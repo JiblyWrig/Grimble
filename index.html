@@ -249,7 +249,7 @@ box-shadow:0 6px 0 #7a5a14, 0 12px 24px rgba(0,0,0,.5); transition:all .12s; poi
 <div class="treeFoot">Wheel to zoom &nbsp;·&nbsp; Right-click to drag</div>
 </div>
 </div>
-<div id="overlay">
+<div id="overlay" class="hidden">
 <div class="ovPanel">
 <h1 id="ovTitle">GRIMBLE</h1>
 <p class="sub" id="ovSub">A meadow, a goblin, and a very deep hole.</p>
@@ -3471,7 +3471,7 @@ new FontLoader().load(
     document.body.classList.add('menu');
   },
   undefined,
-  () => { /* font failed: keep the old HTML overlay as fallback */ }
+  () => { overlay.classList.remove('hidden'); /* font failed: show old HTML overlay as fallback */ }
 );
 
 function ensureFirstGoblin(){
