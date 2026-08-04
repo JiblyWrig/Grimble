@@ -293,10 +293,10 @@ const _qTmp = new THREE.Quaternion(), _qT2 = new THREE.Quaternion();
 const _holdT = new THREE.Vector3(), _acc = new THREE.Vector3();
 const _camD = new THREE.Vector3(), _camR = new THREE.Vector3(), _camU = new THREE.Vector3(), _toCam = new THREE.Vector3();
 
-
 let holeGlowSprite = null;
 let holeDustMat = null;
 let grassMat = null;
+let holeRim = null;
 /* Rain every 5 minutes: 300s clear, 10s fade in, 120s rain, 10s fade out */
 const RAIN_CYCLE = 440;
 const RAIN_START = 300;
@@ -641,9 +641,10 @@ const bottom = new THREE.Mesh(new THREE.CircleGeometry(HOLE_R*0.9+0.08, 48), new
 bottom.rotation.x = -Math.PI/2; bottom.position.y = -HOLE_D+0.02;
 scene.add(bottom);
 const rim = new THREE.Mesh(new THREE.RingGeometry(HOLE_R-0.02, HOLE_R+0.9, 64),
-new THREE.MeshBasicMaterial({ map:rimTex, transparent:true, depthWrite:false }));
+new THREE.MeshBasicMaterial({ map:rimTex, transparent:true, depthWrite:false, opacity:0 }));
 rim.rotation.x = -Math.PI/2; rim.position.y = 0.015; rim.renderOrder = 1;
 scene.add(rim);
+holeRim = rim;
 }
 /* ---------- hole dust ---------- */
 {
@@ -2342,6 +2343,7 @@ const a = Math.random()*Math.PI*2, r = HOLE_R*(0.4+Math.random()*0.9);
 dirtBurst.burst(Math.cos(a)*r, 0.08, Math.sin(a)*r, 1.8, 3.4);
 }
 const k = sm((t-2.6)/2.0);
+if (holeRim) holeRim.material.opacity = k; // dirt rim fades in as the hole tears open
 introPlug.position.y = 0.02 - k*2.8;
 introPlug.rotation.z = k*0.6;
 introPlug.scale.setScalar(Math.max(0.001, 1 - k*0.35));
@@ -2349,6 +2351,7 @@ introPlug.scale.setScalar(Math.max(0.001, 1 - k*0.35));
 // hole fully open
 if (t > 4.6 && !c.plugged){
 c.plugged = true;
+if (holeRim) holeRim.material.opacity = 1;
 scene.remove(introPlug);
 dirtBurst.burst(0, 0.1, 0, 3.2, 4.5);
 shake = Math.max(shake, 0.95);
@@ -2360,6 +2363,7 @@ if (t > 4.9 && !c.dropped){
 c.dropped = true;
 const g = goblins[0];
 c.gob = g;
+g.root.visible = true; // he only enters the world by falling from the sky
 g.root.position.set(1.8, 14, 7.6);
 g.state = 'thrown';
 g.throwT = 0;
