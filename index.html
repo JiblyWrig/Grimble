@@ -95,17 +95,19 @@ font-family:'MedievalSharp',cursive; font-size:17px; color:#ffe58a; opacity:0; t
 font-family:'MedievalSharp',cursive; font-size:38px; letter-spacing:3px; color:#c9a6ef;
 text-shadow:0 0 24px rgba(150,80,255,.6), 0 2px 0 #1a0a24; opacity:0; transition:opacity 1.2s; pointer-events:none; }
 #prestigeText.on { opacity:1; }
-#dialog { position:fixed; left:50%; bottom:60px; transform:translateX(-50%); z-index:16; width:620px; max-width:92vw;
-padding:16px 22px 14px; text-align:center;
-background:linear-gradient(160deg, rgba(24,40,16,.94), rgba(11,20,8,.96));
-border:1px solid rgba(212,175,55,.45);
-border-radius:12px;
-box-shadow:0 8px 24px rgba(0,0,0,.55), inset 0 0 24px rgba(0,0,0,.35); }
+#dialog { position:fixed; left:50%; bottom:48px; transform:translateX(-50%); z-index:16; width:820px; max-width:94vw;
+padding:28px 38px 24px; text-align:center;
+background:linear-gradient(160deg, #182810, #0b1408);
+border:2px solid #7a5a1e;
+border-radius:14px;
+box-shadow:0 12px 32px rgba(0,0,0,.7), inset 0 0 24px rgba(0,0,0,.35); }
 #dialog.hidden { display:none; }
-.dlgName { font-family:'MedievalSharp',cursive; color:#f5cf5f; font-size:18px; letter-spacing:2px; margin-bottom:6px;
+.dlgName { font-family:'MedievalSharp',cursive; color:#f5cf5f; font-size:22px; letter-spacing:3px; margin-bottom:10px;
 text-shadow:0 2px 0 #6b4a10, 0 3px 8px #000; }
-#dlgText { color:#dfeecb; font-size:14px; font-weight:700; min-height:44px; }
-#dlgHint { margin-top:8px; font-size:11px; color:#a9c48a; font-weight:800; letter-spacing:1px; }
+#dlgText { font-family:'MedievalSharp',cursive; color:#e8f2d6; font-size:21px; line-height:1.5; min-height:76px; }
+.dlgWord { display:inline-block; animation:wordSway 2.6s ease-in-out infinite; }
+@keyframes wordSway { 0%,100% { transform:translateY(0) rotate(0deg); } 50% { transform:translateY(-2.5px) rotate(0.5deg); } }
+#dlgHint { margin-top:10px; font-size:12px; color:#a9c48a; font-weight:800; letter-spacing:1px; }
 #holeBtns { position:fixed; bottom:26px; left:50%; transform:translateX(-50%); z-index:16;
 display:flex; gap:14px; }
 #holeBtns.hidden { display:none; }
@@ -225,7 +227,7 @@ box-shadow:0 6px 0 #7a5a14, 0 12px 24px rgba(0,0,0,.5); transition:all .12s; poi
 <div id="fadeBlack"></div>
 <div id="prestigeText">the hole grows hungrier...</div>
 <div id="dialog" class="hidden">
-<div class="dlgName">MAUD, THE HOLE-WITCH</div>
+<div class="dlgName">MAUD</div>
 <div id="dlgText"></div>
 <div id="dlgHint"></div>
 </div>
@@ -2533,7 +2535,7 @@ function updatePrestigeBadge(){
     document.getElementById('prestigeN').textContent = prestige;
     document.getElementById('prestigeM').textContent = prestigeMult();
 
-    if (holeGlowSprite) holeGlowSprite.material.opacity = 0.75;
+    if (holeGlowSprite) holeGlowSprite.material.opacity = 0.375;
     if (holeDustMat) holeDustMat.uniforms.uPrestige.value = 1;
   } else {
     b.classList.remove('on');
@@ -2546,25 +2548,62 @@ function updatePrestigeBadge(){
 const dialogEl = document.getElementById('dialog');
 const dlgTextEl = document.getElementById('dlgText');
 const dlgHintEl = document.getElementById('dlgHint');
+let typeTimer = null;
+function setDlgLine(txt){
+if (typeTimer){ clearInterval(typeTimer); typeTimer = null; }
+dlgTextEl.innerHTML = '';
+const words = txt.split(' ');
+let wi = 0, ci = 0, cur = null;
+typeTimer = setInterval(()=>{
+if (wi >= words.length){ clearInterval(typeTimer); typeTimer = null; return; }
+if (!cur){
+cur = document.createElement('span');
+cur.className = 'dlgWord';
+cur.style.animationDelay = (-(wi*0.41)%2.6).toFixed(2)+'s'; // desync each word's sway
+dlgTextEl.appendChild(cur);
+}
+cur.textContent += words[wi].charAt(ci);
+ci++;
+if (ci >= words[wi].length){
+if (wi < words.length-1) dlgTextEl.appendChild(document.createTextNode(' '));
+wi++; ci = 0; cur = null;
+}
+}, 26);
+}
+function finishDlgLine(){
+if (typeTimer){ clearInterval(typeTimer); typeTimer = null; }
+dlgTextEl.innerHTML = '';
+const words = DLG[dlgLine].split(' ');
+for (let i=0;i<words.length;i++){
+const s = document.createElement('span');
+s.className = 'dlgWord';
+s.style.animationDelay = (-(i*0.41)%2.6).toFixed(2)+'s';
+s.textContent = words[i];
+dlgTextEl.appendChild(s);
+if (i < words.length-1) dlgTextEl.appendChild(document.createTextNode(' '));
+}
+}
 function openDlg(){
 dlgOpen = true; dlgLine = 0;
 dialogEl.classList.remove('hidden');
 document.body.classList.add('talking');
 prompt.classList.remove('show');
 crosshair.classList.remove('active');
-dlgTextEl.textContent = DLG[0];
-dlgHintEl.innerHTML = '<kbd>E</kbd> — continue';
+setDlgLine(DLG[0]);
+dlgHintEl.innerHTML = '<kbd>E</kbd>';
 tone(500,0.08,'triangle',0.1);
 }
 function closeDlg(){
 dlgOpen = false;
+if (typeTimer){ clearInterval(typeTimer); typeTimer = null; }
 dialogEl.classList.add('hidden');
 document.body.classList.remove('talking');
 }
 function advanceDlg(){
+if (typeTimer){ finishDlgLine(); return; } // E while typing = reveal line instantly
 if (dlgLine < DLG.length-1){
 dlgLine++;
-dlgTextEl.textContent = DLG[dlgLine];
+setDlgLine(DLG[dlgLine]);
 if (dlgLine === DLG.length-1)
 dlgHintEl.innerHTML = '<kbd>E</kbd> — SACRIFICE EVERYTHING &nbsp;·&nbsp; <kbd>Q</kbd> — NOT YET';
 tone(520+dlgLine*40,0.08,'triangle',0.1);
