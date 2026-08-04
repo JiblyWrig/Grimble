@@ -10,7 +10,8 @@
 html,body { width:100%; height:100%; overflow:hidden; background:#0a140a; font-family:'Nunito',sans-serif; user-select:none; }
 canvas { display:block; }
 body.locked { cursor:none; }
-body.menu #hud { display:none; }
+body.menu #coinCard, body.menu #rainCard, body.menu #worldCoins,
+body.menu #crosshair, body.menu #prompt, body.menu #toast { display:none; }
 body.shop #crosshair, body.shop #prompt { display:none; }
 body.shop #coinCard { display:none; }
 body.shop #worldCoins { display:flex; }
@@ -1283,7 +1284,7 @@ g.pupL.position.set(-0.085 + ex, 0.05 + ey, 0.21);
 g.pupR.position.set( 0.085 + ex, 0.05 + ey, 0.21);
 g.shadow.position.set(p.x, 0.02, p.z);
 }
-makeGoblin(1.8, 7.6);
+/* first goblin spawns when the game starts (see ensureFirstGoblin) */
 /* ============================== BUTTERFLIES (7, fenced in) ============================== */
 const butterflies = [];
 {
@@ -3376,6 +3377,7 @@ addEventListener('contextmenu', e=>e.preventDefault());
 overlay.addEventListener('click', ()=>{
 initAudio();
 if (AC && AC.state === 'suspended') AC.resume();
+ensureFirstGoblin();
 if (!introDone) {
 introDone = true;
 startIntroCine();
@@ -3408,8 +3410,10 @@ renderer.setSize(innerWidth, innerHeight);
 const menuGroup = new THREE.Group();
 scene.add(menuGroup);
 let menuReady = false, menuFading = false, menuFade = 1, menuHover = false;
-let menuTitle = null, menuSub = null, menuBtn = null;
+let menuHolding = false, menuHold = 0;
+let menuTitle = null, menuBtn = null, menuBar = null;
 let menuBtnHit = [], menuBtnMat = null;
+const MENU_HOLD_TIME = 1.1;
 const menuMats = [];
 const menuNdc = new THREE.Vector2(0, 0);
 const menuRay = new THREE.Raycaster();
@@ -3428,14 +3432,7 @@ function buildMenu(font){
   menuTitle.position.set(0, 3.35, 0);
   menuGroup.add(menuTitle);
 
-  // ---- small floating subtitle ----
-  const subGeo = new TextGeometry('A meadow, a goblin, and a very deep hole.', { font, size: 0.24, height: 0.02 });
-  subGeo.center();
-  menuSub = new THREE.Mesh(subGeo, menuMat(new THREE.MeshToonMaterial({ color: 0xcfe3b8, gradientMap: gradTex })));
-  menuSub.position.set(0, 2.5, 0);
-  menuGroup.add(menuSub);
-
-  // ---- 3D start button ----
+  // ---- 3D start button (HOLD to enter) ----
   menuBtn = new THREE.Group();
   menuBtnMat = menuMat(new THREE.MeshToonMaterial({ color: 0x33421f, gradientMap: gradTex }));
   const btnBody = new THREE.Mesh(new THREE.BoxGeometry(4.4, 1.0, 0.3), menuBtnMat);
@@ -3449,6 +3446,17 @@ function buildMenu(font){
   const label = new THREE.Mesh(labGeo, menuMat(new THREE.MeshToonMaterial({ color: 0xf2d894, gradientMap: gradTex })));
   label.position.z = 0.21;
   menuBtn.add(label);
+  // hold-progress bar (fills left -> right)
+  const barBack = new THREE.Mesh(new THREE.PlaneGeometry(3.9, 0.14),
+    menuMat(new THREE.MeshBasicMaterial({ color: 0x140d05 })));
+  barBack.position.set(0, -0.32, 0.16);
+  menuBtn.add(barBack);
+  const barGeo = new THREE.PlaneGeometry(3.9, 0.14);
+  barGeo.translate(3.9 / 2, 0, 0); // origin at left edge so scale.x fills it
+  menuBar = new THREE.Mesh(barGeo, menuMat(new THREE.MeshBasicMaterial({ color: 0xf5cf5f })));
+  menuBar.position.set(-3.9 / 2, -0.32, 0.17);
+  menuBar.scale.x = 0.001;
+  menuBtn.add(menuBar);
   menuBtn.position.set(0, 1.5, 0);
   menuGroup.add(menuBtn);
   menuBtnHit = [btnBody, rim, label];
@@ -3459,21 +3467,27 @@ new FontLoader().load(
   (font) => {
     buildMenu(font);
     menuReady = true;
-    overlay.classList.add('hidden');      // HTML panel only stays as fallback / pause menu
+    overlay.classList.add('hidden');
     document.body.classList.add('menu');
   },
   undefined,
   () => { /* font failed: keep the old HTML overlay as fallback */ }
 );
 
+function ensureFirstGoblin(){
+  if (!goblins.length) makeGoblin(1.8, 7.6);
+}
+
 function startFromMenu(){
   if (!menuReady || menuFading) return;
   menuFading = true;
+  menuHolding = false;
   for (const m of menuMats) m.depthWrite = false;
   document.body.classList.remove('menu');
   renderer.domElement.style.cursor = '';
   initAudio();
   if (AC && AC.state === 'suspended') AC.resume();
+  ensureFirstGoblin();
   if (!introDone){ introDone = true; startIntroCine(); }
   else { try { renderer.domElement.requestPointerLock(); } catch(e){} }
 }
@@ -3483,7 +3497,10 @@ addEventListener('mousemove', (e) => {
   menuNdc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
 });
 addEventListener('mousedown', (e) => {
-  if (e.button === 0 && menuReady && !menuFading && !locked && menuHover) startFromMenu();
+  if (e.button === 0 && menuReady && !menuFading && !locked && menuHover) menuHolding = true;
+});
+addEventListener('mouseup', (e) => {
+  if (e.button === 0) menuHolding = false;
 });
 
 function updateMenu(dt, time){
@@ -3495,13 +3512,17 @@ function updateMenu(dt, time){
       menuReady = false;
       return;
     }
+  } else if (menuHolding && menuHover){
+    menuHold = Math.min(1, menuHold + dt / MENU_HOLD_TIME);
+    if (menuHold >= 1) startFromMenu();
+  } else if (menuHold > 0){
+    menuHold = Math.max(0, menuHold - dt * 2.5); // drains when released
   }
   // gentle float
   if (menuTitle) menuTitle.position.y = 3.35 + Math.sin(time * 0.9) * 0.09;
-  if (menuSub)   menuSub.position.y   = 2.5  + Math.sin(time * 0.9 + 0.8) * 0.05;
   if (menuBtn)   menuBtn.position.y   = 1.5  + Math.sin(time * 0.9 + 1.7) * 0.06;
-  // billboard (yaw only, stays upright) so it always faces the orbiting camera
-  for (const o of [menuTitle, menuSub, menuBtn]){
+  // billboard (yaw only, stays upright)
+  for (const o of [menuTitle, menuBtn]){
     if (!o) continue;
     o.rotation.y = Math.atan2(camera.position.x - o.position.x, camera.position.z - o.position.z);
   }
@@ -3512,11 +3533,14 @@ function updateMenu(dt, time){
     if (hit !== menuHover){
       menuHover = hit;
       renderer.domElement.style.cursor = hit ? 'pointer' : '';
-      menuBtnMat.emissive.setHex(hit ? 0x1c2a10 : 0x000000);
     }
+    if (!menuHover) menuHolding = false;
   }
-  const s = menuHover ? 1.07 : 1;
-  menuBtn.scale.lerp(_v1.set(s, s, s), Math.min(1, 12 * dt));
+  // hold animation: press-in + shimmer + glow, spring back on release
+  const targetS = menuHolding ? 0.94 + Math.sin(time * 26) * 0.01 : (menuHover ? 1.07 : 1);
+  menuBtn.scale.lerp(_v1.set(targetS, targetS, targetS), Math.min(1, 12 * dt));
+  if (menuBtnMat) menuBtnMat.emissive.setHex(menuHolding ? 0x2c3d12 : (menuHover ? 0x1c2a10 : 0x000000));
+  if (menuBar) menuBar.scale.x = Math.max(0.001, menuHold);
 }
 /* ============================== MAIN LOOP ============================== */
 const clock = new THREE.Clock();
@@ -3607,10 +3631,11 @@ updateRainDisplay();
 }
 sun.position.copy(player.pos).addScaledVector(sunDir, 30);
 if (!started && !cine){
-// main menu orbit
+// main menu orbit (pulls in while holding the button)
 const t = elapsed*0.12;
-camera.position.set(Math.sin(t)*11, 4.3+Math.sin(elapsed*0.3)*0.4, Math.cos(t)*11);
-camera.lookAt(0, 0.3, 0);
+const rad = 11 - menuHold*2.2;
+camera.position.set(Math.sin(t)*rad, 4.3+Math.sin(elapsed*0.3)*0.4 - menuHold*0.5, Math.cos(t)*rad);
+camera.lookAt(0, 0.3 + menuHold*0.6, 0);
 } else {
 if (locked && !cine) updatePlayer(dt);
 if (cine) updateCine(dt, elapsed);
