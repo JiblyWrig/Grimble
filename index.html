@@ -144,7 +144,7 @@ perspective:700px; text-align:center; cursor:pointer; pointer-events:auto; }
 .tnode.cant { cursor:default; }
 .tnode.cant:hover { transform:translate(-50%,-50%); }
 .t3d { position:absolute; inset:0; transform-style:preserve-3d; transition:transform .1s ease-out;
-transform:rotateY(26deg) rotateX(14deg); }
+transform:rotateY(-18.2deg) rotateX(9.8deg); }
 .face { position:absolute; border-radius:14px; backface-visibility:hidden;
 background:
 radial-gradient(circle at 30% 22%, rgba(255,220,150,.10), transparent 55%),
@@ -153,23 +153,23 @@ repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0 1px, transparent 1px 5px
 linear-gradient(165deg, rgb(30,46,20), rgb(12,20,8));
 border:2px solid rgba(212,175,55,.5);
 box-shadow:0 6px 18px #000c; }
-.face.front { inset:0; transform:translateZ(11.7px); }
-.face.back { inset:0; transform:rotateY(180deg) translateZ(11.7px); background:linear-gradient(165deg,#141f0d,#0a1206); }
-.face.left, .face.right { width:23.4px; left:50%; margin-left:-11.7px; top:0; height:100%; border-radius:6px;
+.face.front { inset:0; transform:translateZ(14.04px); }
+.face.back { inset:0; transform:rotateY(180deg) translateZ(14.04px); background:linear-gradient(165deg,#141f0d,#0a1206); }
+.face.left, .face.right { width:28.08px; left:50%; margin-left:-14.04px; top:0; height:100%; border-radius:6px;
 background:linear-gradient(180deg,#1c2b12,#0a1406); border-color:rgba(212,175,55,.35); }
 .face.left { transform:rotateY(-90deg) translateZ(61px); }
 .face.right { transform:rotateY(90deg) translateZ(61px); }
-.face.top, .face.bottom { height:23.4px; top:50%; margin-top:-11.7px; left:0; width:100%; border-radius:6px;
+.face.top, .face.bottom { height:28.08px; top:50%; margin-top:-14.04px; left:0; width:100%; border-radius:6px;
 background:linear-gradient(90deg,#1c2b12,#0a1406); border-color:rgba(212,175,55,.35); }
 .face.top { transform:rotateX(90deg) translateZ(59px); }
 .face.bottom { transform:rotateX(-90deg) translateZ(59px); }
 .tnode.cant .face { opacity:.5; }
-.tnode.max { animation:maxPulse 2.4s ease-in-out infinite; }
+.tnode.max { animation:maxPulse .7s cubic-bezier(.34,.72,.34,1) 1; }
 .tnode.max .face.front { border-color:#b470ef; box-shadow:0 0 18px rgba(180,112,239,.35), 0 6px 18px #000c; }
 .tnode.max .tname { color:#dcb6f7; }
 @keyframes maxPulse {
 0% { transform:translate(-50%,-50%) scale(1); }
-50% { transform:translate(-50%,-50%) scale(1.12); }
+45% { transform:translate(-50%,-50%) scale(1.16); }
 100% { transform:translate(-50%,-50%) scale(1); }
 }
 .maxBanner { position:absolute; left:-16px; right:-16px; top:50%; height:26px; margin-top:-13px;
@@ -183,10 +183,10 @@ clip-path:polygon(0 0, 100% 0, 94% 50%, 100% 100%, 0 100%, 6% 50%);
 pointer-events:none; opacity:0; }
 .tnode.max .maxBanner { animation:bannerWrap 1.15s cubic-bezier(.25,.85,.3,1) both; }
 @keyframes bannerWrap {
-0%   { transform:rotateY(-190deg) translateZ(72px); opacity:0; }
+0%   { transform:rotateY(-190deg) translateZ(76px); opacity:0; }
 18%  { opacity:1; }
-70%  { transform:rotateY(-14deg) translateZ(68px); opacity:1; }
-100% { transform:rotateY(0deg) translateZ(16px); opacity:1; }
+70%  { transform:rotateY(-14deg) translateZ(70px); opacity:1; }
+100% { transform:rotateY(0deg) translateZ(18px); opacity:1; }
 }
 .tnode.max:hover { transform:translate(-50%,-50%) scale(1.12); }
 .tnode .ico { display:flex; justify-content:center; color:#c9c0a6; margin-top:10px; }
@@ -383,14 +383,14 @@ mradius:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width
 mcapacity:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 8h8l3 12H5z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/><circle cx="12" cy="14.5" r="2"/></svg>`,
 };
 const TREE = [
-{ key:'stack',     x:350, y:330, ico:ICO.stack,  name:'Coin Stack',  from:null },
-{ key:'rate',      x:545, y:330, ico:ICO.rate,   name:'Prod. Rate',  from:'stack',  need:()=>upgrades.stack>1 },
-{ key:'value',     x:155, y:330, ico:ICO.value,  name:'Coin Value',  from:'stack',  need:()=>upgrades.rate>1 },
-{ key:'goblins',   x:52,  y:215, ico:ICO.goblins,name:'Goblins',     from:'value',  need:()=>upgrades.value>1 },
-{ key:'chieftains',x:52,  y:95,  ico:ICO.chief,  name:'Chieftains',  from:'goblins',need:()=>upgrades.goblins>2 },
-{ key:'magnet',    x:350, y:180, ico:ICO.magnet, name:'Magnet',      from:'stack',  need:()=>upgrades.goblins>1 },
-{ key:'mradius',   x:250, y:62,  ico:ICO.mradius,name:'Mag. Radius', from:'magnet', need:()=>upgrades.magnet>0 },
-{ key:'mcapacity', x:450, y:62,  ico:ICO.mcapacity,name:'Mag. Cap.', from:'magnet', need:()=>upgrades.magnet>0 },
+{ key:'stack',     x:350, y:375, ico:ICO.stack,  name:'Coin Stack',  from:null },
+{ key:'rate',      x:570, y:360, ico:ICO.rate,   name:'Prod. Rate',  from:'stack',  need:()=>upgrades.stack>1 },
+{ key:'value',     x:130, y:360, ico:ICO.value,  name:'Coin Value',  from:'stack',  need:()=>upgrades.rate>1 },
+{ key:'goblins',   x:70,  y:220, ico:ICO.goblins,name:'Goblins',     from:'value',  need:()=>upgrades.value>1 },
+{ key:'chieftains',x:90,  y:60,  ico:ICO.chief,  name:'Chieftains',  from:'goblins',need:()=>upgrades.goblins>2 },
+{ key:'magnet',    x:350, y:205, ico:ICO.magnet, name:'Magnet',      from:'stack',  need:()=>upgrades.goblins>1 },
+{ key:'mradius',   x:240, y:75,  ico:ICO.mradius,name:'Mag. Radius', from:'magnet', need:()=>upgrades.magnet>0 },
+{ key:'mcapacity', x:465, y:75,  ico:ICO.mcapacity,name:'Mag. Cap.', from:'magnet', need:()=>upgrades.magnet>0 },
 ];
 let cheat = false, cheatT = 0;
 let shake = 0;
@@ -2929,7 +2929,7 @@ el.addEventListener('mousemove', ev=>{
 const r = el.getBoundingClientRect();
 const px = (ev.clientX - r.left)/r.width - 0.5;
 const py = (ev.clientY - r.top)/r.height - 0.5;
-t3d.style.transform = `rotateY(${(26 + px*26).toFixed(1)}deg) rotateX(${(14 - py*26).toFixed(1)}deg) translateZ(6px)`;
+t3d.style.transform = `rotateY(${(-18.2 + px*26).toFixed(1)}deg) rotateX(${(9.8 - py*26).toFixed(1)}deg) translateZ(6px)`;
 });
 el.addEventListener('mouseleave', ()=>{ t3d.style.transform = ''; });
 treeBox.appendChild(el);
