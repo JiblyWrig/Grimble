@@ -105,8 +105,8 @@ box-shadow:0 12px 32px rgba(0,0,0,.7), inset 0 0 24px rgba(0,0,0,.35); }
 .dlgName { font-family:'MedievalSharp',cursive; color:#f5cf5f; font-size:22px; letter-spacing:3px; margin-bottom:10px;
 text-shadow:0 2px 0 #6b4a10, 0 3px 8px #000; }
 #dlgText { font-family:'MedievalSharp',cursive; color:#e8f2d6; font-size:21px; line-height:1.5; min-height:76px; }
-.dlgWord { display:inline-block; animation:wordSway 2.6s ease-in-out infinite; }
-@keyframes wordSway { 0%,100% { transform:translateY(0) rotate(0deg); } 50% { transform:translateY(-2.5px) rotate(0.5deg); } }
+.dlgWord { display:inline-block; animation:wordSway 2.2s ease-in-out infinite; }
+@keyframes wordSway { 0%,100% { transform:translateY(0) rotate(0deg); } 50% { transform:translateY(-3px) rotate(0.6deg); } }
 #dlgHint { margin-top:10px; font-size:12px; color:#a9c48a; font-weight:800; letter-spacing:1px; }
 #holeBtns { position:fixed; bottom:26px; left:50%; transform:translateX(-50%); z-index:16;
 display:flex; gap:14px; }
@@ -138,28 +138,47 @@ background:rgba(255,255,255,.05); border:1px solid rgba(169,196,138,.35); border
 .treeHead { display:flex; align-items:center; gap:18px; }
 #treeBox { position:relative; width:700px; height:540px; max-width:96vw; pointer-events:none; }
 #treeLines { position:absolute; inset:0; width:100%; height:100%; overflow:visible; pointer-events:none; }
-.tnode { position:absolute; transform:translate(-50%,-50%); width:122px; padding:9px 6px 9px;
-background:linear-gradient(165deg, rgb(30,46,20), rgb(12,20,8));
-border:2px solid rgba(212,175,55,.5); border-radius:14px; text-align:center; cursor:pointer;
-box-shadow:0 6px 18px #000c; transition:transform .12s, border-color .2s, opacity .2s;
-pointer-events:auto; }
+.tnode { position:absolute; transform:translate(-50%,-50%); width:122px; height:118px;
+perspective:700px; text-align:center; cursor:pointer; pointer-events:auto; }
 .tnode:hover { transform:translate(-50%,-50%) scale(1.06); }
-.tnode.cant { opacity:.5; cursor:default; }
+.tnode.cant { cursor:default; }
 .tnode.cant:hover { transform:translate(-50%,-50%); }
-.tnode.max { border-color:#b470ef; box-shadow:0 0 18px rgba(180,112,239,.35), 0 6px 18px #000c; animation:maxPulse 2.4s ease-in-out infinite; }
+.t3d { position:absolute; inset:0; transform-style:preserve-3d; transition:transform .1s ease-out; }
+.face { position:absolute; border-radius:14px; backface-visibility:hidden;
+background:
+radial-gradient(circle at 30% 22%, rgba(255,220,150,.10), transparent 55%),
+repeating-linear-gradient(90deg, rgba(0,0,0,.14) 0 2px, transparent 2px 7px),
+repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0 1px, transparent 1px 5px),
+linear-gradient(165deg, rgb(30,46,20), rgb(12,20,8));
+border:2px solid rgba(212,175,55,.5);
+box-shadow:0 6px 18px #000c; }
+.face.front { inset:0; transform:translateZ(9px); }
+.face.back { inset:0; transform:rotateY(180deg) translateZ(9px); background:linear-gradient(165deg,#141f0d,#0a1206); }
+.face.left, .face.right { width:18px; left:50%; margin-left:-9px; top:0; height:100%; border-radius:6px;
+background:linear-gradient(180deg,#1c2b12,#0a1406); border-color:rgba(212,175,55,.35); }
+.face.left { transform:rotateY(-90deg) translateZ(61px); }
+.face.right { transform:rotateY(90deg) translateZ(61px); }
+.face.top, .face.bottom { height:18px; top:50%; margin-top:-9px; left:0; width:100%; border-radius:6px;
+background:linear-gradient(90deg,#1c2b12,#0a1406); border-color:rgba(212,175,55,.35); }
+.face.top { transform:rotateX(90deg) translateZ(59px); }
+.face.bottom { transform:rotateX(-90deg) translateZ(59px); }
+.tnode.cant .face { opacity:.5; }
+.tnode.max { animation:maxPulse 2.4s ease-in-out infinite; }
+.tnode.max .face.front { border-color:#b470ef; box-shadow:0 0 18px rgba(180,112,239,.35), 0 6px 18px #000c; }
 .tnode.max .tname { color:#dcb6f7; }
 @keyframes maxPulse {
-0% { transform:translate(-50%,-50%) scale(1); box-shadow:0 0 18px rgba(180,112,239,.35), 0 6px 18px #000c; }
-50% { transform:translate(-50%,-50%) scale(1.12); box-shadow:0 0 28px rgba(180,112,239,.55), 0 8px 22px #000c; }
-100% { transform:translate(-50%,-50%) scale(1); box-shadow:0 0 18px rgba(180,112,239,.35), 0 6px 18px #000c; }
+0% { transform:translate(-50%,-50%) scale(1); }
+50% { transform:translate(-50%,-50%) scale(1.12); }
+100% { transform:translate(-50%,-50%) scale(1); }
 }
 .tnode.max:hover { transform:translate(-50%,-50%) scale(1.12); }
-.tnode .ico { display:flex; justify-content:center; color:#c9c0a6; }
+.tnode .ico { display:flex; justify-content:center; color:#c9c0a6; margin-top:10px; }
 .tnode .ico svg { width:26px; height:26px; }
-.tname { font-family:'MedievalSharp',cursive; font-size:13px; color:#f0d68a; margin-top:2px; }
+.tname { font-family:'MedievalSharp',cursive; font-size:13px; color:#f0d68a; margin-top:2px; text-shadow:0 1px 0 #000; }
 .tlvl { font-size:10px; color:#a9c48a; font-weight:800; letter-spacing:1px; margin-top:1px; min-height:12px; }
 .tcost { display:inline-block; margin-top:5px; font-family:'MedievalSharp',cursive; font-size:12px; color:#3a2a08;
 background:linear-gradient(180deg,#f9dd82,#cf9d2c); border-radius:6px; padding:2px 9px; }
+.tnode.max .tcost { background:#3a2a44; color:#c9a6ef; }
 .tnode.max .tcost { background:#3a2a44; color:#c9a6ef; }
 .udigit { height:1em; overflow:hidden; display:inline-block; vertical-align:bottom; }
 .ureel { display:block; transition:transform .5s cubic-bezier(.25,.9,.3,1); }
@@ -1639,7 +1658,7 @@ mothGeos.push(m);
 
 // Merge all stall props into one geometry
 const mergedStallGeo = mergeGeometries(stallGeomParts, false);
-const stallMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+const stallMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
 const stallMesh = new THREE.Mesh(mergedStallGeo, stallMat);
 stallMesh.position.copy(STALL_POS);
 scene.add(stallMesh);
@@ -2450,8 +2469,8 @@ shake = Math.max(shake, 1.0);
 }
 if (c.bh){
 c.bh.t += dt;
-c.bh.rings[0].rotation.z += dt*2.2;
-c.bh.rings[1].rotation.z -= dt*1.6;
+c.bh.rings[0].rotation.z += dt*1.1;
+c.bh.rings[1].rotation.z -= dt*0.8;
 c.bh.glow.scale.setScalar(7+Math.sin(c.bh.t*6)*0.8);
 if (Math.random() < 0.2) violetBurst.burst((Math.random()-0.5)*3, 2.5+Math.random(), (Math.random()-0.5)*3, 1.5, 1.5);
 }
@@ -2459,7 +2478,7 @@ if (c.t > 1.0){
 let coinDirty = false;
 for (const it of c.suck){
 it.t += dt;
-const k = sm((it.t - it.d)/1.7);
+const k = sm((it.t - it.d)/3.4); // 50% slower suck
 if (k <= 0) continue;
 if (it.ci !== undefined){
 coinDirty = true;
@@ -2471,7 +2490,7 @@ P[i3]   = it.s.x*(1-k) + SUCK_T.x*k + Math.cos(ang)*rad*(1-k);
 P[i3+1] = (it.s.y+0.5)*(1-k) + SUCK_T.y*k;
 P[i3+2] = it.s.z*(1-k) + SUCK_T.z*k + Math.sin(ang)*rad*(1-k);
 SSCL[it.ci] = Math.max(0.01, 1-k*0.9);
-_qTmp.setFromAxisAngle(UP, dt*8);
+_qTmp.setFromAxisAngle(UP, dt*4);
 Q[it.ci].premultiply(_qTmp);
 } else {
 const ang = it.ph + k*7;
@@ -2481,26 +2500,26 @@ _cB.x += Math.cos(ang)*rad*(1-k);
 _cB.z += Math.sin(ang)*rad*(1-k);
 it.o.position.copy(_cB);
 it.o.scale.setScalar(Math.max(0.01, it.sc*(1-k*0.9)));
-it.o.rotation.y += dt*8;
+it.o.rotation.y += dt*4;
 if (it.sh){ it.sh.position.set(_cB.x,0.02,_cB.z); it.sh.material.opacity = 0.5*(1-k); }
 if (k >= 1){ it.o.visible = false; if (it.sh) it.sh.visible = false; }
 }
 }
 if (coinDirty) composeCoinInstances();
 }
-if (c.t > 3.8 && !c.faded){
+if (c.t > 5.6 && !c.faded){
 c.faded = true;
 document.getElementById('fadeBlack').classList.add('on');
 document.getElementById('prestigeText').classList.add('on');
 tone(40,2.0,'sine',0.4,0,-15);
 }
-if (c.t > 5.6 && !c.reset){
+if (c.t > 7.4 && !c.reset){
 c.reset = true;
 doPrestigeReset();
 removeBlackHole(c.bh);
 c.suck = c.suck.filter(it => it.ci === undefined);
 }
-if (c.t > 7.4){
+if (c.t > 9.2){
 document.getElementById('fadeBlack').classList.remove('on');
 document.getElementById('prestigeText').classList.remove('on');
 cine = null;
@@ -2559,7 +2578,7 @@ if (wi >= words.length){ clearInterval(typeTimer); typeTimer = null; return; }
 if (!cur){
 cur = document.createElement('span');
 cur.className = 'dlgWord';
-cur.style.animationDelay = (-(wi*0.41)%2.6).toFixed(2)+'s'; // desync each word's sway
+cur.style.animationDelay = (-(wi*0.41)%2.2).toFixed(2)+'s';
 dlgTextEl.appendChild(cur);
 }
 cur.textContent += words[wi].charAt(ci);
@@ -2568,20 +2587,7 @@ if (ci >= words[wi].length){
 if (wi < words.length-1) dlgTextEl.appendChild(document.createTextNode(' '));
 wi++; ci = 0; cur = null;
 }
-}, 26);
-}
-function finishDlgLine(){
-if (typeTimer){ clearInterval(typeTimer); typeTimer = null; }
-dlgTextEl.innerHTML = '';
-const words = DLG[dlgLine].split(' ');
-for (let i=0;i<words.length;i++){
-const s = document.createElement('span');
-s.className = 'dlgWord';
-s.style.animationDelay = (-(i*0.41)%2.6).toFixed(2)+'s';
-s.textContent = words[i];
-dlgTextEl.appendChild(s);
-if (i < words.length-1) dlgTextEl.appendChild(document.createTextNode(' '));
-}
+}, 34);
 }
 function openDlg(){
 dlgOpen = true; dlgLine = 0;
@@ -2600,7 +2606,7 @@ dialogEl.classList.add('hidden');
 document.body.classList.remove('talking');
 }
 function advanceDlg(){
-if (typeTimer){ finishDlgLine(); return; } // E while typing = reveal line instantly
+if (typeTimer) return; // E does NOTHING while the line is still typing
 if (dlgLine < DLG.length-1){
 dlgLine++;
 setDlgLine(DLG[dlgLine]);
@@ -2885,10 +2891,24 @@ lineEls[n.key] = ln;
 const el = document.createElement('div');
 el.className = 'tnode';
 el.style.left = n.x+'px'; el.style.top = n.y+'px';
-el.innerHTML = `<div class="ico">${n.ico}</div><div class="tname">${n.name}</div>
+el.innerHTML = `<div class="t3d">
+<div class="face front">
+<div class="ico">${n.ico}</div><div class="tname">${n.name}</div>
 <div class="tlvl"><span class="ulvl-max" style="display:none">OWNED</span><span class="ulvl-roll"></span><span class="ulvl-static"></span></div>
-<span class="tcost"><span class="ucost-max" style="display:none">MAX</span><span class="ucost-roll"></span><span class="ucost-star"> ★</span></span>`;
+<span class="tcost"><span class="ucost-max" style="display:none">MAX</span><span class="ucost-roll"></span><span class="ucost-star"> ★</span></span>
+</div>
+<div class="face back"></div><div class="face left"></div><div class="face right"></div>
+<div class="face top"></div><div class="face bottom"></div>
+</div>`;
 el.addEventListener('click', ev=>{ ev.stopPropagation(); buy(n.key); });
+const t3d = el.querySelector('.t3d');
+el.addEventListener('mousemove', ev=>{
+const r = el.getBoundingClientRect();
+const px = (ev.clientX - r.left)/r.width - 0.5;
+const py = (ev.clientY - r.top)/r.height - 0.5;
+t3d.style.transform = `rotateY(${(px*26).toFixed(1)}deg) rotateX(${(-py*26).toFixed(1)}deg) translateZ(6px)`;
+});
+el.addEventListener('mouseleave', ()=>{ t3d.style.transform = ''; });
 treeBox.appendChild(el);
 nodeEls[n.key] = {
 wrap: el,
@@ -3369,7 +3389,7 @@ keys.add(e.code);
 if (!started) return;
 if (dlgOpen){
 if (e.code === 'KeyE') advanceDlg();
-else if (e.code === 'KeyQ' && dlgLine === DLG.length-1) closeDlg();
+else if (e.code === 'KeyQ' && dlgLine === DLG.length-1 && !typeTimer) closeDlg();
 return;
 }
 if (cine) return;
