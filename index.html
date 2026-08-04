@@ -10,6 +10,7 @@
 html,body { width:100%; height:100%; overflow:hidden; background:#0a140a; font-family:'Nunito',sans-serif; user-select:none; }
 canvas { display:block; }
 body.locked { cursor:none; }
+body.menu #hud { display:none; }
 body.shop #crosshair, body.shop #prompt { display:none; }
 body.shop #coinCard { display:none; }
 body.shop #worldCoins { display:flex; }
@@ -266,6 +267,8 @@ box-shadow:0 6px 0 #7a5a14, 0 12px 24px rgba(0,0,0,.5); transition:all .12s; poi
 <script type="module">
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 /* ============================== CONSTANTS ============================== */
 const WORLD_R = 28;
 const GROUND_R = 80;
@@ -3400,6 +3403,121 @@ camera.aspect = innerWidth/innerHeight;
 camera.updateProjectionMatrix();
 renderer.setSize(innerWidth, innerHeight);
 });
+
+/* ============================== 3D MAIN MENU ============================== */
+const menuGroup = new THREE.Group();
+scene.add(menuGroup);
+let menuReady = false, menuFading = false, menuFade = 1, menuHover = false;
+let menuTitle = null, menuSub = null, menuBtn = null;
+let menuBtnHit = [], menuBtnMat = null;
+const menuMats = [];
+const menuNdc = new THREE.Vector2(0, 0);
+const menuRay = new THREE.Raycaster();
+function menuMat(m){ m.transparent = true; menuMats.push(m); return m; }
+
+function buildMenu(font){
+  // ---- "GRIMBLE" as extruded 3D letters, no UI container ----
+  const titleGeo = new TextGeometry('GRIMBLE', {
+    font, size: 1.35, height: 0.42, curveSegments: 8,
+    bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.045, bevelSegments: 3
+  });
+  titleGeo.center();
+  const titleFace = menuMat(new THREE.MeshToonMaterial({ color: 0xf5cf5f, gradientMap: gradTex }));
+  const titleSide = menuMat(new THREE.MeshToonMaterial({ color: 0x8a5c14, gradientMap: gradTex }));
+  menuTitle = new THREE.Mesh(titleGeo, [titleFace, titleSide]);
+  menuTitle.position.set(0, 3.35, 0);
+  menuGroup.add(menuTitle);
+
+  // ---- small floating subtitle ----
+  const subGeo = new TextGeometry('A meadow, a goblin, and a very deep hole.', { font, size: 0.24, height: 0.02 });
+  subGeo.center();
+  menuSub = new THREE.Mesh(subGeo, menuMat(new THREE.MeshToonMaterial({ color: 0xcfe3b8, gradientMap: gradTex })));
+  menuSub.position.set(0, 2.5, 0);
+  menuGroup.add(menuSub);
+
+  // ---- 3D start button ----
+  menuBtn = new THREE.Group();
+  menuBtnMat = menuMat(new THREE.MeshToonMaterial({ color: 0x33421f, gradientMap: gradTex }));
+  const btnBody = new THREE.Mesh(new THREE.BoxGeometry(4.4, 1.0, 0.3), menuBtnMat);
+  menuBtn.add(btnBody);
+  const rim = new THREE.Mesh(new THREE.BoxGeometry(4.62, 1.22, 0.22),
+    menuMat(new THREE.MeshToonMaterial({ color: 0x7a5a1e, gradientMap: gradTex })));
+  rim.position.z = -0.07;
+  menuBtn.add(rim);
+  const labGeo = new TextGeometry('ENTER THE MEADOW', { font, size: 0.32, height: 0.1 });
+  labGeo.center();
+  const label = new THREE.Mesh(labGeo, menuMat(new THREE.MeshToonMaterial({ color: 0xf2d894, gradientMap: gradTex })));
+  label.position.z = 0.21;
+  menuBtn.add(label);
+  menuBtn.position.set(0, 1.5, 0);
+  menuGroup.add(menuBtn);
+  menuBtnHit = [btnBody, rim, label];
+}
+
+new FontLoader().load(
+  'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/gentilis_bold.typeface.json',
+  (font) => {
+    buildMenu(font);
+    menuReady = true;
+    overlay.classList.add('hidden');      // HTML panel only stays as fallback / pause menu
+    document.body.classList.add('menu');
+  },
+  undefined,
+  () => { /* font failed: keep the old HTML overlay as fallback */ }
+);
+
+function startFromMenu(){
+  if (!menuReady || menuFading) return;
+  menuFading = true;
+  for (const m of menuMats) m.depthWrite = false;
+  document.body.classList.remove('menu');
+  renderer.domElement.style.cursor = '';
+  initAudio();
+  if (AC && AC.state === 'suspended') AC.resume();
+  if (!introDone){ introDone = true; startIntroCine(); }
+  else { try { renderer.domElement.requestPointerLock(); } catch(e){} }
+}
+
+addEventListener('mousemove', (e) => {
+  if (!menuReady || menuFading || locked) return;
+  menuNdc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+});
+addEventListener('mousedown', (e) => {
+  if (e.button === 0 && menuReady && !menuFading && !locked && menuHover) startFromMenu();
+});
+
+function updateMenu(dt, time){
+  if (menuFading){
+    menuFade = Math.max(0, menuFade - dt / 0.8);
+    for (const m of menuMats) m.opacity = menuFade;
+    if (menuFade <= 0){
+      scene.remove(menuGroup);
+      menuReady = false;
+      return;
+    }
+  }
+  // gentle float
+  if (menuTitle) menuTitle.position.y = 3.35 + Math.sin(time * 0.9) * 0.09;
+  if (menuSub)   menuSub.position.y   = 2.5  + Math.sin(time * 0.9 + 0.8) * 0.05;
+  if (menuBtn)   menuBtn.position.y   = 1.5  + Math.sin(time * 0.9 + 1.7) * 0.06;
+  // billboard (yaw only, stays upright) so it always faces the orbiting camera
+  for (const o of [menuTitle, menuSub, menuBtn]){
+    if (!o) continue;
+    o.rotation.y = Math.atan2(camera.position.x - o.position.x, camera.position.z - o.position.z);
+  }
+  // hover picking on the 3D button
+  if (!locked && !menuFading && menuBtn){
+    menuRay.setFromCamera(menuNdc, camera);
+    const hit = menuRay.intersectObjects(menuBtnHit, false).length > 0;
+    if (hit !== menuHover){
+      menuHover = hit;
+      renderer.domElement.style.cursor = hit ? 'pointer' : '';
+      menuBtnMat.emissive.setHex(hit ? 0x1c2a10 : 0x000000);
+    }
+  }
+  const s = menuHover ? 1.07 : 1;
+  menuBtn.scale.lerp(_v1.set(s, s, s), Math.min(1, 12 * dt));
+}
 /* ============================== MAIN LOOP ============================== */
 const clock = new THREE.Clock();
 let elapsed = 0;
@@ -3517,6 +3635,7 @@ camera.position.x += (Math.random()-0.5)*0.14*shake;
 camera.position.y += (Math.random()-0.5)*0.10*shake;
 camera.position.z += (Math.random()-0.5)*0.14*shake;
 }
+if (menuReady) updateMenu(dt, elapsed);
 updateFlare();
 renderer.render(scene, camera);
 }
