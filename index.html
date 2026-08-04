@@ -624,6 +624,11 @@ new THREE.MeshBasicMaterial({ map:wallTex, side:THREE.BackSide })
 );
 wall.position.y = -HOLE_D/2;
 scene.add(wall);
+// Violet glow at hole center (appears after prestige)
+const holeGlowSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map:violetGlowTex, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, opacity:0 }));
+holeGlowSprite.scale.setScalar(5);
+holeGlowSprite.position.y = 0.3;
+scene.add(holeGlowSprite);
 const bottom = new THREE.Mesh(new THREE.CircleGeometry(HOLE_R*0.9+0.08, 48), new THREE.MeshBasicMaterial({ color:0x030202 }));
 bottom.rotation.x = -Math.PI/2; bottom.position.y = -HOLE_D+0.02;
 scene.add(bottom);
@@ -646,7 +651,7 @@ g.setAttribute('position', new THREE.BufferAttribute(pos,3));
 g.setAttribute('aPh', new THREE.BufferAttribute(aPh,1));
 const m = new THREE.ShaderMaterial({
 transparent:true, depthWrite:false,
-uniforms:{ uTime:{value:0}, uDepth:{value:HOLE_D} },
+uniforms:{ uTime:{value:0}, uDepth:{value:HOLE_D}, uPrestige:{value:0} },
 vertexShader:`
 attribute float aPh; uniform float uTime; uniform float uDepth;
 varying float vA;
@@ -659,10 +664,11 @@ gl_PointSize = (46.0/max(1.0,-mv.z)) * (0.7+0.5*fract(aPh*13.7));
 gl_Position = projectionMatrix * mv;
 }`,
 fragmentShader:`
-varying float vA;
+varying float vA; uniform float uPrestige;
 void main(){
 float m = smoothstep(0.5,0.1,length(gl_PointCoord-0.5));
-gl_FragColor = vec4(vec3(0.75,0.63,0.45), m*vA*0.32);
+vec3 col = mix(vec3(0.75,0.63,0.45), vec3(0.85,0.55,0.95), min(1.0, uPrestige));
+gl_FragColor = vec4(col, m*vA*0.32);
 }`
 });
 const dust = new THREE.Points(g, m);
@@ -1598,6 +1604,22 @@ addProp(new THREE.CylinderGeometry(0.008,0.008,0.18,4), metalColor, [lampX + Mat
 }
 addProp(new THREE.TorusGeometry(0.03,0.008,5,10), metalColor, [lampX, 1.94, lampZ]);
 
+// Lantern moths orbit group
+const lanternMoths = new THREE.Group();
+lanternMoths.position.set(STALL_POS.x + lampX, 1.74, STALL_POS.z + lampZ);
+scene.add(lanternMoths);
+const mothGeos = [];
+const mothGeoBase = new THREE.ConeGeometry(0.025, 0.06, 4);
+mothGeoBase.rotateX(Math.PI/2);
+for(let i=0;i<3;i++){
+const m = new THREE.Mesh(mothGeoBase, new THREE.MeshBasicMaterial({color:0xffeedd, transparent:true, opacity:0.85}));
+const angle = (i/3)*Math.PI*2;
+const radius = 0.22 + i*0.04;
+m.userData = { angle, radius, speed: 0.8 + i*0.15, phase: Math.random()*Math.PI*2 };
+lanternMoths.add(m);
+mothGeos.push(m);
+}
+
 // Merge all stall props into one geometry
 const mergedStallGeo = mergeGeometries(stallGeomParts, false);
 const stallMat = new THREE.MeshLambertMaterial({ vertexColors: true });
@@ -2491,7 +2513,14 @@ if (prestige > 0){
 b.classList.add('on');
 document.getElementById('prestigeN').textContent = prestige;
 document.getElementById('prestigeM').textContent = prestigeMult();
-} else b.classList.remove('on');
+// Enable hole glow and purple dust motes after prestige
+holeGlowSprite.material.opacity = THREE.MathUtils.lerp(holeGlowSprite.material.opacity, 0.75, Math.min(1, 3*dt));
+holeDustMat.uniforms.uPrestige.value = 1;
+} else {
+b.classList.remove('on');
+holeGlowSprite.material.opacity = THREE.MathUtils.lerp(holeGlowSprite.material.opacity, 0, Math.min(1, 3*dt));
+holeDustMat.uniforms.uPrestige.value = 0;
+}
 }
 /* ---------- witch dialogue ---------- */
 const dialogEl = document.getElementById('dialog');
@@ -2526,6 +2555,7 @@ startSacrifice();
 /* ============================== PLAYER ============================== */
 const player = { pos:new THREE.Vector3(0,EYE,6.8), vel:new THREE.Vector3(), vy:0, grounded:true };
 let yaw = 0, pitch = -0.08, roll = 0, bobPhase = 0, landDip = 0, prevYaw = 0, turnSm = 0, fov = 74;
+let idleSwayTime = 0;
 let shopOpen = false;
 let shopPhase = 'none';
 const keys = new Set();
@@ -2573,7 +2603,12 @@ roll += (rollTarget - roll)*Math.min(1,9*dt);
 const fovT = 74 + (sprint && spXZ>2 ? 8 : 0) + (!player.grounded ? 2 : 0);
 fov += (fovT - fov)*Math.min(1,6*dt);
 if (Math.abs(camera.fov - fov) > 0.02){ camera.fov = fov; camera.updateProjectionMatrix(); }
-camera.rotation.set(pitch, yaw, roll);
+// Idle camera sway when not moving
+idleSwayTime += dt;
+const idleAmp = Math.min(1, 8/spXZ) * 0.012;
+const swayYaw = Math.sin(idleSwayTime * 0.7) * idleAmp;
+const swayPitch = Math.cos(idleSwayTime * 0.5) * idleAmp * 0.7;
+camera.rotation.set(pitch + swayPitch, yaw + swayYaw, roll);
 camera.position.set(player.pos.x, player.pos.y + bob - landDip, player.pos.z);
 } else {
 prevYaw = yaw;
@@ -3399,6 +3434,16 @@ dirtBurst.update(dt);
 updateFloatTexts(dt);
 updateTreeSway(elapsed);
 lampLight.intensity = (14 + Math.sin(elapsed*11)*1.2 + Math.sin(elapsed*23+1.7)*0.8) * (1 + 0.5*rainFactor);
+// Update lantern moths orbit with sine wobble
+for(const moth of mothGeos){
+const u = moth.userData;
+u.angle += u.speed * dt;
+const wobble = Math.sin(elapsed * 2 + u.phase) * 0.06;
+moth.position.set(Math.cos(u.angle) * (u.radius + wobble), Math.sin(u.angle * 2 + u.phase) * 0.04, Math.sin(u.angle) * (u.radius + wobble));
+moth.rotation.z = elapsed * 3 + u.phase;
+}
+// Update hole dust prestige uniform
+holeDustMat.uniforms.uPrestige.value = THREE.MathUtils.lerp(holeDustMat.uniforms.uPrestige.value, Math.min(prestige, 1), Math.min(1, 2*dt));
 for (const c of clouds){
 c.position.x += c.userData.spd*dt;
 if (c.position.x > 260) c.position.x = -260;
