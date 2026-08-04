@@ -292,7 +292,7 @@ const _v1 = new THREE.Vector3();
 const _qTmp = new THREE.Quaternion(), _qT2 = new THREE.Quaternion();
 const _holdT = new THREE.Vector3(), _acc = new THREE.Vector3();
 const _camD = new THREE.Vector3(), _camR = new THREE.Vector3(), _camU = new THREE.Vector3(), _toCam = new THREE.Vector3();
-
+const _euler = new THREE.Euler();
 let holeGlowSprite = null;
 let holeDustMat = null;
 let grassMat = null;
@@ -3479,7 +3479,11 @@ new FontLoader().load(
 );
 
 function ensureFirstGoblin(){
-  if (!goblins.length) makeGoblin(1.8, 7.6);
+if (!goblins.length){
+const g = makeGoblin(1.8, 7.6);
+g.root.visible = false;   // stay hidden until the falling cutscene
+g.shadow.visible = false;
+}
 }
 
 function startFromMenu(){
