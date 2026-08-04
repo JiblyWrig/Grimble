@@ -862,9 +862,9 @@ const indices = [];
 // Create 2-quad cross (4 vertices per quad, 2 quads = 8 vertices)
 const quadVerts = [
 // Quad 1 (vertical)
--0.06, 0, 0,   0.06, 0, 0,   0.06, 0.18, 0,   -0.06, 0.18, 0,
+-0.06, 0, 0,   0.06, 0, 0,   0.06, 0.04, 0,   -0.06, 0.04, 0,
 // Quad 2 (horizontal, rotated 90 deg)
-0, 0, -0.06,   0, 0, 0.06,   0, 0.18, 0.06,   0, 0.18, -0.06
+0, 0, -0.06,   0, 0, 0.06,   0, 0.04, 0.06,   0, 0.04, -0.06
 ];
 const quadUVs = [0,0, 1,0, 1,1, 0,1,  0,0, 1,0, 1,1, 0,1];
 const quadIdx = [0,1,2, 0,2,3,  4,5,6, 4,6,7];
@@ -923,7 +923,7 @@ varying float vFog;
 void main(){
 vec3 col = vColor;
 col = mix(col, uFogColor, smoothstep(28.0, 100.0, vFog));
-gl_FragColor = vec4(col, 1.0);
+gl_FragColor = vec4(col, 0.5);
 }`
 });
 const flowers = new THREE.Mesh(instancedFlowerGeo, flowerMat);
@@ -1496,14 +1496,14 @@ const glassColor = new THREE.Color(0xffc46a);
 // Helper to add geometry with vertex color
 function addProp(geo, color, position, rotation = [0,0,0], scale = [1,1,1]){
 const g = geo.clone();
-g.translate(position[0], position[1], position[2]);
+if (scale[0] !== 1 || scale[1] !== 1 || scale[2] !== 1){
+g.scale(scale[0], scale[1], scale[2]);
+}
 if (rotation[0] || rotation[1] || rotation[2]){
 const m = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(rotation[0], rotation[1], rotation[2]));
 g.applyMatrix4(m);
 }
-if (scale[0] !== 1 || scale[1] !== 1 || scale[2] !== 1){
-g.scale(scale[0], scale[1], scale[2]);
-}
+g.translate(position[0], position[1], position[2]);
 const colors = new Float32Array(g.attributes.position.count * 3);
 for(let i=0;i<colors.length;i+=3){
 colors[i] = color.r; colors[i+1] = color.g; colors[i+2] = color.b;
