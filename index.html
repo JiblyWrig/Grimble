@@ -573,6 +573,7 @@ x.fillRect(Math.random()*w, y+2+Math.random()*18, 6+Math.random()*20, 1+Math.ran
 }
 });
 woodTex.wrapS = woodTex.wrapT = THREE.RepeatWrapping;
+woodTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 const stripeTex = canvasTex(128,64,(x,w,h)=>{
 for(let i=0;i<w;i+=16){
 x.fillStyle = (i/16)%2 ? '#efe3c8' : '#bf4030';
@@ -580,6 +581,7 @@ x.fillRect(i,0,16,h);
 }
 });
 stripeTex.wrapS = THREE.RepeatWrapping; stripeTex.repeat.set(3,1);
+stripeTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 const signTex = canvasTex(256,96,(x,w,h)=>{
 x.fillStyle='#6b4526'; x.fillRect(0,0,w,h);
 x.strokeStyle='#3d2712'; x.lineWidth=8; x.strokeRect(4,4,w-8,h-8);
@@ -588,6 +590,7 @@ x.font='italic bold 42px Georgia, serif';
 x.textAlign='center'; x.textBaseline='middle';
 x.fillText("GRIMBLE'S", w/2, h/2+2);
 });
+signTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 const mapTex = canvasTex(256,128,(x,w,h)=>{
 x.fillStyle='#d4b87a'; x.fillRect(0,0,w,h);
 for(let i=0;i<200;i++){
@@ -604,6 +607,7 @@ x.stroke();
 x.beginPath(); x.arc(120, 70, 8, 0, 7); x.stroke();
 x.beginPath(); x.moveTo(120, 62); x.lineTo(120, 78); x.moveTo(112, 70); x.lineTo(128, 70); x.stroke();
 }, true);
+mapTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 /* ============================== GROUND + HOLE ============================== */
 {
 const shape = new THREE.Shape();
@@ -836,6 +840,84 @@ gl_FragColor = vec4(col,1.0);
 const grass = new THREE.Mesh(geo, grassMat);
 grass.frustumCulled = false;
 scene.add(grass);
+}
+/* ============================== WILDFLOWERS (INSTANCED) ============================== */
+const FLOWER_N = 80;
+{
+const flowerGeo = new THREE.BufferGeometry();
+const positions = [];
+const uvs = [];
+const indices = [];
+// Create 2-quad cross (4 vertices per quad, 2 quads = 8 vertices)
+const quadVerts = [
+// Quad 1 (vertical)
+-0.06, 0, 0,   0.06, 0, 0,   0.06, 0.18, 0,   -0.06, 0.18, 0,
+// Quad 2 (horizontal, rotated 90 deg)
+0, 0, -0.06,   0, 0, 0.06,   0, 0.18, 0.06,   0, 0.18, -0.06
+];
+const quadUVs = [0,0, 1,0, 1,1, 0,1,  0,0, 1,0, 1,1, 0,1];
+const quadIdx = [0,1,2, 0,2,3,  4,5,6, 4,6,7];
+flowerGeo.setAttribute('position', new THREE.Float32BufferAttribute(quadVerts, 3));
+flowerGeo.setAttribute('uv', new THREE.Float32BufferAttribute(quadUVs, 2));
+flowerGeo.setIndex(quadIdx);
+const fPos = new Float32Array(FLOWER_N*3), fCol = new Float32Array(FLOWER_N*3);
+const flowerColors = [
+[1.0, 1.0, 1.0], // white
+[1.0, 0.95, 0.4], // yellow
+[1.0, 0.65, 0.85], // pink
+[0.55, 0.75, 1.0]  // blue
+];
+for(let i=0;i<FLOWER_N;i++){
+const r = 2 + Math.random() * (WORLD_R - 3);
+const a = Math.random() * Math.PI * 2;
+fPos[i*3] = Math.cos(a) * r;
+fPos[i*3+1] = 0;
+fPos[i*3+2] = Math.sin(a) * r;
+const colIdx = Math.floor(Math.random() * flowerColors.length);
+const c = flowerColors[colIdx];
+fCol[i*3] = c[0];
+fCol[i*3+1] = c[1];
+fCol[i*3+2] = c[2];
+}
+const instancedFlowerGeo = new THREE.InstancedBufferGeometry();
+instancedFlowerGeo.index = flowerGeo.index;
+instancedFlowerGeo.setAttribute('position', flowerGeo.getAttribute('position'));
+instancedFlowerGeo.setAttribute('uv', flowerGeo.getAttribute('uv'));
+instancedFlowerGeo.setAttribute('instancePosition', new THREE.InstancedBufferAttribute(fPos, 3));
+instancedFlowerGeo.setAttribute('instanceColor', new THREE.InstancedBufferAttribute(fCol, 3));
+instancedFlowerGeo.instanceCount = FLOWER_N;
+const flowerMat = new THREE.ShaderMaterial({
+side:THREE.DoubleSide,
+transparent:true, alphaTest:0.5,
+uniforms:{ uTime:{value:0}, uFogColor:{value:FOGC} },
+vertexShader:`
+attribute vec3 instancePosition;
+attribute vec3 instanceColor;
+varying vec3 vColor;
+varying float vFog;
+void main(){
+vec3 pos = position;
+pos.y += instancePosition.y;
+pos.xz += instancePosition.xz;
+vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+vFog = -mv.z;
+vColor = instanceColor;
+gl_Position = projectionMatrix * mv;
+}`,
+fragmentShader:`
+precision mediump float;
+uniform vec3 uFogColor;
+varying vec3 vColor;
+varying float vFog;
+void main(){
+vec3 col = vColor;
+col = mix(col, uFogColor, smoothstep(28.0, 100.0, vFog));
+gl_FragColor = vec4(col, 1.0);
+}`
+});
+const flowers = new THREE.Mesh(instancedFlowerGeo, flowerMat);
+flowers.frustumCulled = false;
+scene.add(flowers);
 }
 /* ---------- pollen ---------- */
 const POLLEN_N = 90;
@@ -1369,203 +1451,186 @@ const vendor = { nextBlink:2.2, blinkT:0, waveAmt:0 };
 let lampLight;
 let catBodyMesh = null;
 {
-const stall = new THREE.Group();
-stall.position.copy(STALL_POS);
-scene.add(stall);
-const woodMat  = toonMap(woodTex);
-const woodDark = toon(0x5c3c20);
-const counter = new THREE.Mesh(new THREE.BoxGeometry(2.6,0.9,0.9), woodMat);
-counter.position.set(0,0.45,0.45); stall.add(counter);
-const counterTop = new THREE.Mesh(new THREE.BoxGeometry(2.8,0.07,1.05), woodDark);
-counterTop.position.set(0,0.93,0.45); stall.add(counterTop);
+// Stall prop geometries with vertex colors - merged for minimal draw calls
+const stallGeomParts = [];
+const woodColor = new THREE.Color(0x7a5230);
+const woodDarkColor = new THREE.Color(0x5c3c20);
+const stripeColor1 = new THREE.Color(0xefe3c8);
+const stripeColor2 = new THREE.Color(0xbf4030);
+const signBackColor = new THREE.Color(0x6b4526);
+const signTextColor = new THREE.Color(0xf2d894);
+const potColor = new THREE.Color(0xb0603a);
+const cheeseColor = new THREE.Color(0xe8c04a);
+const bottleColor = new THREE.Color(0x3f7f42);
+const sackColor = new THREE.Color(0xb09055);
+const mushroomCapColor = new THREE.Color(0xc23b2e);
+const mushroomStemColor = new THREE.Color(0xe8dcc0);
+const mapColor = new THREE.Color(0xd4b87a);
+const compassBaseColor = new THREE.Color(0x8a6a30);
+const compassRimColor = new THREE.Color(0x6a4a20);
+const compassFaceColor = new THREE.Color(0xf5ecd4);
+const needleNColor = new THREE.Color(0xd43030);
+const needleSColor = new THREE.Color(0x303040);
+const crateColor = new THREE.Color(0x7a5230);
+const barrelColor = new THREE.Color(0x7a5230);
+const bandColor = new THREE.Color(0x5c3c20);
+const catColor = new THREE.Color(0xd98f4a);
+const catDarkColor = new THREE.Color(0xb06a2e);
+const metalColor = new THREE.Color(0x2e2a26);
+const glassColor = new THREE.Color(0xffc46a);
+
+// Helper to add geometry with vertex color
+function addProp(geo, color, position, rotation = [0,0,0], scale = [1,1,1]){
+const g = geo.clone();
+g.translate(position[0], position[1], position[2]);
+if (rotation[0] || rotation[1] || rotation[2]){
+const m = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(rotation[0], rotation[1], rotation[2]));
+g.applyMatrix4(m);
+}
+if (scale[0] !== 1 || scale[1] !== 1 || scale[2] !== 1){
+g.scale(scale[0], scale[1], scale[2]);
+}
+const colors = new Float32Array(g.attributes.position.count * 3);
+for(let i=0;i<colors.length;i+=3){
+colors[i] = color.r; colors[i+1] = color.g; colors[i+2] = color.b;
+}
+g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+stallGeomParts.push(g);
+}
+
+// Counter
+addProp(new THREE.BoxGeometry(2.6,0.9,0.9), woodColor, [0,0.45,0.45]);
+addProp(new THREE.BoxGeometry(2.8,0.07,1.05), woodDarkColor, [0,0.93,0.45]);
+// Poles
 for(const sx of [-1,1]) for(const sz of [0,1]){
-const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.06,2.35,8), woodDark);
-pole.position.set(sx*1.3, 1.17, sz*0.95);
-stall.add(pole);
+addProp(new THREE.CylinderGeometry(0.05,0.06,2.35,8), woodDarkColor, [sx*1.3, 1.17, sz*0.95]);
 }
-const canopyMat = toonMap(stripeTex, { side:THREE.DoubleSide });
-const canopy = new THREE.Mesh(new THREE.PlaneGeometry(3.1,1.6), canopyMat);
-canopy.rotation.x = -Math.PI/2 + 0.24;
-canopy.position.set(0, 2.42, 0.48);
-stall.add(canopy);
-const valance = new THREE.Mesh(new THREE.PlaneGeometry(3.0,0.36), canopyMat);
-valance.position.set(0, 2.16, 1.22);
-stall.add(valance);
+// Canopy (striped - use average color or primary)
+addProp(new THREE.PlaneGeometry(3.1,1.6), stripeColor1, [0, 2.42, 0.48], [-Math.PI/2 + 0.24, 0, 0]);
+// Valance
+addProp(new THREE.PlaneGeometry(3.0,0.36), stripeColor1, [0, 2.16, 1.22]);
+// Posts
 for(const sx of [-0.62,0.62]){
-const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.6,6), woodDark);
-post.position.set(sx, 2.48, 1.16);
-stall.add(post);
+addProp(new THREE.CylinderGeometry(0.03,0.03,0.6,6), woodDarkColor, [sx, 2.48, 1.16]);
 }
-const signMat = toonMap(signTex);
-const sign = new THREE.Mesh(new THREE.BoxGeometry(1.5,0.55,0.05),
-[woodDark,woodDark,woodDark,woodDark, signMat, signMat]);
-sign.position.set(0, 3.0, 1.16);
-sign.rotation.x = -0.12;
-stall.add(sign);
-const string = new THREE.Mesh(new THREE.CylinderGeometry(0.008,0.008,2.7,5), woodDark);
-string.rotation.z = Math.PI/2;
-string.position.set(0, 2.28, 1.0);
-stall.add(string);
-const pennCols = [0xd94f3d, 0xe8b23a, 0x5b8c3e, 0x4d6fb0, 0xd94f3d];
+// Sign
+addProp(new THREE.BoxGeometry(1.5,0.55,0.05), signBackColor, [0, 3.0, 1.16], [-0.12, 0, 0]);
+// String
+addProp(new THREE.CylinderGeometry(0.008,0.008,2.7,5), woodDarkColor, [0, 2.28, 1.0], [0, 0, Math.PI/2]);
+// Pennants (use average color)
 for(let i=0;i<5;i++){
-const tri = new THREE.Mesh(new THREE.CircleGeometry(0.15,3), toon(pennCols[i], { side:THREE.DoubleSide }));
-tri.rotation.z = Math.PI;
-tri.rotation.y = 0.15*(i-2);
-tri.position.set(-1.1+i*0.55, 2.18, 1.0);
-stall.add(tri);
+const pennCol = [0xd94f3d, 0xe8b23a, 0x5b8c3e, 0x4d6fb0, 0xd94f3d][i];
+addProp(new THREE.CircleGeometry(0.15,3), new THREE.Color(pennCol), [-1.1+i*0.55, 2.18, 1.0], [0, 0.15*(i-2), Math.PI]);
 }
-const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.09,0.2,10), toon(0xb0603a));
-pot.position.set(-0.85,1.07,0.5); stall.add(pot);
-const cheese = new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.15,0.08,12), toon(0xe8c04a));
-cheese.position.set(-0.35,1.01,0.35); stall.add(cheese);
+// Pot
+addProp(new THREE.CylinderGeometry(0.13,0.09,0.2,10), potColor, [-0.85,1.07,0.5]);
+// Cheese
+addProp(new THREE.CylinderGeometry(0.15,0.15,0.08,12), cheeseColor, [-0.35,1.01,0.35]);
+// Bottles
 for(const [bx,bz] of [[0.15,0.6],[0.32,0.4]]){
-const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.24,8), toon(0x3f7f42));
-bottle.position.set(bx,1.09,bz); stall.add(bottle);
-const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,0.08,6), toon(0x3f7f42));
-neck.position.set(bx,1.25,bz); stall.add(neck);
+addProp(new THREE.CylinderGeometry(0.05,0.05,0.24,8), bottleColor, [bx,1.09,bz]);
+addProp(new THREE.CylinderGeometry(0.02,0.02,0.08,6), bottleColor, [bx,1.25,bz]);
 }
-const sack = new THREE.Mesh(new THREE.SphereGeometry(0.19,10,8), toon(0xb09055));
-sack.scale.set(1,0.75,1); sack.position.set(0.85,1.08,0.45); stall.add(sack);
-const mushroomMat = toon(0xc23b2e);
-const speckMat = new THREE.MeshBasicMaterial({ color:0xffffff });
+// Sack
+const sackGeo = new THREE.SphereGeometry(0.19,10,8);
+sackGeo.scale(1, 0.75, 1);
+addProp(sackGeo, sackColor, [0.85,1.08,0.45]);
+// Mushrooms
 for(const [mx,mz] of [[-1.05,0.32],[-0.95,0.6]]){
-const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.03,0.07,6), toon(0xe8dcc0));
-stem.position.set(mx,1.0,mz); stall.add(stem);
-const cap = new THREE.Mesh(new THREE.ConeGeometry(0.06,0.05,8), mushroomMat);
-cap.position.set(mx,1.06,mz); stall.add(cap);
+addProp(new THREE.CylinderGeometry(0.025,0.03,0.07,6), mushroomStemColor, [mx,1.0,mz]);
+addProp(new THREE.ConeGeometry(0.06,0.05,8), mushroomCapColor, [mx,1.06,mz]);
 for(let s=0;s<5;s++){
-const speck = new THREE.Mesh(new THREE.SphereGeometry(0.008,4,4), speckMat);
 const sa = (s/5)*Math.PI*2 + Math.random()*0.5;
 const sr = 0.02 + Math.random()*0.03;
-speck.position.set(mx + Math.cos(sa)*sr, 1.055 + Math.random()*0.015, mz + Math.sin(sa)*sr);
-stall.add(speck);
+addProp(new THREE.SphereGeometry(0.008,4,4), new THREE.Color(0xffffff), [mx + Math.cos(sa)*sr, 1.055 + Math.random()*0.015, mz + Math.sin(sa)*sr]);
 }
 }
-const mapMat = toonMap(mapTex);
-const mapRoll = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.35,8), mapMat);
-mapRoll.rotation.z = Math.PI/2;
-mapRoll.position.set(-0.65, 0.97, 0.55);
-stall.add(mapRoll);
-const mapFlat = new THREE.Mesh(new THREE.PlaneGeometry(0.35,0.22), mapMat);
-mapFlat.rotation.x = -Math.PI/2;
-mapFlat.rotation.z = 0.15;
-mapFlat.position.set(-0.62, 0.975, 0.78);
-stall.add(mapFlat);
+// Map roll
+addProp(new THREE.CylinderGeometry(0.04,0.04,0.35,8), mapColor, [-0.65, 0.97, 0.55], [0, 0, Math.PI/2]);
+// Map flat
+addProp(new THREE.PlaneGeometry(0.35,0.22), mapColor, [-0.62, 0.975, 0.78], [-Math.PI/2, 0, 0.15]);
+// Compass parts
+addProp(new THREE.CylinderGeometry(0.05,0.05,0.015,16), compassBaseColor, [-0.82, 0.97, 0.62]);
+addProp(new THREE.TorusGeometry(0.05,0.006,6,16), compassRimColor, [-0.82, 0.98, 0.62], [Math.PI/2, 0, 0]);
+addProp(new THREE.CircleGeometry(0.045,16), compassFaceColor, [-0.82, 0.982, 0.62], [-Math.PI/2, 0, 0]);
+addProp(new THREE.ConeGeometry(0.006,0.035,4), needleNColor, [-0.82, 0.985, 0.608], [-Math.PI/2, 0, 0.4]);
+addProp(new THREE.ConeGeometry(0.006,0.035,4), needleSColor, [-0.82, 0.985, 0.632], [Math.PI/2, 0, 0.4]);
+// Crates
+addProp(new THREE.BoxGeometry(0.55,0.55,0.55), crateColor, [-1.85,0.27,0.5], [0, 0.3, 0]);
+addProp(new THREE.BoxGeometry(0.45,0.45,0.45), crateColor, [-1.8,0.78,0.45], [0, -0.2, 0]);
+// Barrel
+addProp(new THREE.CylinderGeometry(0.28,0.24,0.62,12), barrelColor, [1.85,0.31,0.35]);
+for(const by of [0.14,0.48]){
+addProp(new THREE.TorusGeometry(0.265,0.015,6,16), bandColor, [1.85,by,0.35], [Math.PI/2, 0, 0]);
+}
+// Cat on barrel
+addProp(new THREE.SphereGeometry(0.17,12,10), catColor, [1.85, 0.71, 0.35], [0, 0, 0], [1.25, 0.55, 0.95]);
+addProp(new THREE.SphereGeometry(0.09,10,8), catColor, [1.99, 0.75, 0.44]);
+for(const s of [-1,1]){
+addProp(new THREE.ConeGeometry(0.028,0.055,5), catColor, [1.85 + s*0.045, 0.835, 0.43], [0, 0, -s*0.25]);
+}
+// Cat eyes closed
+addProp(new THREE.BoxGeometry(0.006,0.006,0.03), new THREE.Color(0x3a2a18), [2.068, 0.765, 0.425]);
+addProp(new THREE.BoxGeometry(0.006,0.006,0.03), new THREE.Color(0x3a2a18), [2.068, 0.765, 0.455]);
+// Cat nose
+addProp(new THREE.SphereGeometry(0.012,6,5), new THREE.Color(0xd46a6a), [2.078, 0.74, 0.44]);
+// Cat tail
+const tailGeo = new THREE.TorusGeometry(0.15, 0.024, 6, 14, Math.PI*1.25);
+tailGeo.rotateX(-Math.PI/2); tailGeo.rotateZ(0.6);
+addProp(tailGeo, catDarkColor, [1.83, 0.67, 0.35]);
+// Cat stripes
+for(let i=0;i<3;i++){
+const st = new THREE.SphereGeometry(0.05,8,6);
+st.scale(1, 0.3, 0.6);
+addProp(st, catDarkColor, [1.76+i*0.09, 0.79, 0.35 + (i%2?0.05:-0.04)]);
+}
+// Lamp arm
+addProp(new THREE.CylinderGeometry(0.02,0.02,0.5,6), woodDarkColor, [1.35,2.05,0.95], [0, 0, Math.PI/2]);
+// Chain
+addProp(new THREE.CylinderGeometry(0.011,0.011,0.2,5), metalColor, [lampX, 1.95, lampZ]);
+// Lantern parts
+addProp(new THREE.CylinderGeometry(0.075,0.095,0.17,6), glassColor, [lampX, 1.74, lampZ]);
+addProp(new THREE.ConeGeometry(0.11,0.1,6), metalColor, [lampX, 1.87, lampZ]);
+addProp(new THREE.CylinderGeometry(0.1,0.075,0.045,6), metalColor, [lampX, 1.635, lampZ]);
+for(let i=0;i<4;i++){
+const a = i/4*Math.PI*2 + Math.PI/4;
+addProp(new THREE.CylinderGeometry(0.008,0.008,0.18,4), metalColor, [lampX + Math.cos(a)*0.086, 1.74, lampZ + Math.sin(a)*0.086]);
+}
+addProp(new THREE.TorusGeometry(0.03,0.008,5,10), metalColor, [lampX, 1.94, lampZ]);
+
+// Merge all stall props into one geometry
+const mergedStallGeo = mergeGeometries(stallGeomParts, false);
+const stallMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+const stallMesh = new THREE.Mesh(mergedStallGeo, stallMat);
+stallMesh.position.copy(STALL_POS);
+scene.add(stallMesh);
+
+// Separate groups that need individual control (cat shadow, compass shadow, map shadow, lantern light)
+const stallShadows = new THREE.Group();
+stallShadows.position.copy(STALL_POS);
 const mapShadow = new THREE.Mesh(new THREE.PlaneGeometry(0.4,0.3),
 new THREE.MeshBasicMaterial({ map:blobTex, transparent:true, depthWrite:false, opacity:0.3 }));
 mapShadow.rotation.x = -Math.PI/2;
-mapShadow.position.set(-0.63, 0.94, 0.75);
+mapShadow.position.set(-0.62, 0.94, 0.75);
 mapShadow.renderOrder = 1;
-stall.add(mapShadow);
-const compassGroup = new THREE.Group();
-compassGroup.position.set(-0.82, 0.97, 0.62);
-const compassBase = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.015,16), toon(0x8a6a30));
-compassGroup.add(compassBase);
-const compassRim = new THREE.Mesh(new THREE.TorusGeometry(0.05,0.006,6,16), toon(0x6a4a20));
-compassRim.rotation.x = Math.PI/2; compassRim.position.y = 0.01;
-compassGroup.add(compassRim);
-const compassFace = new THREE.Mesh(new THREE.CircleGeometry(0.045,16), toon(0xf5ecd4));
-compassFace.rotation.x = -Math.PI/2; compassFace.position.y = 0.012;
-compassGroup.add(compassFace);
-const needleN = new THREE.Mesh(new THREE.ConeGeometry(0.006,0.035,4), toon(0xd43030));
-needleN.rotation.x = -Math.PI/2; needleN.rotation.z = 0.4; needleN.position.set(0, 0.015, -0.012);
-compassGroup.add(needleN);
-const needleS = new THREE.Mesh(new THREE.ConeGeometry(0.006,0.035,4), toon(0x303040));
-needleS.rotation.x = Math.PI/2; needleS.rotation.z = 0.4; needleS.position.set(0, 0.015, 0.012);
-compassGroup.add(needleS);
-stall.add(compassGroup);
+stallShadows.add(mapShadow);
 const compassShadow = new THREE.Mesh(new THREE.PlaneGeometry(0.15,0.15),
 new THREE.MeshBasicMaterial({ map:blobTex, transparent:true, depthWrite:false, opacity:0.35 }));
 compassShadow.rotation.x = -Math.PI/2;
 compassShadow.position.set(-0.82, 0.94, 0.62);
 compassShadow.renderOrder = 1;
-stall.add(compassShadow);
-const crate1 = new THREE.Mesh(new THREE.BoxGeometry(0.55,0.55,0.55), woodMat);
-crate1.position.set(-1.85,0.27,0.5); crate1.rotation.y = 0.3; stall.add(crate1);
-const crate2 = new THREE.Mesh(new THREE.BoxGeometry(0.45,0.45,0.45), woodMat);
-crate2.position.set(-1.8,0.78,0.45); crate2.rotation.y = -0.2; stall.add(crate2);
-const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.24,0.62,12), woodMat);
-barrel.position.set(1.85,0.31,0.35); stall.add(barrel);
-for(const by of [0.14,0.48]){
-const band = new THREE.Mesh(new THREE.TorusGeometry(0.265,0.015,6,16), woodDark);
-band.rotation.x = Math.PI/2; band.position.set(1.85,by,0.35); stall.add(band);
-}
-/* ---------- sleeping cat on the barrel ---------- */
-{
-const catGroup = new THREE.Group();
-catGroup.position.set(1.85, 0.62, 0.35);
-const catMat = toon(0xd98f4a);
-const catDark = toon(0xb06a2e);
-const catBody = new THREE.Mesh(new THREE.SphereGeometry(0.17,12,10), catMat);
-catBody.scale.set(1.25, 0.55, 0.95);
-catBody.position.y = 0.09;
-catGroup.add(catBody);
-catBodyMesh = catBody;
-const catHead = new THREE.Mesh(new THREE.SphereGeometry(0.09,10,8), catMat);
-catHead.position.set(0.14, 0.13, 0.09);
-catGroup.add(catHead);
-for(const s of [-1,1]){
-const ear = new THREE.Mesh(new THREE.ConeGeometry(0.028,0.055,5), catMat);
-ear.position.set(0.14 + s*0.045, 0.215, 0.08);
-ear.rotation.z = -s*0.25;
-catGroup.add(ear);
-}
-// closed eyes
-for(const s of [-1,1]){
-const eye = new THREE.Mesh(new THREE.BoxGeometry(0.006,0.006,0.03), new THREE.MeshBasicMaterial({color:0x3a2a18}));
-eye.position.set(0.218, 0.145, 0.09 + s*0.035);
-catGroup.add(eye);
-}
-// nose
-const cNose = new THREE.Mesh(new THREE.SphereGeometry(0.012,6,5), toon(0xd46a6a));
-cNose.position.set(0.228, 0.12, 0.09);
-catGroup.add(cNose);
-// curled tail
-const tail = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.024, 6, 14, Math.PI*1.25), catDark);
-tail.rotation.x = -Math.PI/2;
-tail.rotation.z = 0.6;
-tail.position.set(-0.02, 0.05, 0);
-catGroup.add(tail);
-// stripes
-for(let i=0;i<3;i++){
-const st = new THREE.Mesh(new THREE.SphereGeometry(0.05,8,6), catDark);
-st.scale.set(1, 0.3, 0.6);
-st.position.set(-0.09+i*0.09, 0.17, (i%2?0.05:-0.04));
-catGroup.add(st);
-}
-// soft shadow under cat on barrel top
+stallShadows.add(compassShadow);
 const catShadow = new THREE.Mesh(new THREE.PlaneGeometry(0.5,0.5),
 new THREE.MeshBasicMaterial({ map:blobTex, transparent:true, depthWrite:false, opacity:0.5 }));
 catShadow.rotation.x = -Math.PI/2;
 catShadow.position.y = 0.012;
 catShadow.renderOrder = 2;
-catGroup.add(catShadow);
-stall.add(catGroup);
-}
-const lampX = 1.58, lampZ = 0.95;
-const lampArm = new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,0.5,6), woodDark);
-lampArm.rotation.z = Math.PI/2; lampArm.position.set(1.35,2.05,0.95); stall.add(lampArm);
-const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.011,0.011,0.2,5), toon(0x2e2a26));
-chain.position.set(lampX, 1.95, lampZ); stall.add(chain);
-const lantern = new THREE.Group();
-lantern.position.set(lampX, 1.74, lampZ);
-stall.add(lantern);
-const metal = toon(0x2e2a26);
-const glass = new THREE.MeshBasicMaterial({ color:0xffc46a });
-lantern.add(new THREE.Mesh(new THREE.CylinderGeometry(0.075,0.095,0.17,6), glass));
-const lTop = new THREE.Mesh(new THREE.ConeGeometry(0.11,0.1,6), metal); lTop.position.y = 0.13; lantern.add(lTop);
-const lBot = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.075,0.045,6), metal); lBot.position.y = -0.105; lantern.add(lBot);
-for(let i=0;i<4;i++){
-const a = i/4*Math.PI*2 + Math.PI/4;
-const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.008,0.008,0.18,4), metal);
-bar.position.set(Math.cos(a)*0.086, 0, Math.sin(a)*0.086);
-lantern.add(bar);
-}
-const lRing = new THREE.Mesh(new THREE.TorusGeometry(0.03,0.008,5,10), metal);
-lRing.position.y = 0.2; lantern.add(lRing);
+stallShadows.add(catShadow);
+scene.add(stallShadows);
+
 lampLight = new THREE.PointLight(0xffb05c, 14, 9, 2);
-lampLight.position.set(lampX, 1.74, lampZ);
-stall.add(lampLight);
+lampLight.position.set(STALL_POS.x + lampX, 1.74, STALL_POS.z + lampZ);
+scene.add(lampLight);
 const skin  = toon(0x9161cf);
 const skinD = toon(0x7248ab);
 const grey  = toon(0xc9c9c9);
