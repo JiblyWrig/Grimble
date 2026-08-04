@@ -1590,6 +1590,8 @@ const st = new THREE.SphereGeometry(0.05,8,6);
 st.scale(1, 0.3, 0.6);
 addProp(st, catDarkColor, [1.76+i*0.09, 0.79, 0.35 + (i%2?0.05:-0.04)]);
 }
+// Lamp position relative to stall
+const lampX = 1.35, lampZ = 0.95;
 // Lamp arm
 addProp(new THREE.CylinderGeometry(0.02,0.02,0.5,6), woodDarkColor, [1.35,2.05,0.95], [0, 0, Math.PI/2]);
 // Chain
