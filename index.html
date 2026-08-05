@@ -427,6 +427,7 @@ let holeGlowSprite = null;
 let holeDustMat = null;
 let grassMat = null;
 let holeRim = null;
+let plugGrass = null;
 /* Rain every 5 minutes: 300s clear, 10s fade in, 120s rain, 10s fade out */
 const RAIN_CYCLE = 440;
 const RAIN_START = 300;
@@ -927,7 +928,7 @@ while(i<GRASS_N){
 const r = Math.sqrt(Math.random())*(GROUND_R-3), a = Math.random()*Math.PI*2;
 const x = Math.cos(a)*r, z = Math.sin(a)*r;
 if (r > WORLD_R && Math.random() > 0.3) continue;
-if (Math.hypot(x,z) < HOLE_R+0.7) continue;
+if (Math.hypot(x,z) < HOLE_R+0.25) continue;
 if (Math.hypot(x-RUG_CENTER.x, z-RUG_CENTER.z) < RUG_R+0.15) continue;
 if (x > STALL_POS.x-2.4 && x < STALL_POS.x+2.4 && z > STALL_POS.z-1.15 && z < STALL_POS.z+1.65) continue;
 if (Math.hypot(x-WITCH_POS.x, z-WITCH_POS.z) < 1.6) continue;
@@ -986,6 +987,26 @@ gl_FragColor = vec4(col,1.0);
 const grass = new THREE.Mesh(geo, grassMat);
 grass.frustumCulled = false;
 scene.add(grass);
+/* grass covering the hole plug — falls away with the hole in the intro */
+{
+const R = HOLE_R + 0.25;
+const N = isMobile() ? 36 : 100;
+const pPos = new Float32Array(N*3), pInfo = new Float32Array(N*4);
+for(let i=0;i<N;i++){
+const r = Math.sqrt(Math.random())*R, a = Math.random()*Math.PI*2;
+pPos.set([Math.cos(a)*r, 0, Math.sin(a)*r], i*3);
+pInfo.set([Math.random(), 0.194+Math.random()*0.243, 0.7+Math.random()*0.7, Math.random()], i*4);
+}
+const g2 = new THREE.InstancedBufferGeometry();
+g2.index = blade.index;
+g2.setAttribute('position', blade.getAttribute('position'));
+g2.setAttribute('aPos', new THREE.InstancedBufferAttribute(pPos,3));
+g2.setAttribute('aInfo', new THREE.InstancedBufferAttribute(pInfo,4));
+g2.instanceCount = N;
+plugGrass = new THREE.Mesh(g2, grassMat);
+plugGrass.frustumCulled = false;
+scene.add(plugGrass);
+}
 }
 /* ============================== WILDFLOWERS (INSTANCED) ============================== */
 const FLOWER_N = 80;
@@ -2500,12 +2521,18 @@ if (holeRim) holeRim.material.opacity = k; // dirt rim fades in as the hole tear
 introPlug.position.y = 0.02 - k*2.8;
 introPlug.rotation.z = k*0.6;
 introPlug.scale.setScalar(Math.max(0.001, 1 - k*0.35));
+if (plugGrass){
+plugGrass.position.y = introPlug.position.y;
+plugGrass.rotation.z = introPlug.rotation.z;
+plugGrass.scale.copy(introPlug.scale);
+}
 }
 // hole fully open
 if (t > 4.6 && !c.plugged){
 c.plugged = true;
 if (holeRim) holeRim.material.opacity = 1;
 scene.remove(introPlug);
+if (plugGrass){ scene.remove(plugGrass); plugGrass = null; }
 dirtBurst.burst(0, 0.1, 0, 3.2, 4.5);
 shake = Math.max(shake, 0.95);
 tone(60, 0.7, 'sine', 0.35, 0, -30);
