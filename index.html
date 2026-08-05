@@ -114,6 +114,16 @@ border:2px solid #7a5a1e;
 border-radius:14px;
 box-shadow:0 12px 32px rgba(0,0,0,.7), inset 0 0 24px rgba(0,0,0,.35); }
 #dialog.hidden { display:none; }
+#holeThought { position:fixed; left:50%; bottom:16vh; transform:translateX(-50%); z-index:16;
+max-width:560px; padding:16px 26px; text-align:center;
+background:linear-gradient(160deg, rgba(26,42,18,.94), rgba(12,21,9,.96));
+border:2px solid #7a5a1e; border-radius:12px;
+box-shadow:0 12px 32px rgba(0,0,0,.7), inset 0 0 24px rgba(0,0,0,.35);
+font-family:'MedievalSharp',cursive; font-size:19px; color:#e8f2d6; line-height:1.4;
+opacity:0; transition:opacity .8s; pointer-events:none; }
+#holeThought.show { opacity:1; }
+#holeThought::after { content:''; position:absolute; left:50%; bottom:-9px; margin-left:-8px;
+border:8px solid transparent; border-top-color:#7a5a1e; border-bottom:none; }
 .dlgName { font-family:'MedievalSharp',cursive; color:#f5cf5f; font-size:22px; letter-spacing:3px; margin-bottom:10px;
 text-shadow:0 2px 0 #6b4a10, 0 3px 8px #000; }
 #dlgText { font-family:'MedievalSharp',cursive; color:#e8f2d6; font-size:21px; line-height:1.5; min-height:76px; }
@@ -352,6 +362,7 @@ to { opacity:0; transform:translate(-50%,-50%) rotate(-2deg) scale(1.05); }
 <div id="fadeBlack"></div>
 <div id="letterbox"><div class="bar top"></div><div class="bar bot"></div></div>
 <div id="cineCap"></div>
+<div id="holeThought"><span id="htText"></span></div>
 <div id="prestigeText">the hole grows hungrier...</div>
 <div id="dialog" class="hidden">
 <div class="dlgName">MAUD</div>
@@ -2737,7 +2748,6 @@ hideCap();
 for (const s of c.stars) scene.remove(s);
 snapCameraToPlayer();
 cine = null;
-toast('Feed the hole…');
 }
 return;
 }
@@ -3730,9 +3740,9 @@ aFilter.frequency.setTargetAtTime(900 + Math.random()*800, t, 2.0);
 aGain.gain.setTargetAtTime(0.0054 + Math.random()*0.0063, t, 2.0);
 setTimeout(windWander, dur*800);
 }
-let musicOn = false, musicGain = null;
+let musicOn = false, musicGain = null, musicDelay = null;
 const DORIAN = [293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25, 587.33];
-let melodyIdx = 3;
+let melodyIdx = 3, mBeat = 0;
 function startMusic(){
 if (!AC || musicOn) return; musicOn = true;
 const panner = AC.createPanner();
@@ -3745,36 +3755,93 @@ panner.positionZ.value = STALL_POS.z;
 } else panner.setPosition(STALL_POS.x, 1.6, STALL_POS.z);
 panner.connect(master);
 musicGain = AC.createGain(); musicGain.gain.value = 0.55; musicGain.connect(panner);
-const dg = AC.createGain(); dg.gain.value = 0.032;
+/* tavern-space echo */
+musicDelay = AC.createDelay(1.0); musicDelay.delayTime.value = 0.29;
+const fb = AC.createGain(); fb.gain.value = 0.28;
+const damp = AC.createBiquadFilter(); damp.type='lowpass'; damp.frequency.value = 1600;
+musicDelay.connect(damp); damp.connect(fb); fb.connect(musicDelay);
+const wet = AC.createGain(); wet.gain.value = 0.16;
+musicDelay.connect(wet); wet.connect(musicGain);
+/* hurdy-gurdy drone: root + fifth, slow breathing */
+const dg = AC.createGain(); dg.gain.value = 0.030;
 const o1 = AC.createOscillator(); o1.type='sine'; o1.frequency.value = 146.83;
 const o2 = AC.createOscillator(); o2.type='triangle'; o2.frequency.value = 73.42;
-o1.connect(dg); o2.connect(dg); dg.connect(musicGain);
-o1.start(); o2.start();
+const o3 = AC.createOscillator(); o3.type='sine'; o3.frequency.value = 220.00;
+const g3 = AC.createGain(); g3.gain.value = 0.4;
+const breath = AC.createOscillator(); breath.frequency.value = 0.11;
+const breathG = AC.createGain(); breathG.gain.value = 0.008;
+breath.connect(breathG); breathG.connect(dg.gain);
+o1.connect(dg); o2.connect(dg); o3.connect(g3); g3.connect(dg); dg.connect(musicGain);
+o1.start(); o2.start(); o3.start(); breath.start();
 scheduleMelody();
 }
 function fadeMusic(target){
 if (musicGain && AC) musicGain.gain.setTargetAtTime(target, AC.currentTime, 0.5);
 }
-function pluck(f, when, vol){
+function lutePluck(f, when, vol){
 const o = AC.createOscillator(); o.type='triangle'; o.frequency.value = f;
-const o2 = AC.createOscillator(); o2.type='sine'; o2.frequency.value = f*2.01;
+const o2 = AC.createOscillator(); o2.type='sawtooth'; o2.frequency.value = f*1.006;
+const g2 = AC.createGain(); g2.gain.value = 0.22;
+const lp = AC.createBiquadFilter(); lp.type='lowpass';
+lp.frequency.setValueAtTime(2600, when); lp.frequency.exponentialRampToValueAtTime(500, when+0.5);
 const g = AC.createGain();
-g.gain.setValueAtTime(0.0001, when);
-g.gain.linearRampToValueAtTime(vol, when+0.012);
-g.gain.exponentialRampToValueAtTime(0.0001, when+0.95);
-const g2 = AC.createGain(); g2.gain.value = 0.25;
-o.connect(g); o2.connect(g2); g2.connect(g); g.connect(musicGain);
-o.start(when); o.stop(when+1); o2.start(when); o2.stop(when+1);
+g.gain.setValueAtTime(0.0001, when); g.gain.linearRampToValueAtTime(vol, when+0.008);
+g.gain.exponentialRampToValueAtTime(0.0001, when+0.7);
+o.connect(lp); o2.connect(g2); g2.connect(lp); lp.connect(g);
+g.connect(musicGain); g.connect(musicDelay);
+o.start(when); o.stop(when+0.8); o2.start(when); o2.stop(when+0.8);
+}
+function fluteNote(f, when, dur, vol){
+const o = AC.createOscillator(); o.type='sine';
+const vib = AC.createOscillator(); vib.frequency.value = 5.2;
+const vibG = AC.createGain(); vibG.gain.value = f*0.006;
+vib.connect(vibG); vibG.connect(o.frequency);
+const g = AC.createGain();
+g.gain.setValueAtTime(0.0001, when); g.gain.linearRampToValueAtTime(vol, when+0.06);
+g.gain.setValueAtTime(vol, when+Math.max(0.07,dur-0.08)); g.gain.exponentialRampToValueAtTime(0.0001, when+dur);
+o.connect(g); g.connect(musicGain); g.connect(musicDelay);
+o.start(when); o.stop(when+dur+0.05); vib.start(when); vib.stop(when+dur+0.05);
+}
+function drumHit(when, vol){
+const o = AC.createOscillator(); o.type='sine';
+o.frequency.setValueAtTime(120, when); o.frequency.exponentialRampToValueAtTime(55, when+0.12);
+const g = AC.createGain(); g.gain.setValueAtTime(vol, when); g.gain.exponentialRampToValueAtTime(0.0001, when+0.18);
+o.connect(g); g.connect(musicGain);
+o.start(when); o.stop(when+0.2);
+}
+function shaker(when, vol){
+const n = AC.createBufferSource(); n.buffer = noiseBuf;
+const f = AC.createBiquadFilter(); f.type='highpass'; f.frequency.value = 6000;
+const g = AC.createGain(); g.gain.setValueAtTime(vol, when); g.gain.exponentialRampToValueAtTime(0.0001, when+0.06);
+n.connect(f); f.connect(g); g.connect(musicGain);
+n.start(when); n.stop(when+0.08);
 }
 function scheduleMelody(){
 if (!AC) return;
 if (shopOpen){ setTimeout(scheduleMelody, 1000); return; }
-const beat = 0.42 + Math.random()*0.12;
-if (Math.random() < 0.78){
+const when = AC.currentTime + 0.06;
+const beat = 0.40 + Math.random()*0.08;
+const b = mBeat % 8;
+/* frame drum + shaker groove */
+if (b === 0) drumHit(when, 0.09);
+if (b === 4) drumHit(when, 0.06);
+if (b === 6 && Math.random() < 0.5) drumHit(when, 0.05);
+if (b % 2 === 1 && Math.random() < 0.75) shaker(when, 0.025);
+/* lute: wandering modal line, occasional organum fifth / bass octave */
+if (Math.random() < 0.72){
 melodyIdx = THREE.MathUtils.clamp(melodyIdx + Math.round((Math.random()-0.5)*3), 0, 7);
-pluck(DORIAN[melodyIdx], AC.currentTime, 0.07);
-if (Math.random() < 0.2) pluck(DORIAN[Math.max(0,melodyIdx-2)], AC.currentTime+0.02, 0.038);
+const f = DORIAN[melodyIdx];
+lutePluck(f, when, 0.065);
+if (Math.random() < 0.25) lutePluck(f*1.5, when+0.02, 0.028);
+if (Math.random() < 0.18) lutePluck(f*0.5, when, 0.03);
 }
+/* recorder phrase at the top of each two-bar cycle */
+if (b === 0 && Math.random() < 0.8){
+const i1 = 3 + Math.floor(Math.random()*4);
+fluteNote(DORIAN[i1], when, beat*1.8, 0.05);
+if (Math.random() < 0.6) fluteNote(DORIAN[Math.max(0, i1-1+Math.floor(Math.random()*3))], when+beat*2, beat*1.6, 0.045);
+}
+mBeat++;
 setTimeout(scheduleMelody, beat*1000);
 }
 /* ============================== LENS FLARE ============================== */
@@ -3867,6 +3934,32 @@ ovSub.textContent = 'The goblin waits, coin in hand…';
 ovGoal.textContent = '';
 ovBtn.textContent = 'RESUME';
 overlay.classList.remove('hidden');
+}
+/* ---------- first sight of the hole ---------- */
+const holeThoughtEl = document.getElementById('holeThought');
+const htTextEl = document.getElementById('htText');
+const HT_LINE = 'What in the name of Kraz is this hole doing here?';
+let holeThoughtDone = false, holeThoughtActive = false, holeThoughtT = 0, htTimer = null;
+function updateHoleThought(dt){
+if (!holeThoughtDone && introDone && !cine && locked && camMode === 'play' && !shopOpen && !dlgOpen &&
+Math.hypot(player.pos.x, player.pos.z) < 4.5){
+holeThoughtDone = true;
+holeThoughtActive = true;
+holeThoughtT = 0;
+holeThoughtEl.classList.add('show');
+let i = 0;
+htTextEl.textContent = '';
+htTimer = setInterval(()=>{ i++; htTextEl.textContent = HT_LINE.slice(0,i); if (i >= HT_LINE.length) clearInterval(htTimer); }, 42);
+tone(520,0.08,'triangle',0.08);
+}
+if (holeThoughtActive){
+holeThoughtT += dt;
+if (holeThoughtT > 5){
+holeThoughtActive = false;
+holeThoughtEl.classList.remove('show');
+if (htTimer) clearInterval(htTimer);
+}
+}
 }
 /* ============================== INPUT / FLOW ============================== */
 addEventListener('keydown', e=>{
@@ -4307,6 +4400,7 @@ camera.position.x += (Math.random()-0.5)*0.14*shake;
 camera.position.y += (Math.random()-0.5)*0.10*shake;
 camera.position.z += (Math.random()-0.5)*0.14*shake;
 }
+updateHoleThought(dt);
 if (menuReady) updateMenu(dt, elapsed);
 updateFlare();
 renderer.render(scene, camera);
