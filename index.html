@@ -908,12 +908,62 @@ const arr = new Float32Array(n*3);
 for(let i=0;i<n;i++){ arr[i*3]=c.r; arr[i*3+1]=c.g; arr[i*3+2]=c.b; }
 g.setAttribute('color', new THREE.BufferAttribute(arr,3));
 }
-const trunk = new THREE.CylinderGeometry(0.22,0.42,3.84,6); trunk.translate(0,1.92,0); paint(trunk,0x6b4a2a);
-const c1 = new THREE.ConeGeometry(2.3,5.28,7);  c1.translate(0,3.84,0); paint(c1,0x2e6b34);
-const c2 = new THREE.ConeGeometry(1.8,4.32,7);  c2.translate(0,6.72,0); paint(c2,0x357a3c);
-const c3 = new THREE.ConeGeometry(1.25,3.6,7);  c3.translate(0,9.36,0); paint(c3,0x3f8a45);
+function remapUV(g,u0,u1,v0,v1){
+const uv = g.getAttribute('uv');
+for(let i=0;i<uv.count;i++){
+uv.setXY(i, u0 + uv.getX(i)*(u1-u0), v0 + uv.getY(i)*(v1-v0));
+}
+}
+/* bark + needle atlas: left half bark, right half needles */
+const treeTex = canvasTex(256,256,(x,w,h)=>{
+/* ---- bark (left half) ---- */
+x.save(); x.beginPath(); x.rect(0,0,w/2,h); x.clip();
+x.fillStyle='#6b4a2a'; x.fillRect(0,0,w/2,h);
+for(let i=0;i<26;i++){
+x.fillStyle=`rgba(${Math.random()<0.5?'38,24,12':'122,88,54'},${0.18+Math.random()*0.22})`;
+x.fillRect(Math.random()*(w/2),0,2+Math.random()*5,h);
+}
+for(let i=0;i<160;i++){
+x.fillStyle=`rgba(${Math.random()<0.5?'30,18,8':'150,110,70'},${0.05+Math.random()*0.12})`;
+x.fillRect(Math.random()*(w/2), Math.random()*h, 1+Math.random()*3, 4+Math.random()*18);
+}
+for(let i=0;i<26;i++){
+x.fillStyle='rgba(20,10,4,0.25)';
+x.fillRect(Math.random()*(w/2), Math.random()*h, 6+Math.random()*16, 1+Math.random()*2);
+}
+x.restore();
+/* ---- needles (right half) ---- */
+x.save(); x.beginPath(); x.rect(w/2,0,w/2,h); x.clip();
+x.fillStyle='#2e6b34'; x.fillRect(w/2,0,w/2,h);
+for(let i=0;i<46;i++){
+const r=4+Math.random()*10;
+const cx=w/2+Math.random()*(w/2), cy=Math.random()*h;
+const g=x.createRadialGradient(cx,cy,0,cx,cy,r);
+g.addColorStop(0,`rgba(16,42,18,${0.12+Math.random()*0.18})`);
+g.addColorStop(1,'rgba(16,42,18,0)');
+x.fillStyle=g; x.beginPath(); x.arc(cx,cy,r,0,7); x.fill();
+}
+for(let i=0;i<1100;i++){
+const t=Math.random();
+x.fillStyle = t<0.42 ? `rgba(18,48,20,${0.15+Math.random()*0.2})` : t<0.82 ? `rgba(70,140,60,${0.10+Math.random()*0.18})` : `rgba(126,190,96,${0.08+Math.random()*0.15})`;
+const a=Math.random()*Math.PI*2, l=2+Math.random()*5;
+x.save(); x.translate(w/2+Math.random()*(w/2), Math.random()*h); x.rotate(a); x.fillRect(-l/2,-0.7,l,1.4); x.restore();
+}
+x.restore();
+});
+treeTex.wrapS = THREE.ClampToEdgeWrapping;
+treeTex.wrapT = THREE.RepeatWrapping;
+treeTex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
+const trunk = new THREE.CylinderGeometry(0.22,0.42,3.84,6); trunk.translate(0,1.92,0);
+remapUV(trunk, 0.01,0.47, 0.0,1.0); paint(trunk,0xe8d4c0);
+const c1 = new THREE.ConeGeometry(2.3,5.28,7);  c1.translate(0,3.84,0);
+remapUV(c1, 0.53,0.99, 0.0,2.0); paint(c1,0xbfd4bf);
+const c2 = new THREE.ConeGeometry(1.8,4.32,7);  c2.translate(0,6.72,0);
+remapUV(c2, 0.53,0.99, 0.0,2.0); paint(c2,0xd2e4d2);
+const c3 = new THREE.ConeGeometry(1.25,3.6,7);  c3.translate(0,9.36,0);
+remapUV(c3, 0.53,0.99, 0.0,2.0); paint(c3,0xe4f4e4);
 const treeGeo = mergeGeometries([trunk,c1,c2,c3]);
-const treeMat = new THREE.MeshToonMaterial({ vertexColors:true, gradientMap:gradTex });
+const treeMat = new THREE.MeshToonMaterial({ map:treeTex, vertexColors:true, gradientMap:gradTex });
 const mats = [];
 const placed = [];
 const MIN2 = 1.8*1.8;
