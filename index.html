@@ -128,6 +128,7 @@ border:8px solid transparent; border-top-color:#7a5a1e; border-bottom:none; }
 .dlgName { font-family:'MedievalSharp',cursive; color:#f5cf5f; font-size:22px; letter-spacing:3px; margin-bottom:10px;
 text-shadow:0 2px 0 #6b4a10, 0 3px 8px #000; }
 #dlgText { font-family:'MedievalSharp',cursive; color:#e8f2d6; font-size:21px; line-height:1.5; min-height:76px; }
+#dialog.grimVoice #dlgText { font-size:25.2px; } /* Grimble speaks 20% larger */
 .dlgWord { display:inline-block; animation:wordSway 2.2s ease-in-out infinite; }
 @keyframes wordSway { 0%,100% { transform:translateY(0) rotate(0deg); } 50% { transform:translateY(-3px) rotate(0.6deg); } }
 #dlgHint { margin-top:10px; font-size:12px; color:#a9c48a; font-weight:800; letter-spacing:1px; }
@@ -3210,7 +3211,7 @@ function setDlgLine(txt){
 if (typeTimer){ clearInterval(typeTimer); typeTimer = null; }
 dlgTextEl.innerHTML = '';
 const words = txt.split(' ');
-let wi = 0, ci = 0, cur = null;
+let wi = 0, ci = 0, cur = null, chars = 0;
 typeTimer = setInterval(()=>{
 if (wi >= words.length){ clearInterval(typeTimer); typeTimer = null; return; }
 if (!cur){
@@ -3220,6 +3221,8 @@ cur.style.animationDelay = (-(wi*0.41)%2.2).toFixed(2)+'s';
 dlgTextEl.appendChild(cur);
 }
 cur.textContent += words[wi].charAt(ci);
+chars++;
+if (chars % 2 === 0) dlgTick(); // tick on every 2nd letter
 ci++;
 if (ci >= words[wi].length){
 if (wi < words.length-1) dlgTextEl.appendChild(document.createTextNode(' '));
@@ -3228,9 +3231,20 @@ wi++; ci = 0; cur = null;
 }, 34);
 }
 let dlgCfg = null;
+let dlgVoice = 'grim'; // 'grim' = low ticks · 'maud' = high ticks
 const dlgNameEl = document.querySelector('.dlgName');
+function dlgTick(){
+if (!AC || !settings.sfx) return;
+if (dlgVoice === 'maud'){
+tone(620 + Math.random()*160, 0.03, 'square', 0.014);
+} else {
+tone(140 + Math.random()*40, 0.04, 'square', 0.0245);
+}
+}
 function openDlg(cfg){
 dlgCfg = cfg;
+dlgVoice = (cfg.name === 'MAUD') ? 'maud' : 'grim';
+dialogEl.classList.toggle('grimVoice', dlgVoice === 'grim');
 dlgOpen = true; dlgLine = 0;
 dlgNameEl.textContent = cfg.name;
 dialogEl.classList.remove('hidden');
@@ -4433,6 +4447,7 @@ let prodIntroDone = false;
 let menuParX = 0, menuParY = 0;
 let menuRevealT = 0, menuTitleLanded = false, menuBtnPuff = false, menuBtnLanded = false, menuTitleDust = false;
 let menuHolding = false, menuHold = 0;
+let menuDolly = 0; // seconds spent on the menu: drives the 60s slow dolly-in
 let menuTitle = null, menuBtn = null, menuBar = null;
 let menuLetters = [];
 let menuBtnHit = [], menuBtnMat = null;
@@ -4807,13 +4822,19 @@ rainUpdateAccum = 0;
 updateRainDisplay();
 }
 sun.position.copy(player.pos).addScaledVector(sunDir, 30);
+
 if (!started && !cine){
 // main menu orbit (pulls in while holding the button) + mouse parallax
+// + 60s slow dolly-in: camera distance eases from 100% to 50% so the menu never feels static
+if (menuReady && prodIntroDone) menuDolly = Math.min(60, menuDolly + dt);
+const dk = sm(menuDolly/60);        // 0 → 1 over 60s, then holds at 1
+const zoom = 1 - 0.5*dk;            // max zoom: 50% of the starting distance
 const t = elapsed*0.12;
-const rad = 11 - menuHold*2.2;
+const rad = (11 - menuHold*2.2) * zoom;
 menuParX += (menuNdc.x*1.5 - menuParX)*Math.min(1, 3*dt);
 menuParY += (menuNdc.y*0.8 - menuParY)*Math.min(1, 3*dt);
-camera.position.set(Math.sin(t)*rad + menuParX, 4.3+Math.sin(elapsed*0.3)*0.4 - menuHold*0.5 + menuParY, Math.cos(t)*rad);
+const hy = (4.3 - 1.5*dk) + Math.sin(elapsed*0.3)*0.4 - menuHold*0.5;
+camera.position.set(Math.sin(t)*rad + menuParX, hy + menuParY, Math.cos(t)*rad);
 camera.lookAt(menuParX*0.4, 0.3 + menuHold*0.6 + menuParY*0.3, 0);
 } else {
 if (locked && !cine) updatePlayer(dt);
