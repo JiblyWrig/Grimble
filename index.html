@@ -214,13 +214,13 @@ repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0 1px, transparent 1px 5px
 linear-gradient(165deg, rgb(30,46,20), rgb(12,20,8));
 border:2px solid rgba(212,175,55,.5);
 box-shadow:0 6px 18px #000c; }
-.face.front { inset:0; transform:translateZ(28.08px); }
-.face.back { inset:0; transform:rotateY(180deg) translateZ(28.08px); background:linear-gradient(165deg,#141f0d,#0a1206); }
-.face.left, .face.right { width:56.16px; left:50%; margin-left:-28.08px; top:0; height:100%; border-radius:6px;
+.face.front { inset:0; transform:translateZ(56.16px); }
+.face.back { inset:0; transform:rotateY(180deg) translateZ(56.16px); background:linear-gradient(165deg,#141f0d,#0a1206); }
+.face.left, .face.right { width:112.32px; left:50%; margin-left:-56.16px; top:0; height:100%; border-radius:6px;
 background:linear-gradient(180deg,#1c2b12,#0a1406); border-color:rgba(212,175,55,.35); }
 .face.left { transform:rotateY(-90deg) translateZ(61px); }
 .face.right { transform:rotateY(90deg) translateZ(61px); }
-.face.top, .face.bottom { height:56.16px; top:50%; margin-top:-28.08px; left:0; width:100%; border-radius:6px;
+.face.top, .face.bottom { height:112.32px; top:50%; margin-top:-56.16px; left:0; width:100%; border-radius:6px;
 background:linear-gradient(90deg,#1c2b12,#0a1406); border-color:rgba(212,175,55,.35); }
 .face.top { transform:rotateX(90deg) translateZ(59px); }
 .face.bottom { transform:rotateX(-90deg) translateZ(59px); }
@@ -247,7 +247,7 @@ pointer-events:none; opacity:0; }
 0%   { transform:rotateY(-190deg) translateZ(76px); opacity:0; }
 18%  { opacity:1; }
 70%  { transform:rotateY(-14deg) translateZ(70px); opacity:1; }
-100% { transform:rotateY(0deg) translateZ(32px); opacity:1; }
+100% { transform:rotateY(0deg) translateZ(60px); opacity:1; }
 }
 .tnode.max:hover { transform:translate(-50%,-50%) scale(1.12); }
 .tnode .ico { display:flex; justify-content:center; color:#c9c0a6; margin-top:10px; }
@@ -1255,15 +1255,20 @@ g.inner = new THREE.Group();
 g.root.add(g.inner);
 const body = new THREE.Mesh(new THREE.SphereGeometry(0.27,12,10), skinD);
 body.scale.set(1,1.15,0.9); body.position.y = 0.56; g.inner.add(body);
+g.isBub = bub;
 g.head = new THREE.Group(); g.head.position.y = 0.97; g.inner.add(g.head);
+if (bub) g.head.scale.setScalar(1.2); // Bub's head 20% bigger
 g.head.add(new THREE.Mesh(new THREE.SphereGeometry(0.21,12,10), skin));
-const nose = new THREE.Mesh(new THREE.SphereGeometry(0.05,8,6), skin); nose.position.set(0,-0.03,0.2); g.head.add(nose);
+const nose = new THREE.Mesh(new THREE.SphereGeometry(0.05,8,6), skin); nose.position.set(0,-0.03,0.2); nose.visible = !bub; g.head.add(nose);
+const eb = bub ? 1.4 : 1;             // Bub's eyes 40% bigger
+g.eyeBase = eb;
+g.pupZ = bub ? 0.245 : 0.21;         // keep pupils proud of the bigger eyes
 for(const s of [-1,1]){
 const eye = new THREE.Mesh(new THREE.SphereGeometry(0.055,8,8), new THREE.MeshBasicMaterial({color:0xfff6cc}));
-eye.position.set(0.085*s, 0.05, 0.165); g.head.add(eye);
+eye.position.set(0.085*s, 0.05, 0.165); eye.scale.setScalar(eb); g.head.add(eye);
 if(s<0) g.eyeL = eye; else g.eyeR = eye;
 const pup = new THREE.Mesh(new THREE.SphereGeometry(0.026,6,6), new THREE.MeshBasicMaterial({color:0x1c1408}));
-pup.position.set(0.085*s, 0.05, 0.21); g.head.add(pup);
+pup.position.set(0.085*s, 0.05, g.pupZ); pup.scale.setScalar(eb); g.head.add(pup);
 if(s<0) g.pupL = pup; else g.pupR = pup;
 const ear = new THREE.Mesh(new THREE.ConeGeometry(0.065,0.24,8), skin);
 ear.position.set(0.24*s, 0.1, -0.02); ear.rotation.z = -s*1.85;
@@ -1288,8 +1293,10 @@ if (!bub){
 const belt = new THREE.Mesh(new THREE.TorusGeometry(0.26,0.045,8,16), cloth);
 belt.rotation.x = Math.PI/2; belt.position.y = 0.42; g.inner.add(belt);
 }
+if (!bub){ // the brown pouch stays off Bub
 const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.13,0.12,0.09), cloth);
 pouch.position.set(0.2,0.36,0.16); g.inner.add(pouch);
+}
 g.baseScale = chief ? 1.425 : 0.95;
 g.root.scale.setScalar(g.baseScale);
 g.root.position.set(x, 0, z);
@@ -1328,8 +1335,10 @@ const bp = g.blinkT / 0.22;
 if (bp >= 1){ g.blinkT = 0; g.nextBlink = time + 2 + Math.random()*4; }
 else blinkScale = 1 - Math.sin(bp*Math.PI)*0.94;
 }
-g.eyeL.scale.y = g.eyeR.scale.y = blinkScale;
-g.pupL.scale.y = g.pupR.scale.y = blinkScale;
+const es = g.eyeScale || 1;
+const eb = g.eyeBase || 1;
+g.eyeL.scale.set(eb, blinkScale*eb, eb); g.eyeR.scale.set(eb, blinkScale*eb, eb);
+g.pupL.scale.set(eb, blinkScale*eb, eb); g.pupR.scale.set(eb, blinkScale*eb, eb);
 g.eyeL.material.color.setHex(0xfff6cc);
 g.eyeR.material.color.setHex(0xfff6cc);
 g.coinQueueT += dt;
@@ -1355,9 +1364,10 @@ return;
 }
 if (g.state === 'dizzy'){
 const awake = !!(cine && cine.type === 'intro' && cine.eyesOpen);
+const eb = g.eyeBase || 1;
 g.eyeK = (g.eyeK === undefined ? 1 : g.eyeK + ((awake ? 1 : 0.1) - g.eyeK)*Math.min(1,10*dt));
-g.eyeL.scale.y = g.eyeR.scale.y = g.eyeK;
-g.pupL.scale.y = g.pupR.scale.y = awake ? g.eyeK : 0.001; // pupils hidden while out
+g.eyeL.scale.set(eb, g.eyeK*eb, eb); g.eyeR.scale.set(eb, g.eyeK*eb, eb);
+g.pupL.scale.set(eb, (awake ? g.eyeK : 0.001)*eb, eb); g.pupR.scale.set(eb, (awake ? g.eyeK : 0.001)*eb, eb);
 if (!awake){ // dark lash line so the closed eyes read clearly
 g.eyeL.material.color.setHex(0x2f5a4e);
 g.eyeR.material.color.setHex(0x2f5a4e);
@@ -1593,8 +1603,8 @@ g.head.rotation.x = headPitch;
 g.head.worldToLocal(_look.set(player.pos.x, player.pos.y - 0.15, player.pos.z)).normalize();
 const ex = THREE.MathUtils.clamp(_look.x, -1, 1) * 0.02 * w;
 const ey = THREE.MathUtils.clamp(_look.y, -0.8, 1) * 0.018 * w;
-g.pupL.position.set(-0.085 + ex, 0.05 + ey, 0.21);
-g.pupR.position.set( 0.085 + ex, 0.05 + ey, 0.21);
+g.pupL.position.set(-0.085 + ex, 0.05 + ey, g.pupZ || 0.21);
+g.pupR.position.set( 0.085 + ex, 0.05 + ey, g.pupZ || 0.21);
 g.shadow.position.set(p.x, 0.02, p.z);
 }
 /* first goblin spawns when the game starts (see ensureFirstGoblin) */
@@ -2687,6 +2697,7 @@ stars, landT:0, zoomDone:false, eyesOpen:false,
 cap:0, capT:0, capClick:false, cap3Shown:false, turnT:-1, holdT:-1, fadeT:-1, done:false };
 try { renderer.domElement.requestPointerLock(); } catch(e){}
 tone(110, 2.0, 'sine', 0.12, 0, -40);
+toast('Hold 8 to skip');
 }
 function startWitchCine(){
 witchSpawned = true;
@@ -2717,12 +2728,44 @@ mouseHeld = false; rightMouseHeld = false; releaseMagnet();
 camMode = 'throwCine';
 letterbox(true);
 document.body.classList.add('cineMode');
-const g = goblins[0];
-if (heldGoblin === g) heldGoblin = null;
-if (g){ g.state = 'wait'; g.root.position.set(3.4, 0, 1.4); g.root.visible = true; g.shadow.visible = true; }
+// a normal goblin (not Bub) demonstrates the coin throw
+const g = makeGoblin(4.4, 1.8); // a normal goblin, a meter further from the hole
+g.state = 'wait';
+g.root.visible = true; g.shadow.visible = true;
 cine = { type:'throw', t:0, fromPos:camera.position.clone(), g,
 phase:0, pt:0, capShown:false, capClick:false, thrown:false, coinIdx:-1, clink:false, clinkT:0 };
 tone(220,0.4,'sine',0.15,0,-60);
+}
+/* ---------- hold 8 for 5s: skip the whole prologue ---------- */
+function skipPrologue(){
+if (cine && cine.stars) for (const s of cine.stars) scene.remove(s);
+hideCap();
+letterbox(false);
+document.getElementById('fadeBlack').classList.remove('on');
+document.body.classList.remove('cineMode');
+const bub = goblins.find(g=>g.isBub);
+if (bub){
+if (heldGoblin === bub) heldGoblin = null;
+scene.remove(bub.root); scene.remove(bub.shadow);
+goblins.splice(goblins.indexOf(bub), 1);
+}
+for (const g of goblins){
+if (g.state === 'wait' || g.state === 'dizzy' || g.state === 'thrown'){
+g.state = 'idle'; g.t = 1+Math.random();
+g.root.visible = true; g.shadow.visible = true;
+setGoblinOpacity(g, 1, false);
+}
+}
+if (!goblins.length){
+const g = makeGoblin(4.4, 1.8);
+g.state = 'idle'; g.t = 1+Math.random();
+}
+goblinsAwakened = true;
+cine = null;
+if (!started){ started = true; player.pos.set(0,EYE,6.8); yaw = 0; pitch = -0.08; }
+snapCameraToPlayer();
+if (!locked){ try { renderer.domElement.requestPointerLock(); } catch(e){} }
+toast('The meadow awaits…');
 }
 const SUCK_T = new THREE.Vector3(0,2.6,0);
 function updateCine(dt, time){
@@ -2831,7 +2874,8 @@ noiseS(0.5, 0.25, 300, 80);
 /* ---- Bub drops ---- */
 if (t > 5.6 && !c.dropped){
 c.dropped = true;
-const g = goblins[0];
+hideCap();
+const g = goblins.find(g=>g.isBub) || goblins[0];
 c.gob = g;
 g.root.visible = true;
 g.root.position.set(1.8, 14, 7.6);
@@ -2897,28 +2941,34 @@ document.body.classList.remove('cineMode');
 letterbox(false);
 hideCap();
 for (const s of c.stars) scene.remove(s);
-const b0 = goblins[0];
-if (b0){ // Bub stays hidden until the throw cutscene after Grimble's chat
-b0.state = 'wait';
-b0.throwVel.set(0,0,0); b0.throwAV.set(0,0,0);
-b0.root.position.set(3.4, 0, 1.4);
-b0.root.quaternion.setFromEuler(new THREE.Euler(0, Math.atan2(-3.4,-1.4), 0));
-b0.root.visible = false;
-b0.shadow.visible = false;
+const b0 = goblins.find(g => g.isBub);
+
+if (b0){
+  if (heldGoblin === b0) heldGoblin = null;
+
+  scene.remove(b0.root);
+  scene.remove(b0.shadow);
+
+  goblins.splice(goblins.indexOf(b0), 1);
 }
-snapCameraToPlayer();
+
 cine = null;
-if (!locked) toast('Click to take control');
+startCineHandoff();
+
+if (!locked) showPause();
 }
+
 return;
 }
+
 if (c.type === 'throw'){
-const g = c.g;
-const t = c.t;
-camera.up.set(0,1,0);
+  const g = c.g;
+  const t = c.t;
+
+  camera.up.set(0, 1, 0);
 if (c.phase === 0){
 const e = sm(Math.min(1, t/1.4));
-camera.position.lerpVectors(c.fromPos, _cA.set(4.8,1.8,4.6), e);
+camera.position.lerpVectors(c.fromPos, _cA.set(6.0,1.8,4.9), e);
 camera.lookAt(g.root.position.x, 0.9, g.root.position.z);
 if (t > 1.2 && !c.capShown){ c.capShown = true; setCap('There goes one now!'); }
 if (c.capClick && c.capShown){ c.capClick = false; hideCap(); c.phase = 1; c.pt = t; }
@@ -2932,14 +2982,14 @@ c.thrown = true;
 const fx = Math.sin(g.yaw), fz = Math.cos(g.yaw);
 const hx = g.root.position.x + fx*0.35, hz = g.root.position.z + fz*0.35, hy = 1.05;
 const T = 0.85;
-const tgt = _tmp.set(2.15, 0, 0.9); // lands short of the rim, never in the hole
+const tgt = _tmp.set(3.15, 0, 1.3); // lands well short of the rim, never in the hole
 const vel = new THREE.Vector3((tgt.x-hx)/T, (0.03-hy+0.5*20*T*T)/T, (tgt.z-hz)/T);
 c.coinIdx = spawnCoin(new THREE.Vector3(hx,hy,hz), vel);
 tone(900,0.4,'sine',0.06,0,-500);
 }
 if (c.thrown && c.coinIdx >= 0){
 const i3 = c.coinIdx*3;
-camera.position.lerpVectors(_cA.set(4.8,1.8,4.6), _cB.set(3.9,1.4,3.4), sm(Math.min(1,t2/1.2)));
+camera.position.lerpVectors(_cA.set(6.0,1.8,4.9), _cB.set(5.1,1.4,4.0), sm(Math.min(1,t2/1.2)));
 camera.lookAt(P[i3], P[i3+1]+0.1, P[i3+2]);
 if (ST[c.coinIdx] === 2 && !c.clink){
 c.clink = true; c.clinkT = t2;
@@ -3077,17 +3127,17 @@ doPrestigeReset();
 removeBlackHole(c.bh);
 c.suck = c.suck.filter(it => it.ci === undefined);
 }
-if (c.t > 9.2){
-document.getElementById('fadeBlack').classList.remove('on');
-document.getElementById('prestigeText').classList.remove('on');
-cine = null;
-document.body.classList.remove('cineMode');
-letterbox(false);
-startCineHandoff();
-toast('The hole collects its own tribute now.');
-if (!locked) showPause();
-}
-}
+    if (c.t > 9.2){
+      document.getElementById('fadeBlack').classList.remove('on');
+      document.getElementById('prestigeText').classList.remove('on');
+      cine = null;
+      document.body.classList.remove('cineMode');
+      letterbox(false);
+      startCineHandoff();
+      toast('The hole collects its own tribute now.');
+      if (!locked) showPause();
+    }
+  }
 }
 function doPrestigeReset(){
 prestige++;
@@ -3906,14 +3956,6 @@ const rF = AC.createBiquadFilter(); rF.type='bandpass'; rF.frequency.value = 260
 rainGain = AC.createGain(); rainGain.gain.value = 0;
 rSrc.connect(rF); rF.connect(rainGain); rainGain.connect(master);
 rSrc.start();
-const dg = AC.createGain(); dg.gain.value = 0.5;
-const o1 = AC.createOscillator(); o1.type='sine'; o1.frequency.value = 46;
-const o2 = AC.createOscillator(); o2.type='sine'; o2.frequency.value = 49.3;
-const o3 = AC.createOscillator(); o3.type='triangle'; o3.frequency.value = 92.7;
-const g3 = AC.createGain(); g3.gain.value = 0.25;
-o1.connect(dg); o2.connect(dg); o3.connect(g3); g3.connect(dg);
-dg.connect(eerieBus);
-o1.start(); o2.start(); o3.start();
 const nSrc = AC.createBufferSource(); nSrc.buffer = noiseBuf; nSrc.loop = true; nSrc.playbackRate.value = 0.5;
 const nF = AC.createBiquadFilter(); nF.type='bandpass'; nF.frequency.value = 320; nF.Q.value = 6;
 const nG = AC.createGain(); nG.gain.value = 0.22;
@@ -4574,7 +4616,8 @@ const settings = { music:true, ambience:true, sfx:true, grain:true };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('grimbleSettings')||'{}')); } catch(e){}
 const setBtn = document.getElementById('setBtn');
 const setPanel = document.getElementById('setPanel');
-setBtn.addEventListener('click', ()=> setPanel.classList.toggle('hidden'));
+setBtn.addEventListener('mousedown', e=> e.stopPropagation());
+setBtn.addEventListener('click', e=>{ e.stopPropagation(); setPanel.classList.toggle('hidden'); });
 setPanel.addEventListener('mousedown', e=> e.stopPropagation());
 setPanel.addEventListener('click', e=> e.stopPropagation());
 function applySettings(){
@@ -4694,7 +4737,15 @@ camera.position.set(Math.sin(t)*rad + menuParX, 4.3+Math.sin(elapsed*0.3)*0.4 - 
 camera.lookAt(menuParX*0.4, 0.3 + menuHold*0.6 + menuParY*0.3, 0);
 } else {
 if (locked && !cine) updatePlayer(dt);
+if (cine){
+if (cine.type === 'intro' || cine.type === 'throw'){
+if (keys.has('Digit8') || keys.has('Numpad8')){
+cine.skipT = (cine.skipT || 0) + dt;
+if (cine.skipT >= 5) skipPrologue();
+} else cine.skipT = 0;
+}
 if (cine) updateCine(dt, elapsed);
+}
 else if (camMode !== 'play') updateCameraAnim(dt);
 if (locked && camMode === 'play' && !shopOpen && !cine && !dlgOpen) updatePrompt();
 if (heldGoblin && locked && camMode === 'play') updateHeldGoblin();
