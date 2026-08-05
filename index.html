@@ -97,6 +97,12 @@ transition:transform .9s cubic-bezier(.55,0,.25,1); }
 #letterbox .bar.top { top:0; transform:translateY(-101%); }
 #letterbox .bar.bot { bottom:0; transform:translateY(101%); }
 #letterbox.on .bar { transform:translateY(0); }
+#cineCap { position:fixed; left:50%; bottom:13vh; transform:translateX(-50%); z-index:17;
+font-family:'MedievalSharp',cursive; font-size:27px; color:#ffe58a; text-align:center;
+text-shadow:0 2px 0 #000, 0 0 14px rgba(0,0,0,.9); opacity:0; transition:opacity .4s;
+pointer-events:none; max-width:80vw; }
+#cineCap.show { opacity:1; }
+#cineCap.show::after { content:'  ·  E'; font-size:14px; opacity:.55; }
 #prestigeText { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:19;
 font-family:'MedievalSharp',cursive; font-size:38px; letter-spacing:3px; color:#c9a6ef;
 text-shadow:0 0 24px rgba(150,80,255,.6), 0 2px 0 #1a0a24; opacity:0; transition:opacity 1.2s; pointer-events:none; }
@@ -189,8 +195,7 @@ perspective:700px; text-align:center; cursor:pointer; pointer-events:auto; z-ind
 .tnode:hover { transform:translate(-50%,-50%) scale(1.06); }
 .tnode.cant { cursor:default; }
 .tnode.cant:hover { transform:translate(-50%,-50%); }
-.t3d { position:absolute; inset:0; transform-style:preserve-3d; transition:transform .1s ease-out;
-transform:rotateY(-13.5deg) rotateX(7.5deg); }
+.t3d { position:absolute; inset:0; transform-style:preserve-3d; transition:transform .1s ease-out; }
 .face { position:absolute; border-radius:14px; backface-visibility:hidden;
 background:
 radial-gradient(circle at 30% 22%, rgba(255,220,150,.10), transparent 55%),
@@ -283,7 +288,7 @@ background:repeating-conic-gradient(from 0deg, rgba(245,207,95,.09) 0deg 5deg, r
 mask-image:radial-gradient(circle, #000 0%, rgba(0,0,0,.55) 26%, transparent 64%);
 opacity:0; transition:opacity 1.2s ease; pointer-events:none;
 animation:burstSpin 30s linear infinite; }
-#prodIntro.logo #piBurst { opacity:1; }
+#prodIntro.logo #piBurst { opacity:.3; }
 @keyframes burstSpin { to { transform:rotate(360deg); } }
 #piLogoIn { display:block; animation:logoIdle 2.8s ease-in-out 1s infinite; transform-origin:50% 62%; }
 @keyframes logoIdle {
@@ -346,6 +351,7 @@ to { opacity:0; transform:translate(-50%,-50%) rotate(-2deg) scale(1.05); }
 </div>
 <div id="fadeBlack"></div>
 <div id="letterbox"><div class="bar top"></div><div class="bar bot"></div></div>
+<div id="cineCap"></div>
 <div id="prestigeText">the hole grows hungrier...</div>
 <div id="dialog" class="hidden">
 <div class="dlgName">MAUD</div>
@@ -378,8 +384,6 @@ to { opacity:0; transform:translate(-50%,-50%) rotate(-2deg) scale(1.05); }
 <p class="sub" id="ovSub">A meadow, a goblin, and a very deep hole.</p>
 <p class="goal" id="ovGoal">Feed the hole. Then descend into it, and spend your earnings in the skill tree.</p>
 <button id="ovBtn">ENTER THE MEADOW</button>
-</div>
-</div>
 </div>
 </div>
 <div id="prodIntro">
@@ -1231,6 +1235,9 @@ return;
 function lerpAngle(a,b,t){ let d=(b-a)%(Math.PI*2); if(d>Math.PI)d-=Math.PI*2; if(d<-Math.PI)d+=Math.PI*2; return a+d*t; }
 function normAng(a){ a=(a+Math.PI)%(Math.PI*2); if(a<0)a+=Math.PI*2; return a-Math.PI; }
 const _dir = new THREE.Vector3(), _want = new THREE.Vector3(), _tmp = new THREE.Vector3(), _look = new THREE.Vector3();
+function setGoblinOpacity(g, op, trans){
+g.root.traverse(o=>{ if (o.material){ o.material.opacity = op; o.material.transparent = trans; } });
+}
 function updateGoblin(g, dt, time){
 const p = g.root.position;
 let blinkScale = 1;
@@ -1242,6 +1249,8 @@ else blinkScale = 1 - Math.sin(bp*Math.PI)*0.94;
 }
 g.eyeL.scale.y = g.eyeR.scale.y = blinkScale;
 g.pupL.scale.y = g.pupR.scale.y = blinkScale;
+g.eyeL.material.color.setHex(0xfff6cc);
+g.eyeR.material.color.setHex(0xfff6cc);
 g.coinQueueT += dt;
 if (g.coinQueue.length > 0 && g.coinQueueT >= g.coinQueue[0].delay) {
 const q = g.coinQueue.shift();
@@ -1263,6 +1272,20 @@ g.shadow.position.set(p.x, 0.02, p.z);
 g.shadow.visible = Math.hypot(p.x, p.z) > HOLE_R;
 return;
 }
+if (g.state === 'dizzy'){
+const awake = !!(cine && cine.type === 'intro' && cine.eyesOpen);
+g.eyeK = (g.eyeK === undefined ? 1 : g.eyeK + ((awake ? 1 : 0.1) - g.eyeK)*Math.min(1,10*dt));
+g.eyeL.scale.y = g.eyeR.scale.y = g.eyeK;
+g.pupL.scale.y = g.pupR.scale.y = awake ? g.eyeK : 0.001; // pupils hidden while out
+if (!awake){ // dark lash line so the closed eyes read clearly
+g.eyeL.material.color.setHex(0x2f5a4e);
+g.eyeR.material.color.setHex(0x2f5a4e);
+}
+g.inner.position.y = Math.sin(time*2.0)*0.01; // breathing
+g.root.updateMatrixWorld(true);
+g.shadow.position.set(p.x, 0.02, p.z);
+return;
+}
 if (g.state === 'thrown'){
 g.throwT += dt;
 g.throwVel.y -= 18 * dt;
@@ -1272,8 +1295,24 @@ if (avL > 0.01){
 _qTmp.setFromAxisAngle(_v1.copy(g.throwAV).normalize(), avL * dt);
 g.root.quaternion.premultiply(_qTmp);
 }
+const d = Math.hypot(g.root.position.x, g.root.position.z);
+const overHole = d < HOLE_R - 0.1;
 const groundY = g.baseScale * 0.5;
-if (g.root.position.y <= groundY && g.throwVel.y < 0){
+if (overHole){
+// over the hole: no ground bounce — swallow them
+if (g.root.position.y < 0.25){
+g.state = 'holefall';
+g.throwT = 0;
+g.throwVel.set(0, 0, 0);
+g.throwAV.set(0, 0, 0);
+setGoblinOpacity(g, 1, true);
+tone(520, 0.6, 'sine', 0.12, 0, -380);
+}
+} else if (g.root.position.y <= groundY && g.throwVel.y < 0){
+if (cine && cine.type === 'intro' && cine.gob === g && !cine.landed){
+// first impact of the intro fall: no bounce — the cinematic takes over
+g.root.position.y = groundY;
+} else {
 g.root.position.y = groundY;
 g.throwVel.y = -g.throwVel.y * 0.45;
 g.throwVel.x *= 0.7;
@@ -1288,7 +1327,7 @@ const euler = new THREE.Euler().setFromQuaternion(g.root.quaternion, 'YXZ');
 g.yaw = euler.y;
 }
 }
-const d = Math.hypot(g.root.position.x, g.root.position.z);
+}
 if (d > WORLD_R - 3){
 g.throwVel.x *= -0.5;
 g.throwVel.z *= -0.5;
@@ -1300,14 +1339,36 @@ if (g.root.position.y > 15) {
 g.throwVel.y = -Math.abs(g.throwVel.y) * 0.5;
 g.root.position.y = 15;
 }
-if (d < HOLE_R + 0.5 && g.throwVel.y < 0){
-g.throwVel.y = -g.throwVel.y * 0.3;
-const nx = g.root.position.x / d, nz = g.root.position.z / d;
-g.throwVel.x += nx * 3;
-g.throwVel.z += nz * 3;
-}
 g.shadow.position.set(g.root.position.x, 0.02, g.root.position.z);
 g.shadow.visible = d > HOLE_R;
+return;
+}
+if (g.state === 'holefall'){
+// fade away into the dark, then respawn elsewhere and carry on
+g.throwT += dt;
+const k = Math.min(1, g.throwT / 1.0);
+g.root.position.y -= 4.5 * dt;
+g.root.rotation.y += dt * 2.5;
+g.root.scale.setScalar(Math.max(0.001, g.baseScale * (1 - 0.5*k)));
+g.root.traverse(o=>{ if (o.material) o.material.opacity = 1 - k; });
+g.shadow.visible = false;
+if (k >= 1){
+setGoblinOpacity(g, 1, false);
+g.root.scale.setScalar(g.baseScale);
+g.root.quaternion.setFromEuler(new THREE.Euler(0, g.yaw, 0));
+for(let i=0;i<20;i++){
+const r = 8 + Math.random()*(WORLD_R-12), a = Math.random()*Math.PI*2;
+const x = Math.cos(a)*r, z = Math.sin(a)*r;
+if (Math.hypot(x-STALL_POS.x, z-STALL_POS.z) < 4) continue;
+if (Math.hypot(x-WITCH_POS.x, z-WITCH_POS.z) < 3) continue;
+g.root.position.set(x, 0, z);
+break;
+}
+g.state = 'idle';
+g.t = 1 + Math.random();
+g.shadow.visible = true;
+pickTargetFor(g);
+}
 return;
 }
 if (g.state === 'recovering'){
@@ -2439,15 +2500,41 @@ scene.remove(bh.group);
 blackHole = null;
 }
 /* ---------- FIRST-START INTRO CINEMATIC ---------- */
+const starTex = canvasTex(64,64,(x)=>{
+x.translate(32,32);
+x.fillStyle = '#ffe58a';
+x.strokeStyle = '#7a5210';
+x.lineWidth = 3;
+x.beginPath();
+for(let i=0;i<10;i++){
+const r = i%2===0 ? 26 : 11;
+const a = i/10*Math.PI*2 - Math.PI/2;
+x.lineTo(Math.cos(a)*r, Math.sin(a)*r);
+}
+x.closePath(); x.fill(); x.stroke();
+}, false);
 const letterboxEl = document.getElementById('letterbox');
 const letterbox = on => letterboxEl.classList.toggle('on', on);
+const cineCapEl = document.getElementById('cineCap');
+const setCap = txt => { cineCapEl.textContent = txt; cineCapEl.classList.add('show'); };
+const hideCap = () => cineCapEl.classList.remove('show');
 function startIntroCine(){
 overlay.classList.add('hidden');
 document.body.classList.add('cineMode');
 camMode = 'introCine';
 letterbox(true);
+const stars = [];
+for(let i=0;i<3;i++){
+const s = new THREE.Sprite(new THREE.SpriteMaterial({ map:starTex, transparent:true, depthWrite:false }));
+s.scale.setScalar(0.22);
+s.visible = false;
+scene.add(s);
+stars.push(s);
+}
 cine = { type:'intro', t:0, fromPos:camera.position.clone(),
-rumbled:false, plugged:false, dropped:false, landed:false, gob:null };
+rumbled:false, plugged:false, dropped:false, landed:false, gob:null,
+stars, landT:0, zoomDone:false, eyesOpen:false,
+cap:0, capT:0, capClick:false, cap3Shown:false, turnT:-1, holdT:-1, fadeT:-1, done:false };
 try { renderer.domElement.requestPointerLock(); } catch(e){}
 tone(110, 2.0, 'sine', 0.12, 0, -40);
 }
@@ -2480,36 +2567,78 @@ function updateCine(dt, time){
 const c = cine; c.t += dt;
 if (c.type === 'intro'){
 const t = c.t;
-// camera: approach from the menu orbit, then hold low near the hole
+const gob = c.gob;
+if (gob && c.landed) gob.head.getWorldPosition(_look);
+/* ---- ONE continuous shot ---- */
 if (t < 2.2){
 const e = sm(t/2.2);
-camera.position.lerpVectors(c.fromPos, _cA.set(5.5, 5.0, 8.5), e);
-camera.up.set(0,1,0);
-camera.lookAt(0, 0.4, 0);
+camera.position.lerpVectors(c.fromPos, _cA.set(5.5,5.0,8.5), e);
+camera.lookAt(0,0.4,0);
 } else if (t < 3.4){
 const e = sm((t-2.2)/1.2);
-camera.position.lerpVectors(_cA.set(5.5, 5.0, 8.5), _cB.set(4.2, 3.4, 6.2), e);
-camera.up.set(0,1,0);
-camera.lookAt(0, 0.15, 0);
+camera.position.lerpVectors(_cA.set(5.5,5.0,8.5), _cB.set(4.2,3.4,6.2), e);
+camera.lookAt(0,0.15,0);
+} else if (t < 4.8){
+camera.position.set(4.2+Math.sin(t*0.5)*0.12, 3.4, 6.2);
+camera.lookAt(0,0.15,0);
+} else if (t < 6.0){
+/* no cut: the camera turns around and finds the sky */
+const e = sm((t-4.8)/1.2);
+camera.position.lerpVectors(_cA.set(4.2,3.4,6.2), _cB.set(3.2,1.8,10.8), e);
+_tmp.set(0,0.15,0).lerp(_v1.set(1.8,7.5,7.6), e);
+camera.lookAt(_tmp);
+} else if (!c.landed){
+/* track the fall */
+camera.position.lerpVectors(_cA.set(3.2,1.8,10.8), _cB.set(2.9,1.35,10.6), sm((t-6.0)/1.4));
+if (gob) camera.lookAt(gob.root.position.x, Math.max(gob.root.position.y,0.4), gob.root.position.z);
+else camera.lookAt(1.8,5,7.6);
+} else if (c.turnT < 0){
+const lt = t - c.landT;
+if (lt < 1.3){
+const e = sm(lt/1.3);
+camera.position.lerpVectors(_cA.set(2.9,1.35,10.6), _cB.set(2.55,1.05,9.4), e);
+camera.lookAt(gob.root.position.x, 0.5, gob.root.position.z);
 } else {
-camera.position.set(4.2 + Math.sin(t*0.5)*0.12, 3.4, 6.2);
-camera.up.set(0,1,0);
-if (c.dropped && c.gob && !c.landed){
-_look.copy(c.gob.root.position);
-_look.y = THREE.MathUtils.clamp(_look.y*0.4, 0.2, 3);
-camera.lookAt(_look);
-} else {
-camera.lookAt(0, 0.15, 0);
+const e = sm(Math.min(1,(lt-1.3)/1.5));
+camera.position.lerpVectors(_cA.set(2.55,1.05,9.4), _cB.set(_look.x+0.35,_look.y+0.95,_look.z+0.55), e);
+_v1.set(gob.root.position.x, 0.5, gob.root.position.z).lerp(_look, e);
+camera.lookAt(_v1);
+if (e >= 1 && !c.zoomDone){
+c.zoomDone = true;
+c.eyesOpen = true;
+c.cap = 1; c.capT = 0; c.capClick = false;
+setCap("This is Bub. He doesn't have much going on in his life but as like all other goblins, he seeks for riches");
+tone(520,0.08,'triangle',0.1);
 }
 }
-// rumble begins
+} else if (c.fadeT < 0){
+/* swing around to the stall */
+const k = sm(Math.min(1,(t-c.turnT)/2.8));
+_cA.set(_look.x+0.35,_look.y+0.95,_look.z+0.55);
+_cB.set(0,2.3,-13.5);
+_tmp.set(3.2,3.4,-2.0);
+const ix = (1-k)*(1-k)*_cA.x + 2*(1-k)*k*_tmp.x + k*k*_cB.x;
+const iy = (1-k)*(1-k)*_cA.y + 2*(1-k)*k*_tmp.y + k*k*_cB.y;
+const iz = (1-k)*(1-k)*_cA.z + 2*(1-k)*k*_tmp.z + k*k*_cB.z;
+camera.position.set(ix,iy,iz);
+_v1.copy(_look).lerp(_targ.set(0,1.4,-23), k);
+camera.lookAt(_v1);
+if (k > 0.55 && !c.cap3Shown){
+c.cap3Shown = true;
+setCap('Is that.... a vendor?');
+tone(660,0.09,'triangle',0.1);
+}
+} else {
+camera.position.set(0,2.3,-13.5);
+camera.lookAt(0,1.4,-23);
+}
+/* ---- hole events (unchanged) ---- */
 if (t > 2.4 && !c.rumbled){
 c.rumbled = true;
 shake = Math.max(shake, 0.7);
 tone(45, 1.8, 'sine', 0.4, 0, -15);
 noiseS(1.6, 0.3, 180, 50);
 }
-// plug sinks while dirt flies
 if (t > 2.6 && t < 4.6){
 shake = Math.max(shake, 0.45);
 if (Math.random() < 0.55){
@@ -2517,7 +2646,7 @@ const a = Math.random()*Math.PI*2, r = HOLE_R*(0.4+Math.random()*0.9);
 dirtBurst.burst(Math.cos(a)*r, 0.08, Math.sin(a)*r, 1.8, 3.4);
 }
 const k = sm((t-2.6)/2.0);
-if (holeRim) holeRim.material.opacity = k; // dirt rim fades in as the hole tears open
+if (holeRim) holeRim.material.opacity = k;
 introPlug.position.y = 0.02 - k*2.8;
 introPlug.rotation.z = k*0.6;
 introPlug.scale.setScalar(Math.max(0.001, 1 - k*0.35));
@@ -2527,7 +2656,6 @@ plugGrass.rotation.z = introPlug.rotation.z;
 plugGrass.scale.copy(introPlug.scale);
 }
 }
-// hole fully open
 if (t > 4.6 && !c.plugged){
 c.plugged = true;
 if (holeRim) holeRim.material.opacity = 1;
@@ -2538,12 +2666,12 @@ shake = Math.max(shake, 0.95);
 tone(60, 0.7, 'sine', 0.35, 0, -30);
 noiseS(0.5, 0.25, 300, 80);
 }
-// goblin falls from the sky
-if (t > 4.9 && !c.dropped){
+/* ---- Bub drops ---- */
+if (t > 5.6 && !c.dropped){
 c.dropped = true;
 const g = goblins[0];
 c.gob = g;
-g.root.visible = true; // he only enters the world by falling from the sky
+g.root.visible = true;
 g.root.position.set(1.8, 14, 7.6);
 g.state = 'thrown';
 g.throwT = 0;
@@ -2553,18 +2681,62 @@ g.throwQuat.setFromEuler(new THREE.Euler(0, Math.random()*6, 0));
 g.root.quaternion.copy(g.throwQuat);
 tone(900, 1.3, 'sine', 0.07, 0, -700);
 }
-if (c.dropped && !c.landed && c.gob && c.gob.state !== 'thrown'){
-c.landed = true;
-dirtBurst.burst(c.gob.root.position.x, 0.2, c.gob.root.position.z, 2.5, 2.5);
+/* ---- intercept the impact: lie him down dizzy ---- */
+if (c.dropped && !c.landed && gob && gob.state === 'thrown' && gob.throwVel.y < 0 &&
+gob.root.position.y <= gob.baseScale*0.5 + 0.03){
+c.landed = true; c.landT = t;
+gob.state = 'dizzy';
+gob.throwT = 0; gob.throwVel.set(0,0,0); gob.throwAV.set(0,0,0);
+gob.root.position.y = 0.3;
+gob.root.quaternion.setFromEuler(new THREE.Euler(-Math.PI/2, gob.yaw, 0, 'YXZ'));
+gob.root.updateMatrixWorld(true);
+dirtBurst.burst(gob.root.position.x, 0.2, gob.root.position.z, 2.6, 2.6);
 thumpS();
 shake = Math.max(shake, 0.6);
+for (const s of c.stars) s.visible = true;
 }
-// hand control to the player
-if (t > 8.2){
-cine = null;
+/* stars orbit his head while he's out */
+if (c.landed && gob && gob.state === 'dizzy'){
+for (let i=0;i<3;i++){
+const a = t*3.2 + i*2.094;
+c.stars[i].position.set(_look.x + Math.cos(a)*0.45, _look.y + 0.3 + Math.sin(a*2.1)*0.07, _look.z + Math.sin(a)*0.45);
+}
+}
+/* ---- captions ---- */
+if (c.cap >= 1 && c.cap <= 3 && c.fadeT < 0){
+c.capT += dt;
+if (c.capClick && c.capT > 0.25 && (c.cap < 3 || c.cap3Shown)){ // E only
+c.capClick = false; c.capT = 0;
+c.cap++;
+if (c.cap === 2){
+setCap('Bub has no clue where he is but who really cares?');
+tone(560,0.08,'triangle',0.1);
+} else if (c.cap === 3){
+hideCap();
+c.turnT = t;
+gob.state = 'recovering'; gob.throwT = 0; // Bub gets up behind the camera's back
+for (const s of c.stars) s.visible = false;
+} else if (c.cap === 4){
+hideCap();
+c.holdT = t; // linger on the vendor before fading
+}
+}
+}
+/* ---- hold on the stall, then fade to black, then the game begins ---- */
+if (c.holdT >= 0 && c.fadeT < 0 && t - c.holdT > 1.5){
+c.fadeT = t;
+document.getElementById('fadeBlack').classList.add('on');
+tone(220,0.8,'sine',0.2,0,-120);
+}
+if (c.fadeT >= 0 && t - c.fadeT > 1.25 && !c.done){
+c.done = true;
+document.getElementById('fadeBlack').classList.remove('on');
 document.body.classList.remove('cineMode');
 letterbox(false);
-startCineHandoff();
+hideCap();
+for (const s of c.stars) scene.remove(s);
+snapCameraToPlayer();
+cine = null;
 toast('Feed the hole…');
 }
 return;
@@ -2813,6 +2985,16 @@ const dH = Math.hypot(player.pos.x, player.pos.z);
 if (dH > WORLD_R-2){
 const s = (WORLD_R-2)/dH;
 player.pos.x*=s; player.pos.z*=s;
+}
+/* invisible barrier around the hole */
+const BARR = HOLE_R + 0.35;
+const dHole = Math.hypot(player.pos.x, player.pos.z);
+if (dHole < BARR){
+const inv = 1/Math.max(dHole, 0.0001);
+const nx = player.pos.x*inv, nz = player.pos.z*inv;
+player.pos.x = nx*BARR; player.pos.z = nz*BARR;
+const vn = player.vel.x*nx + player.vel.z*nz;
+if (vn < 0){ player.vel.x -= vn*nx; player.vel.z -= vn*nz; }
 }
 player.vy -= GRAV*dt;
 player.pos.y += player.vy*dt;
@@ -3099,7 +3281,6 @@ treeBox.appendChild(el);
 nodeEls[n.key] = {
 wrap: el,
 lineWasVis: !n.need || n.need(),
-wrap: el,
 lvl: el.querySelector('.tlvl'),
 lvlMax: el.querySelector('.ulvl-max'),
 lvlRoll: el.querySelector('.ulvl-roll'),
@@ -3450,7 +3631,7 @@ function initAudio(){
 if (AC) return;
 try {
 AC = new (window.AudioContext||window.webkitAudioContext)();
-master = AC.createGain(); master.gain.value = 0.5; master.connect(AC.destination);
+master = AC.createGain(); master.gain.value = 1.0; master.connect(AC.destination);
 noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate);
 const d = noiseBuf.getChannelData(0);
 for(let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
@@ -3697,7 +3878,7 @@ if (e.code === 'KeyE') advanceDlg();
 else if (e.code === 'KeyQ' && dlgLine === DLG.length-1 && !typeTimer) closeDlg();
 return;
 }
-if (cine) return;
+if (cine){ if (cine.type === 'intro' && e.code === 'KeyE') cine.capClick = true; return; }
 if (e.code === 'Space' && locked && player.grounded && !shopOpen && camMode === 'play'){
 player.vy = JUMP_V; player.grounded = false; jumpS();
 }
@@ -3787,7 +3968,7 @@ scene.add(menuGroup);
 let menuReady = false, menuFading = false, menuFade = 1, menuHover = false;
 let prodIntroDone = false;
 let menuParX = 0, menuParY = 0;
-let menuRevealT = 0, menuTitleLanded = false, menuBtnPuff = false, menuBtnLanded = false;
+let menuRevealT = 0, menuTitleLanded = false, menuBtnPuff = false, menuBtnLanded = false, menuTitleDust = false;
 let menuHolding = false, menuHold = 0;
 let menuTitle = null, menuBtn = null, menuBar = null;
 let menuBtnHit = [], menuBtnMat = null;
@@ -3924,6 +4105,14 @@ if (menuBtn) menuBtn.position.y = -1.4;
 if (menuTitle){
 const k = Math.min(1, t/1.8);
 menuTitle.position.y = THREE.MathUtils.lerp(8.9, 3.35, bounceOut(k)) + Math.sin(time*0.9)*0.09;
+if (t > 1.3 && !menuTitleDust){ // dust kicks up half a second before impact
+menuTitleDust = true;
+noiseS(0.3, 0.1, 300, 90);
+for (let i=0;i<3;i++){
+const a = Math.random()*Math.PI*2, r = Math.random()*1.4;
+dirtBurst.burst(Math.cos(a)*r, 0.12, Math.sin(a)*r, 3.6, 2.6);
+}
+}
 if (k >= 1 && !menuTitleLanded){
 menuTitleLanded = true;
 shake = Math.max(shake, 0.9);
