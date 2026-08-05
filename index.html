@@ -142,12 +142,14 @@ background:rgba(255,255,255,.05); border:1px solid rgba(169,196,138,.35); border
 .tline { position:absolute; height:8px; margin-top:-4px; transform-origin:left center;
 pointer-events:none; z-index:0; perspective:700px; }
 .tl3d { position:absolute; inset:0; transform-style:preserve-3d;
-transform:rotateY(-18.2deg) rotateX(9.8deg); }
+transform:rotateY(-13.5deg) rotateX(7.5deg); }
 .tlface { position:absolute; backface-visibility:hidden; border-radius:4px; }
 .tlfront { inset:0; transform:translateZ(3.5px);
 background:linear-gradient(180deg,#e8c76a,#a5770e 55%,#6b4a10);
 border:1px solid rgba(58,42,26,.9); box-shadow:0 2px 8px rgba(0,0,0,.65); transition:filter .2s; }
 .tline.grow .tlfront { filter:brightness(1.7) saturate(1.2); }
+.tline.hov .tlfront { filter:brightness(1.45) saturate(1.15); }
+.tline.hov .tltop { filter:brightness(1.3); }
 .tlback { inset:0; transform:rotateY(180deg) translateZ(3.5px); background:#3a2a10; }
 .tltop { left:0; right:0; top:50%; height:7px; margin-top:-3.5px; transform:rotateX(90deg) translateZ(4px);
 background:linear-gradient(90deg,#f2d894,#c8901a); }
@@ -171,7 +173,7 @@ perspective:700px; text-align:center; cursor:pointer; pointer-events:auto; z-ind
 .tnode.cant { cursor:default; }
 .tnode.cant:hover { transform:translate(-50%,-50%); }
 .t3d { position:absolute; inset:0; transform-style:preserve-3d; transition:transform .1s ease-out;
-transform:rotateY(-18.2deg) rotateX(9.8deg); }
+transform:rotateY(-13.5deg) rotateX(7.5deg); }
 .face { position:absolute; border-radius:14px; backface-visibility:hidden;
 background:
 radial-gradient(circle at 30% 22%, rgba(255,220,150,.10), transparent 55%),
@@ -259,7 +261,7 @@ animation:clickPulse 1.7s ease-in-out infinite; transition:opacity .5s; text-sha
 @keyframes clickPulse { 0%,100% { opacity:.3; } 50% { opacity:.95; } }
 #prodIntro.clicked #piClick { opacity:0; animation:none; }
 #piLogo { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) rotate(-2deg); text-align:center; opacity:0; pointer-events:none; }
-#prodIntro.logo #piLogo { animation:logoIn .9s cubic-bezier(.25,.9,.3,1.35) both, logoOut 1s ease-in 5.9s forwards; }
+#prodIntro.logo #piLogo { animation:logoIn .9s cubic-bezier(.25,.9,.3,1.35) both, logoOut 1s ease-in 3.9s forwards; }
 .piA { display:block; font-family:'MedievalSharp',cursive; font-size:clamp(64px, 12vw, 200px); line-height:.95; color:#f5cf5f;
 -webkit-text-stroke:3px #3d2a08;
 text-shadow:0 4px 0 #7a5210, 0 8px 0 #3d2a08, 0 16px 40px #000, 0 0 60px rgba(245,207,95,.3); }
@@ -2297,7 +2299,9 @@ camera.lookAt(_targ);
 if (camT >= 1){
 camMode = 'hole';
 shopPhase = 'hole';
-treeZoom = 1; treePanX = 0; treePanY = 0; applyTreeTransform();
+treeZoom = 1; treePanX = 0; treePanY = 0;
+treeZoomT = 1; treePanXT = 0; treePanYT = 0;
+applyTreeTransform();
 refreshTree();
 shopOverlay.classList.remove('hidden');
 }
@@ -2912,6 +2916,7 @@ shopOpen = true; shopPhase = 'iso'; nearVendor = false;
 mouseHeld = false; rightMouseHeld = false; releaseMagnet();
 shopOverlay.classList.add('hidden');
 document.body.classList.add('shop');
+document.body.classList.remove('locked');
 prompt.classList.remove('show');
 crosshair.classList.remove('active');
 fadeMusic(0.0001);
@@ -2994,9 +2999,13 @@ el.addEventListener('mousemove', ev=>{
 const r = el.getBoundingClientRect();
 const px = (ev.clientX - r.left)/r.width - 0.5;
 const py = (ev.clientY - r.top)/r.height - 0.5;
-t3d.style.transform = `rotateY(${(-18.2 + px*26).toFixed(1)}deg) rotateX(${(9.8 - py*26).toFixed(1)}deg) translateZ(6px)`;
+t3d.style.transform = `rotateY(${(-13.5 + px*26).toFixed(1)}deg) rotateX(${(7.5 - py*26).toFixed(1)}deg) translateZ(14px)`;
 });
-el.addEventListener('mouseleave', ()=>{ t3d.style.transform = ''; });
+el.addEventListener('mouseenter', ()=>{ if (lineEls[n.key]) lineEls[n.key].classList.add('hov'); });
+el.addEventListener('mouseleave', ()=>{
+t3d.style.transform = '';
+if (lineEls[n.key]) lineEls[n.key].classList.remove('hov');
+});
 treeBox.appendChild(el);
 nodeEls[n.key] = {
 wrap: el,
@@ -3065,7 +3074,7 @@ const dt = Math.min(0.05, (now - last)/1000); last = now;
 t += dt;
 const k = Math.min(1, t/dur);
 const e = k*k*(3-2*k);
-tl3d.style.transform = `rotateY(-18.2deg) rotateX(9.8deg) scaleX(${Math.max(0.02, e).toFixed(3)})`;
+tl3d.style.transform = `rotateY(-13.5deg) rotateX(7.5deg) scaleX(${Math.max(0.02, e).toFixed(3)})`;
 tip.style.left = (len*e).toFixed(1) + 'px';
 tip.style.opacity = k < 1 ? '1' : '0';
 if (k < 1){
@@ -3174,15 +3183,27 @@ document.getElementById('ascendBtn').addEventListener('click', e=>{ e.stopPropag
 document.getElementById('holeBtn').addEventListener('click', e=>{ e.stopPropagation(); enterHole(); });
 document.getElementById('leaveBtn').addEventListener('click', e=>{ e.stopPropagation(); closeShopToPlay(); });
 let treeZoom = 1, treePanX = 0, treePanY = 0, treeDrag = false, tdx = 0, tdy = 0;
+let treeZoomT = 1, treePanXT = 0, treePanYT = 0;
 function applyTreeTransform(){ treeBox.style.transform = `translate(${treePanX}px,${treePanY}px) scale(${treeZoom})`; }
+function updateTreeCam(dt){
+if (shopPhase !== 'hole') return;
+const k = 1 - Math.exp(-12*dt);
+treeZoom += (treeZoomT - treeZoom)*k;
+treePanX += (treePanXT - treePanX)*k;
+treePanY += (treePanYT - treePanY)*k;
+applyTreeTransform();
+}
 shopOverlayEl.addEventListener('wheel', e=>{
 if (shopPhase !== 'hole') return;
 e.preventDefault();
-treeZoom = THREE.MathUtils.clamp(treeZoom * (e.deltaY < 0 ? 1.1 : 0.9), 0.5, 2.2);
-applyTreeTransform();
+treeZoomT = THREE.MathUtils.clamp(treeZoomT * (e.deltaY < 0 ? 1.1 : 0.9), 0.5, 2.2);
 }, { passive:false });
 shopOverlayEl.addEventListener('mousedown', e=>{
 if (e.button === 2 && shopPhase === 'hole'){ treeDrag = true; tdx = e.clientX; tdy = e.clientY; }
+});
+shopOverlayEl.addEventListener('dblclick', ()=>{
+if (shopPhase !== 'hole') return;
+treeZoomT = 1; treePanXT = 0; treePanYT = 0;
 });
 /* ============================== TREE DUST PARALLAX ============================== */
 const treeDust = document.getElementById('treeDust');
@@ -3547,17 +3568,17 @@ addEventListener('keyup', e=>keys.delete(e.code));
 addEventListener('blur', ()=>{ keys.clear(); mouseHeld=false; rightMouseHeld=false; releaseMagnet(); treeDrag=false; });
 addEventListener('mousemove', e=>{
 if (treeDrag){
-treePanX += e.clientX-tdx; treePanY += e.clientY-tdy;
+treePanXT += e.clientX-tdx; treePanYT += e.clientY-tdy;
 tdx = e.clientX; tdy = e.clientY;
-applyTreeTransform();
 return;
 }
-if (!locked || dlgOpen) return;
+if (!locked || dlgOpen || shopOpen) return;
 yaw   -= e.movementX*0.0023;
 pitch -= e.movementY*0.0023;
 pitch = THREE.MathUtils.clamp(pitch, -1.5, 1.5);
 });
 addEventListener('mousedown', e=>{
+if (shopOpen && document.pointerLockElement) document.exitPointerLock();
 if (e.button === 2) {
 if (locked && started && camMode === 'play' && !shopOpen && !cine && !dlgOpen) {
 rightMouseHeld = true;
@@ -3593,6 +3614,12 @@ try { renderer.domElement.requestPointerLock(); } catch(e){}
 });
 document.addEventListener('pointerlockchange', ()=>{
 locked = document.pointerLockElement === renderer.domElement;
+if (locked && shopOpen){ // never stay locked inside the skill tree
+locked = false;
+try { document.exitPointerLock(); } catch(err){}
+document.body.classList.remove('locked');
+return;
+}
 if (locked){
 document.body.classList.add('locked');
 overlay.classList.add('hidden');
@@ -3768,8 +3795,8 @@ setTimeout(()=>prodIntroEl.classList.add('logo'), 450);          // click fades,
 setTimeout(()=>{                                                // logo done -> fade to menu
 prodIntroEl.classList.add('gone');
 prodIntroDone = true;
-}, 7400);
-setTimeout(()=>{ prodIntroEl.remove(); }, 8900);
+}, 5400);
+setTimeout(()=>{ prodIntroEl.remove(); }, 6900);
 });
 /* ============================== MAIN LOOP ============================== */
 const clock = new THREE.Clock();
@@ -3852,6 +3879,7 @@ toast('The witch awaits at the far end…');
 grassMat.uniforms.uTime.value = elapsed;
 holeDustMat.uniforms.uTime.value = elapsed;
 updateListener();
+updateTreeCam(dt);
 updateTreeDust(dt);
 rainUpdateAccum += dt;
 if (rainUpdateAccum >= 0.5) {
