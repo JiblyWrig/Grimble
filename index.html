@@ -266,7 +266,7 @@ background:linear-gradient(180deg,#f9dd82,#cf9d2c); border-radius:6px; padding:2
 .ulvl-static, .ucost-star, .ulvl-max, .ucost-max { display:inline-block; vertical-align:bottom; }
 #ascendBtn { font-family:'MedievalSharp',cursive; font-size:15px; letter-spacing:1px; color:#cfe3b8;
 background:rgba(255,255,255,.06); border:1px solid rgba(169,196,138,.4); border-radius:9px;
-padding:7px 26px; cursor:pointer; transition:all .12s; position:relative; }
+padding:7px 26px; cursor:pointer; transition:all .12s; position:relative; margin-top:34px; }
 #ascendBtn:hover { background:rgba(255,255,255,.12); color:#fff; }
 .treeFoot { font-size:10px; color:#5d6a52; font-weight:700; letter-spacing:.5px; z-index:1; position:relative; }
 #overlay { position:fixed; inset:0; z-index:20; display:flex; align-items:center; justify-content:center;
@@ -409,7 +409,6 @@ background:#2b3f18; border:1px solid #6d8f3f; border-bottom:3px solid #465f26; c
 <svg id="treeLines" viewBox="0 0 700 540"></svg>
 </div>
 <button id="ascendBtn">ASCEND</button>
-<div class="treeFoot">Wheel to zoom &nbsp;·&nbsp; Right-click to drag</div>
 </div>
 </div>
 <div id="overlay" class="hidden">
@@ -524,7 +523,7 @@ const UPG = {
 help:   { base:1,  max:1 },
 value:  { base:5,  max:10 },
 rate:   { base:10, max:7 },
-stack:  { base:5,  max:8 },
+stack:  { base:10, max:8 },
 goblins:{ base:15, max:MAX_GOBLINS },
 chieftains:{ base:50, max:MAX_CHIEFS },
 magnet: { base:12, max:1 },
@@ -537,7 +536,7 @@ const magnetRadius = () => Math.min(10, 0.6 * Math.pow(1.3, upgrades.mradius-1))
 const allMaxed = () => Object.keys(UPG).every(k => upgrades[k] >= UPG[k].max);
 const ICO = {
 stack:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg>`,
-rate:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 3h10v4l-5 5 5 5v4H7v-4l5-5-5-5z"/><path d="M10 6h4M10 18h4"/></svg>`,
+rate:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 3h10v4l-5 5 5 5v4H7v-4l-5-5-5z"/><path d="M10 6h4M10 18h4"/></svg>`,
 value:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><path d="M12 8l1.2 2.6 2.8.3-2 1.9.5 2.8-2.5-1.4-2.5 1.4.5-2.8-2-1.9 2.8-.3z"/></svg>`,
 goblins:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="13" r="6"/><path d="M6.5 10.5L2 7.5l5.5 1.5M17.5 10.5L22 7.5l-5.5 1.5"/><circle cx="10" cy="12.5" r="0.8" fill="currentColor"/><circle cx="14" cy="12.5" r="0.8" fill="currentColor"/></svg>`,
 chief:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="14" r="5.5"/><path d="M7.5 9.5L8 5.5l2.2 2.5L12 4.5l1.8 3.5L16 5.5l.5 4z"/><circle cx="10" cy="13.5" r="0.8" fill="currentColor"/><circle cx="14" cy="13.5" r="0.8" fill="currentColor"/></svg>`,
@@ -548,7 +547,7 @@ help:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1
 };
 const TREE = [
 { key:'help',      x:350, y:480, ico:ICO.help,   name:'A helping hand', from:null },
-{ key:'stack',     x:350, y:355, ico:ICO.stack,  name:'Coin Stack',  from:'help',  need:()=>upgrades.help>0 },
+{ key:'stack',     x:350, y:340, ico:ICO.stack,  name:'Coin Stack',  from:'help',   need:()=>upgrades.help>0 },
 { key:'rate',      x:570, y:360, ico:ICO.rate,   name:'Prod. Rate',  from:'stack',  need:()=>upgrades.stack>1 },
 { key:'value',     x:130, y:360, ico:ICO.value,  name:'Coin Value',  from:'stack',  need:()=>upgrades.rate>1 },
 { key:'goblins',   x:70,  y:220, ico:ICO.goblins,name:'Goblins',     from:'value',  need:()=>upgrades.value>1 },
@@ -2732,8 +2731,9 @@ mouseHeld = false; rightMouseHeld = false; releaseMagnet();
 camMode = 'throwCine';
 letterbox(true);
 document.body.classList.add('cineMode');
-// a normal goblin (not Bub) demonstrates the coin throw
-const g = makeGoblin(4.4, 1.8); // a normal goblin, a meter further from the hole
+// a normal goblin (not Bub) demonstrates the coin throw — reuse one if it already exists so the count never grows
+let g = goblins.find(g=>!g.isBub);
+if (!g) g = makeGoblin(4.4, 1.8);
 g.state = 'wait';
 g.root.visible = true; g.shadow.visible = true;
 cine = { type:'throw', t:0, fromPos:camera.position.clone(), g,
@@ -3196,7 +3196,6 @@ c.suck = c.suck.filter(it => it.ci === undefined);
 function doPrestigeReset(){
 prestige++;
 for (const k in upgrades) upgrades[k] = (k==='magnet'||k==='chieftains'||k==='help') ? 0 : 1;
-for (const k in upgrades) upgrades[k] = (k==='magnet'||k==='chieftains') ? 0 : 1;
 earned = 0;
 setCoinDisplay(0);
 while (live.length) removeCoin(live[0], false);
@@ -3286,6 +3285,16 @@ const done = cfg.onDone;
 closeDlg();
 if (done) done();
 }
+}
+/* ---------- cheat: press 0 + 1 together during dialogue to skip the whole scene ---------- */
+function skipDlg(){
+const cfg = dlgCfg;
+if (!cfg) return;
+closeDlg();
+tone(700,0.08,'triangle',0.08); tone(940,0.1,'triangle',0.08,0.06);
+// scenes with a bail option (the witch) just close — no accidental sacrifice.
+// normal scenes run their completion action so the game flow continues.
+if (!cfg.bail && cfg.onDone) cfg.onDone();
 }
 /* ============================== PLAYER ============================== */
 const player = { pos:new THREE.Vector3(0,EYE,6.8), vel:new THREE.Vector3(), vy:0, grounded:true };
@@ -3633,7 +3642,7 @@ el.innerHTML = `<div class="t3d">
 </div>
 <div class="face back"></div><div class="face left"></div><div class="face right"></div>
 <div class="face top"></div><div class="face bottom"></div>
-<div class="maxBanner">MAXED</div>
+<div class="maxBanner">Bought</div>
 </div>`;
 el.addEventListener('click', ev=>{ ev.stopPropagation(); buy(n.key); });
 const t3d = el.querySelector('.t3d');
@@ -3740,7 +3749,7 @@ treeTip.id = 'treeTip';
 document.body.appendChild(treeTip);
 let tipKey = null;
 const TIP_FLAVOR = {
-help:'A stray goblin wanders in, ready to slave.',
+help:'A stray goblin wanders in, ready to fling.',
 stack:'Deeper pockets on every throw.',
 rate:'The goblins fling faster.',
 value:'Shinier coins, heavier purses.',
@@ -3753,6 +3762,7 @@ mcapacity:'More coins orbit your gaze.',
 function tipDelta(k){
 const L = upgrades[k];
 switch(k){
+case 'help':       return `+1 goblin <span class="arr">→</span> 2 goblins in the meadow`;
 case 'value':      return `coin value ${L} <span class="arr">→</span> ${L+1}`;
 case 'rate':       return `throw interval ${throwInterval().toFixed(1)}s <span class="arr">→</span> ${Math.max(4, 10*Math.pow(0.85, L)).toFixed(1)}s`;
 case 'stack':      return `${L} <span class="arr">→</span> ${L+1} coins per throw`;
@@ -3761,7 +3771,6 @@ case 'chieftains': return `${L} <span class="arr">→</span> ${L+1} chieftains`;
 case 'magnet':     return `unlocks the coin magnet (hold RMB)`;
 case 'mradius':    return `magnet radius ${magnetRadius().toFixed(1)} <span class="arr">→</span> ${Math.min(10, 0.6*Math.pow(1.3, L)).toFixed(1)}`;
 case 'mcapacity':  return `${L} <span class="arr">→</span> ${L+1} magnet slots`;
-case 'help': return `+1 goblin <span class="arr">→</span> ${goblins.length+1} in the meadow`;
 }
 return '';
 }
@@ -3853,6 +3862,21 @@ setCoinDisplay(earned);
 coinNum.classList.remove('bump'); void coinNum.offsetWidth; coinNum.classList.add('bump');
 }
 upgrades[key]++;
+if (key === 'help'){
+let need = 2 - goblins.length; // top up to exactly 2, never more
+while (need > 0){
+need--;
+for(let i=0;i<20;i++){
+const r = 8 + Math.random()*12, a = Math.random()*Math.PI*2;
+const x = Math.cos(a)*r, z = Math.sin(a)*r;
+if (Math.hypot(x-STALL_POS.x, z-STALL_POS.z) < 4) continue;
+if (Math.hypot(x-WITCH_POS.x, z-WITCH_POS.z) < 3) continue;
+makeGoblin(x, z);
+break;
+}
+}
+toast('A helping hand shuffles in…');
+}
 if (key === 'goblins'){
 for(let i=0;i<20;i++){
 const r = 8 + Math.random()*12, a = Math.random()*Math.PI*2;
@@ -3861,17 +3885,6 @@ if (Math.hypot(x-STALL_POS.x, z-STALL_POS.z) < 4) continue;
 if (Math.hypot(x-WITCH_POS.x, z-WITCH_POS.z) < 3) continue;
 makeGoblin(x, z);
 break;
-}
-if (key === 'help'){
-for(let i=0;i<20;i++){
-const r = 8 + Math.random()*12, a = Math.random()*Math.PI*2;
-const x = Math.cos(a)*r, z = Math.sin(a)*r;
-if (Math.hypot(x-STALL_POS.x, z-STALL_POS.z) < 4) continue;
-if (Math.hypot(x-WITCH_POS.x, z-WITCH_POS.z) < 3) continue;
-makeGoblin(x, z);
-break;
-}
-toast('A helping hand shuffles in…');
 }
 toast('Another goblin shuffles in…');
 }
@@ -4358,6 +4371,7 @@ if (!started) return;
 if (dlgOpen){
 if (e.code === 'KeyE') advanceDlg();
 else if (e.code === 'KeyQ' && dlgCfg && dlgCfg.bail && dlgLine === dlgCfg.lines.length-1 && !typeTimer) closeDlg();
+else if ((keys.has('Digit0') || keys.has('Numpad0')) && (keys.has('Digit1') || keys.has('Numpad1'))) skipDlg();
 return;
 }
 if (cine){ if ((cine.type === 'intro' || cine.type === 'throw') && e.code === 'KeyE') cine.capClick = true; return; }
