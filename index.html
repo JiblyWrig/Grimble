@@ -4434,6 +4434,7 @@ let menuParX = 0, menuParY = 0;
 let menuRevealT = 0, menuTitleLanded = false, menuBtnPuff = false, menuBtnLanded = false, menuTitleDust = false;
 let menuHolding = false, menuHold = 0;
 let menuTitle = null, menuBtn = null, menuBar = null;
+let menuLetters = [];
 let menuBtnHit = [], menuBtnMat = null;
 const MENU_HOLD_TIME = 1.1;
 const menuMats = [];
@@ -4443,15 +4444,38 @@ const menuRay = new THREE.Raycaster();
 function menuMat(m){ m.transparent = true; menuMats.push(m); return m; }
 
 function buildMenu(font){
-  // ---- "GRIMBLE" as extruded 3D letters, no UI container ----
-  const titleGeo = new TextGeometry('GRIMBLE', {
-    font, size: 1.35, height: 0.42, curveSegments: 8,
-    bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.045, bevelSegments: 3
-  });
-  titleGeo.center();
-  const titleFace = menuMat(new THREE.MeshToonMaterial({ color: 0xf5cf5f, gradientMap: gradTex }));
-  const titleSide = menuMat(new THREE.MeshToonMaterial({ color: 0x8a5c14, gradientMap: gradTex }));
-  menuTitle = new THREE.Mesh(titleGeo, [titleFace, titleSide]);
+// ---- "GRIMBLE" as one mesh per letter so each letter can jiggle ----
+const titleFace = menuMat(new THREE.MeshToonMaterial({ color: 0xf5cf5f, gradientMap: gradTex }));
+const titleSide = menuMat(new THREE.MeshToonMaterial({ color: 0x8a5c14, gradientMap: gradTex }));
+menuTitle = new THREE.Group();
+menuLetters.length = 0;
+const word = 'GRIMBLE';
+const spacing = 0.10;
+const specs = [];
+let totalW = 0;
+for (const ch of word){
+const g = new TextGeometry(ch, {
+font, size: 1.35, height: 0.42, curveSegments: 8,
+bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.045, bevelSegments: 3
+});
+g.computeBoundingBox();
+const bb = g.boundingBox;
+const w = bb.max.x - bb.min.x;
+const hC = (bb.max.y + bb.min.y) / 2;
+g.translate(-bb.min.x, -hC, 0); // left edge at 0, vertically centered on the word axis
+specs.push({ g, w });
+totalW += w + spacing;
+}
+totalW -= spacing;
+let x = -totalW / 2;
+for (const { g, w } of specs){
+const m = new THREE.Mesh(g, [titleFace, titleSide]);
+m.position.x = x;
+m.userData = { baseY: 0, wobble: 0, phase: Math.random()*6.28 };
+menuTitle.add(m);
+menuLetters.push(m);
+x += w + spacing;
+}
 menuTitle.position.set(0, 8.9, 0); // held high until the reveal drop
 menuGroup.add(menuTitle);
 
@@ -4609,11 +4633,37 @@ renderer.domElement.style.cursor = hit ? 'pointer' : '';
 }
 if (!menuHover) menuHolding = false;
 }
+// per-letter raycast: poke the title letters
+if (prodIntroDone && !locked && !menuFading && menuLetters.length){
+menuRay.setFromCamera(menuNdc, camera);
+const hits = menuRay.intersectObjects(menuLetters, false);
+for (let i=0;i<hits.length;i++){
+hits[i].object.userData.wobble = 1;
+}
+}
 // hold animation: press-in + shimmer + glow, spring back on release
 const targetS = menuHolding ? 0.94 + Math.sin(time * 26) * 0.01 : (menuHover ? 1.07 : 1);
 menuBtn.scale.lerp(_v1.set(targetS, targetS, targetS), Math.min(1, 12 * dt));
 if (menuBtnMat) menuBtnMat.emissive.setHex(menuHolding ? 0x2c3d12 : (menuHover ? 0x1c2a10 : 0x000000));
 if (menuBar) menuBar.scale.x = Math.max(0.001, menuHold);
+// letter jiggle: wobble stays at 1 while hovered, decays once the cursor leaves
+for (const L of menuLetters){
+const u = L.userData;
+if (u.wobble > 0.001){
+u.wobble *= Math.exp(-2.4*dt);
+const w = u.wobble, ph = u.phase;
+L.rotation.z = Math.sin(time*24 + ph)*0.16*w;
+L.rotation.x = Math.cos(time*19 + ph*1.7)*0.12*w;
+L.position.y = u.baseY + Math.sin(time*27 + ph)*0.07*w;
+const s = 1 + Math.sin(time*21 + ph*2.3)*0.09*w;
+L.scale.set(s, s, s);
+} else if (u.wobble !== 0){
+u.wobble = 0;
+L.rotation.set(0,0,0);
+L.position.y = u.baseY;
+L.scale.set(1,1,1);
+}
+}
 }
 /* ---------- fullscreen: on by default, re-enters on next click after Esc ---------- */
 function goFullscreen(){
