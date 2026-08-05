@@ -1383,6 +1383,14 @@ if (avL > 0.01){
 _qTmp.setFromAxisAngle(_v1.copy(g.throwAV).normalize(), avL * dt);
 g.root.quaternion.premultiply(_qTmp);
 }
+// flail limbs while airborne
+const fl = g.throwT*16 + g.squirmT*6;
+g.armL.rotation.x = 2.4 + Math.sin(fl)*0.7;
+g.armR.rotation.x = 2.4 + Math.sin(fl*1.21 + 2.0)*0.7;
+g.armL.rotation.z = 0.5 + Math.sin(fl*0.8)*0.3;
+g.armR.rotation.z = -0.5 - Math.sin(fl*0.86 + 1.0)*0.3;
+g.legL.rotation.x = Math.sin(fl*1.3)*1.2;
+g.legR.rotation.x = Math.sin(fl*1.3 + Math.PI)*1.2;
 const d = Math.hypot(g.root.position.x, g.root.position.z);
 const overHole = d < HOLE_R - 0.1;
 const groundY = g.baseScale * 0.5;
@@ -2707,7 +2715,7 @@ letterbox(true);
 document.body.classList.add('cineMode');
 const g = goblins[0];
 if (heldGoblin === g) heldGoblin = null;
-if (g){ g.state = 'wait'; g.root.position.set(3.4, 0, 1.4); }
+if (g){ g.state = 'wait'; g.root.position.set(3.4, 0, 1.4); g.root.visible = true; g.shadow.visible = true; }
 cine = { type:'throw', t:0, fromPos:camera.position.clone(), g,
 phase:0, pt:0, capShown:false, capClick:false, thrown:false, coinIdx:-1, clink:false, clinkT:0 };
 tone(220,0.4,'sine',0.15,0,-60);
@@ -2886,11 +2894,13 @@ letterbox(false);
 hideCap();
 for (const s of c.stars) scene.remove(s);
 const b0 = goblins[0];
-if (b0){ // Bub waits by the hole, inert, until the throw cutscene
+if (b0){ // Bub stays hidden until the throw cutscene after Grimble's chat
 b0.state = 'wait';
 b0.throwVel.set(0,0,0); b0.throwAV.set(0,0,0);
 b0.root.position.set(3.4, 0, 1.4);
 b0.root.quaternion.setFromEuler(new THREE.Euler(0, Math.atan2(-3.4,-1.4), 0));
+b0.root.visible = false;
+b0.shadow.visible = false;
 }
 snapCameraToPlayer();
 cine = null;
@@ -3292,7 +3302,7 @@ const dW = Math.hypot(player.pos.x - WITCH_POS.x, player.pos.z - WITCH_POS.z);
 nearWitch = witchVisible && dW < 3.5;
 if (!heldGoblin) {
 for (const g of goblins) {
-if (g.state === 'held' || g.state === 'thrown' || g.state === 'recovering') continue;
+if (g.state === 'held' || g.state === 'thrown' || g.state === 'recovering' || !g.root.visible) continue;
 const d = Math.hypot(g.root.position.x - player.pos.x, g.root.position.z - player.pos.z);
 if (d < 3.5) {
 const toGob = new THREE.Vector3(g.root.position.x - player.pos.x, 0, g.root.position.z - player.pos.z).normalize();
@@ -4088,7 +4098,6 @@ bassNote(BASSROOTS[bar]*1.5, t0 + BEAT*2*hum, 0.04);
 bassNote(BASSROOTS[bar]*2, t0 + BEAT*3, 0.03);
 drumHit(t0, 0.085);
 drumHit(t0 + BEAT*2, 0.06);
-if (bar % 2 === 1){ shaker(t0 + BEAT, 0.022); shaker(t0 + BEAT*3, 0.022); }
 for (const n of PHRASE){
 if (n[0] !== bar) continue;
 const f = DORIAN[n[2]];
@@ -4611,7 +4620,7 @@ updateRain(dt, elapsed);
 for (const g of goblins) updateGoblin(g, dt, elapsed);
 let ng = goblins[0], bd = Infinity;
 for (const g of goblins){
-if (g.state === 'held') continue;
+if (g.state === 'held' || !g.root.visible) continue;
 const d = (g.root.position.x-player.pos.x)**2 + (g.root.position.z-player.pos.z)**2;
 if (d < bd){ bd = d; ng = g; }
 }
