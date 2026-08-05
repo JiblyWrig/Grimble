@@ -440,6 +440,7 @@ const STALL_COLL = [ // round props
 { x:-1.85, z:STALL_POS.z+0.50, r:0.55 }, // crates
 { x: 1.85, z:STALL_POS.z+0.35, r:0.45 }, // barrel (+cat)
 { x: 0,    z:STALL_POS.z-0.55, r:0.50 }, // Grimble himself
+{ x:-2.45, z:STALL_POS.z+1.60, r:0.40 }, // chalkboard
 ];
 const WITCH_POS = new THREE.Vector3(0, 0, 23);
 const RUG_CENTER = new THREE.Vector3(STALL_POS.x, 0, STALL_POS.z + 2.6);
@@ -512,7 +513,7 @@ const magnetRadius = () => Math.min(10, 0.6 * Math.pow(1.3, upgrades.mradius-1))
 const allMaxed = () => Object.keys(UPG).every(k => upgrades[k] >= UPG[k].max);
 const ICO = {
 stack:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg>`,
-rate:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 3h10v4l-5 5 5 5v4H7v-4l-5-5-5z"/><path d="M10 6h4M10 18h4"/></svg>`,
+rate:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 3h10v4l-5 5 5 5v4H7v-4l5-5-5-5z"/><path d="M10 6h4M10 18h4"/></svg>`,
 value:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><path d="M12 8l1.2 2.6 2.8.3-2 1.9.5 2.8-2.5-1.4-2.5 1.4.5-2.8-2-1.9 2.8-.3z"/></svg>`,
 goblins:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="13" r="6"/><path d="M6.5 10.5L2 7.5l5.5 1.5M17.5 10.5L22 7.5l-5.5 1.5"/><circle cx="10" cy="12.5" r="0.8" fill="currentColor"/><circle cx="14" cy="12.5" r="0.8" fill="currentColor"/></svg>`,
 chief:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="14" r="5.5"/><path d="M7.5 9.5L8 5.5l2.2 2.5L12 4.5l1.8 3.5L16 5.5l.5 4z"/><circle cx="10" cy="13.5" r="0.8" fill="currentColor"/><circle cx="14" cy="13.5" r="0.8" fill="currentColor"/></svg>`,
@@ -1820,6 +1821,7 @@ let catBodyMesh = null;
 const lampX = 1.35;
 const lampZ = 0.95;
 const mothGeos = [];
+const pennants = [];
 {
 // Stall prop geometries with vertex colors - merged for minimal draw calls
 const stallGeomParts = [];
@@ -1890,10 +1892,25 @@ addProp(new THREE.CylinderGeometry(0.03,0.03,0.6,6), woodDarkColor, [sx, 2.48, 1
 // Sign rebuilt below with the GRIMBLE'S face texture
 // String
 addProp(new THREE.CylinderGeometry(0.008,0.008,2.7,5), woodDarkColor, [0, 2.28, 1.0], [0, 0, Math.PI/2]);
-// Pennants (use average color)
+// Pennants — own meshes so they can sway in the breeze
+{
+const pennCols = [0xd94f3d, 0xe8b23a, 0x5b8c3e, 0x4d6fb0, 0xd94f3d];
 for(let i=0;i<5;i++){
-const pennCol = [0xd94f3d, 0xe8b23a, 0x5b8c3e, 0x4d6fb0, 0xd94f3d][i];
-addProp(new THREE.CircleGeometry(0.15,3), new THREE.Color(pennCol), [-1.1+i*0.55, 2.18, 1.0], [0, 0.15*(i-2), Math.PI]);
+const pg = new THREE.CircleGeometry(0.15,3);
+pg.rotateZ(-Math.PI/2);     // apex down, top edge horizontal
+pg.translate(0,-0.075,0);   // pivot at the string
+const pm = new THREE.Mesh(pg, new THREE.MeshLambertMaterial({ color:pennCols[i], side:THREE.DoubleSide }));
+const baseY = 0.15*(i-2);
+pm.position.set(STALL_POS.x + (-1.1+i*0.55), 2.27, STALL_POS.z + 1.0);
+pm.rotation.set(0, baseY, 0);
+scene.add(pm);
+pennants.push({ m:pm, baseY, ph:Math.random()*6.28, sp:1.1+Math.random()*0.9 });
+}
+}
+// Stool behind Grimble
+addProp(new THREE.CylinderGeometry(0.24,0.26,0.07,10), barrelColor, [0.45,0.47,-1.15], [0,0.4,0], [1,1,1], 1);
+for(const sx of [-1,1]) for(const sz of [-1,1]){
+addProp(new THREE.CylinderGeometry(0.028,0.036,0.47,6), woodDarkColor, [0.45+sx*0.15,0.235,-1.15+sz*0.15], [sz*0.14,0,-sx*0.14], [1,1,1], 1);
 }
 // Pot
 addProp(new THREE.CylinderGeometry(0.13,0.09,0.2,10), potColor, [-0.85,1.07,0.5]);
@@ -2029,6 +2046,7 @@ const sign = new THREE.Mesh(new THREE.BoxGeometry(1.5,0.55,0.05),
 sign.position.set(STALL_POS.x, 3.0, STALL_POS.z + 1.16);
 sign.rotation.x = -0.12;
 scene.add(sign);
+
 if (woodParts.length){
 const wm = new THREE.Mesh(mergeGeometries(woodParts, false),
 new THREE.MeshLambertMaterial({ map: woodTex, side: THREE.DoubleSide }));
@@ -2127,6 +2145,88 @@ vendor.shadow.position.set(vendor.root.position.x, 0.02, vendor.root.position.z)
 vendor.shadow.renderOrder = 2;
 scene.add(vendor.shadow);
 }
+/* ============================== CHALKBOARD (affordable upgrades) ============================== */
+const chalkCanvas = document.createElement('canvas');
+chalkCanvas.width = 256; chalkCanvas.height = 320;
+const chalkCtx = chalkCanvas.getContext('2d');
+const chalkTex = new THREE.CanvasTexture(chalkCanvas);
+chalkTex.colorSpace = THREE.SRGBColorSpace;
+chalkTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+let chalkSig = null;
+function chalkAffordable(){
+const list = [];
+for (const n of TREE){
+const lvl = upgrades[n.key];
+if (lvl >= UPG[n.key].max) continue;
+if (n.need && !n.need()) continue;
+const c = costOf(n.key);
+if (cheat || earned >= c) list.push({ name:n.name, c });
+}
+return list;
+}
+function drawChalkboard(){
+const x = chalkCtx, w = 256, h = 320;
+x.clearRect(0,0,w,h);
+x.fillStyle = '#22322b'; x.fillRect(0,0,w,h);
+for(let i=0;i<46;i++){
+x.fillStyle = `rgba(255,255,255,${0.012+Math.random()*0.03})`;
+x.beginPath(); x.arc(Math.random()*w, Math.random()*h, 6+Math.random()*20, 0, 7); x.fill();
+}
+x.strokeStyle = '#5c3c20'; x.lineWidth = 12; x.strokeRect(6,6,w-12,h-12);
+x.strokeStyle = 'rgba(240,248,240,0.28)'; x.lineWidth = 2; x.strokeRect(14,14,w-28,h-28);
+x.fillStyle = 'rgba(243,249,242,0.95)';
+x.font = '25px MedievalSharp, cursive';
+x.textAlign = 'center'; x.textBaseline = 'top';
+x.fillText('Affordable upgrades', w/2, 24);
+x.strokeStyle = 'rgba(243,249,242,0.7)'; x.lineWidth = 2;
+x.beginPath(); x.moveTo(42,58); x.quadraticCurveTo(w/2,64,w-42,58); x.stroke();
+const list = chalkAffordable();
+x.font = '19px MedievalSharp, cursive';
+if (!list.length){
+x.fillStyle = 'rgba(243,249,242,0.55)';
+x.textAlign = 'center';
+x.fillText('nothin yet...', w/2, 96);
+x.fillText('feed the hole!', w/2, 128);
+} else {
+let y = 92;
+for (const it of list.slice(0,6)){
+x.fillStyle = 'rgba(243,249,242,0.9)';
+x.textAlign = 'left';
+x.fillText(it.name, 26, y);
+x.textAlign = 'right';
+x.fillText(it.c + 'c', w-26, y);
+y += 33;
+}
+if (list.length > 6){
+x.fillStyle = 'rgba(243,249,242,0.5)';
+x.textAlign = 'left';
+x.fillText('... an more', 26, y);
+}
+}
+chalkTex.needsUpdate = true;
+}
+function refreshChalkboard(){
+const sig = chalkAffordable().map(i=>i.name+':'+i.c).join('|');
+if (sig !== chalkSig){ chalkSig = sig; drawChalkboard(); }
+}
+setTimeout(()=>{ chalkSig = null; refreshChalkboard(); }, 50);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ chalkSig = null; refreshChalkboard(); });
+const chalkGroup = new THREE.Group();
+const chalkFrame = new THREE.Mesh(new THREE.BoxGeometry(1.06,1.3,0.06), new THREE.MeshLambertMaterial({ map:woodTex }));
+chalkFrame.position.set(0,0.8,-0.035);
+chalkGroup.add(chalkFrame);
+const chalkFace = new THREE.Mesh(new THREE.PlaneGeometry(0.94,1.18), new THREE.MeshBasicMaterial({ map:chalkTex }));
+chalkFace.position.set(0,0.8,0);
+chalkGroup.add(chalkFace);
+for(const s of [-1,1]){
+const leg = new THREE.Mesh(new THREE.BoxGeometry(0.05,1.3,0.05), new THREE.MeshLambertMaterial({ map:woodTex }));
+leg.position.set(s*0.42,0.62,-0.24);
+leg.rotation.x = 0.38;
+chalkGroup.add(leg);
+}
+chalkGroup.position.set(STALL_POS.x-2.45, 0, STALL_POS.z+1.6);
+chalkGroup.rotation.y = 0.42;
+scene.add(chalkGroup);
 function updateVendor(dt, time){
 vendor.inner.position.y = Math.sin(time*1.8)*0.015;
 const p = vendor.root.position;
@@ -2163,6 +2263,11 @@ vendor.pupL.scale.y = vendor.pupR.scale.y = blinkScale;
 vendor.shadow.position.set(p.x, 0.02, p.z);
 // cat breathing
 if (catBodyMesh) catBodyMesh.scale.y = 0.55 * (1 + Math.sin(time*1.6)*0.09);
+}
+function updatePennants(time){
+for (const p of pennants){
+p.m.rotation.set(Math.sin(time*p.sp + p.ph)*0.22, p.baseY, Math.sin(time*p.sp*0.83 + p.ph*1.7)*0.12);
+}
 }
 /* ============================== COINS — INSTANCED + SoA (max 2000, no shadows) ============================== */
 const MAX_COINS = MAX_WORLD_COINS;
@@ -4831,6 +4936,7 @@ updateTreeSway(elapsed);
 if (lampLight) {
   lampLight.intensity = (14 + Math.sin(elapsed*11)*1.2 + Math.sin(elapsed*23+1.7)*0.8) * (1 + 0.5*rainFactor);
 }
+updatePennants(elapsed);
 // Update lantern moths orbit with sine wobble
 for(const moth of mothGeos){
 const u = moth.userData;
@@ -4870,6 +4976,7 @@ rainUpdateAccum += dt;
 if (rainUpdateAccum >= 0.5) {
 rainUpdateAccum = 0;
 updateRainDisplay();
+refreshChalkboard();
 }
 sun.position.copy(player.pos).addScaledVector(sunDir, 30);
 
