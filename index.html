@@ -3491,6 +3491,7 @@ if (e.button === 0) mouseHeld = false;
 addEventListener('contextmenu', e=>e.preventDefault());
 /* First start triggers the hole-opening cinematic; later starts lock immediately */
 overlay.addEventListener('click', ()=>{
+if (menuReady) return; // 3D menu active: only the 3D button starts the game
 initAudio();
 if (AC && AC.state === 'suspended') AC.resume();
 ensureFirstGoblin();
@@ -3533,6 +3534,7 @@ let menuBtnHit = [], menuBtnMat = null;
 const MENU_HOLD_TIME = 1.1;
 const menuMats = [];
 const menuNdc = new THREE.Vector2(0, 0);
+const _clickNdc = new THREE.Vector2();
 const menuRay = new THREE.Raycaster();
 function menuMat(m){ m.transparent = true; menuMats.push(m); return m; }
 
@@ -3618,7 +3620,10 @@ addEventListener('mousemove', (e) => {
   menuNdc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
 });
 addEventListener('mousedown', (e) => {
-  if (e.button === 0 && menuReady && !menuFading && !locked && menuHover && prodIntroDone) menuHolding = true;
+if (e.button !== 0 || !menuReady || menuFading || locked || !prodIntroDone) return;
+_clickNdc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+menuRay.setFromCamera(_clickNdc, camera);
+if (menuRay.intersectObjects(menuBtnHit, false).length > 0) menuHolding = true;
 });
 addEventListener('mouseup', (e) => {
   if (e.button === 0) menuHolding = false;
