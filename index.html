@@ -271,6 +271,20 @@ cursor:pointer; transition:opacity 1.3s ease; }
 animation:clickPulse 1.7s ease-in-out infinite; transition:opacity .5s; text-shadow:0 2px 6px #000; }
 @keyframes clickPulse { 0%,100% { opacity:.3; } 50% { opacity:.95; } }
 #prodIntro.clicked #piClick { opacity:0; animation:none; }
+#piBurst { position:absolute; left:50%; top:50%; width:170vmax; height:170vmax; margin:-85vmax 0 0 -85vmax;
+background:repeating-conic-gradient(from 0deg, rgba(245,207,95,.09) 0deg 5deg, rgba(245,207,95,0) 5deg 13deg);
+-webkit-mask-image:radial-gradient(circle, #000 0%, rgba(0,0,0,.55) 26%, transparent 64%);
+mask-image:radial-gradient(circle, #000 0%, rgba(0,0,0,.55) 26%, transparent 64%);
+opacity:0; transition:opacity 1.2s ease; pointer-events:none;
+animation:burstSpin 30s linear infinite; }
+#prodIntro.logo #piBurst { opacity:1; }
+@keyframes burstSpin { to { transform:rotate(360deg); } }
+#piLogoIn { display:block; animation:logoIdle 2.8s ease-in-out 1s infinite; transform-origin:50% 62%; }
+@keyframes logoIdle {
+0%,100% { transform:scale(1,1) rotate(0deg); }
+35% { transform:scale(1.03,0.97) rotate(.5deg); }
+70% { transform:scale(0.98,1.025) rotate(-.5deg); }
+}
 #piLogo { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) rotate(-2deg); text-align:center; opacity:0; pointer-events:none; }
 #prodIntro.logo #piLogo { animation:logoIn .9s cubic-bezier(.25,.9,.3,1.35) both, logoOut 1s ease-in 3.9s forwards; }
 .piA { display:block; font-family:'MedievalSharp',cursive; font-size:clamp(64px, 12vw, 200px); line-height:.95; color:#f5cf5f;
@@ -363,7 +377,8 @@ to { opacity:0; transform:translate(-50%,-50%) rotate(-2deg) scale(1.05); }
 </div>
 <div id="prodIntro">
 <div id="piClick">click</div>
-<div id="piLogo"><span class="piA">JayaBeth</span><span class="piB">PRODUCTIONS</span></div>
+<div id="piBurst"></div>
+<div id="piLogo"><div id="piLogoIn"><span class="piA">JayaBeth</span><span class="piB">PRODUCTIONS</span></div></div>
 </div>
 <script type="importmap">
 {
