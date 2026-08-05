@@ -138,11 +138,21 @@ background:rgba(255,255,255,.05); border:1px solid rgba(169,196,138,.35); border
 .treeHead { display:flex; align-items:center; gap:18px; }
 #treeBox { position:relative; width:700px; height:540px; max-width:96vw; pointer-events:none; }
 #treeLines { position:absolute; inset:0; width:100%; height:100%; overflow:visible; pointer-events:none; }
+#treeTip { position:fixed; z-index:30; pointer-events:none; opacity:0; transition:opacity .12s;
+min-width:190px; max-width:270px; padding:10px 14px; text-align:center;
+background:linear-gradient(165deg, #f0dfae, #d9bd82);
+border:2px solid #7a5a1e; border-radius:10px;
+box-shadow:0 10px 26px rgba(0,0,0,.65), inset 0 0 18px rgba(122,90,30,.25); }
+#treeTip.show { opacity:1; }
+.tipName { font-family:'MedievalSharp',cursive; font-size:15px; color:#5c3c10; letter-spacing:1px; }
+.tipFlavor { font-size:11px; font-style:italic; color:#6b4a20; margin-top:2px; }
+.tipDelta { margin-top:6px; font-size:12px; font-weight:800; color:#3a2a08; }
+.tipDelta .arr { color:#8a5c0d; }
+.tipMax { margin-top:6px; font-size:12px; font-weight:800; color:#7a2430; }
 /* ---------- physical 3D connector lines ---------- */
 .tline { position:absolute; height:8px; margin-top:-4px; transform-origin:left center;
 pointer-events:none; z-index:0; perspective:700px; }
-.tl3d { position:absolute; inset:0; transform-style:preserve-3d;
-transform:rotateY(-13.5deg) rotateX(7.5deg); }
+.tl3d { position:absolute; inset:0; transform-style:preserve-3d; }
 .tlface { position:absolute; backface-visibility:hidden; border-radius:4px; }
 .tlfront { inset:0; transform:translateZ(3.5px);
 background:linear-gradient(180deg,#e8c76a,#a5770e 55%,#6b4a10);
@@ -182,13 +192,13 @@ repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0 1px, transparent 1px 5px
 linear-gradient(165deg, rgb(30,46,20), rgb(12,20,8));
 border:2px solid rgba(212,175,55,.5);
 box-shadow:0 6px 18px #000c; }
-.face.front { inset:0; transform:translateZ(14.04px); }
-.face.back { inset:0; transform:rotateY(180deg) translateZ(14.04px); background:linear-gradient(165deg,#141f0d,#0a1206); }
-.face.left, .face.right { width:28.08px; left:50%; margin-left:-14.04px; top:0; height:100%; border-radius:6px;
+.face.front { inset:0; transform:translateZ(28.08px); }
+.face.back { inset:0; transform:rotateY(180deg) translateZ(28.08px); background:linear-gradient(165deg,#141f0d,#0a1206); }
+.face.left, .face.right { width:56.16px; left:50%; margin-left:-28.08px; top:0; height:100%; border-radius:6px;
 background:linear-gradient(180deg,#1c2b12,#0a1406); border-color:rgba(212,175,55,.35); }
 .face.left { transform:rotateY(-90deg) translateZ(61px); }
 .face.right { transform:rotateY(90deg) translateZ(61px); }
-.face.top, .face.bottom { height:28.08px; top:50%; margin-top:-14.04px; left:0; width:100%; border-radius:6px;
+.face.top, .face.bottom { height:56.16px; top:50%; margin-top:-28.08px; left:0; width:100%; border-radius:6px;
 background:linear-gradient(90deg,#1c2b12,#0a1406); border-color:rgba(212,175,55,.35); }
 .face.top { transform:rotateX(90deg) translateZ(59px); }
 .face.bottom { transform:rotateX(-90deg) translateZ(59px); }
@@ -215,7 +225,7 @@ pointer-events:none; opacity:0; }
 0%   { transform:rotateY(-190deg) translateZ(76px); opacity:0; }
 18%  { opacity:1; }
 70%  { transform:rotateY(-14deg) translateZ(70px); opacity:1; }
-100% { transform:rotateY(0deg) translateZ(18px); opacity:1; }
+100% { transform:rotateY(0deg) translateZ(32px); opacity:1; }
 }
 .tnode.max:hover { transform:translate(-50%,-50%) scale(1.12); }
 .tnode .ico { display:flex; justify-content:center; color:#c9c0a6; margin-top:10px; }
@@ -2925,7 +2935,7 @@ if (document.pointerLockElement) document.exitPointerLock();
 tone(660,0.09,'triangle',0.16); tone(880,0.12,'triangle',0.14,0.07);
 }
 function closeShopToPlay(){
-shopOpen = false; shopPhase = 'none';
+shopOpen = false; shopPhase = 'none'; hideTip();
 holeBtns.classList.add('hidden');
 shopOverlay.classList.add('hidden');
 document.body.classList.remove('shop');
@@ -2942,6 +2952,7 @@ function ascend(){
 shopOverlay.classList.add('hidden');
 shopOpen = false;
 shopPhase = 'none';
+hideTip();
 holeBtns.classList.add('hidden');
 document.body.classList.remove('shop');
 fadeMusic(0.55);
@@ -2999,12 +3010,16 @@ el.addEventListener('mousemove', ev=>{
 const r = el.getBoundingClientRect();
 const px = (ev.clientX - r.left)/r.width - 0.5;
 const py = (ev.clientY - r.top)/r.height - 0.5;
-t3d.style.transform = `rotateY(${(-13.5 + px*26).toFixed(1)}deg) rotateX(${(7.5 - py*26).toFixed(1)}deg) translateZ(14px)`;
+t3d.style.transform = `rotateY(${(px*26).toFixed(1)}deg) rotateX(${(-py*26).toFixed(1)}deg) translateZ(14px)`;
 });
-el.addEventListener('mouseenter', ()=>{ if (lineEls[n.key]) lineEls[n.key].classList.add('hov'); });
+el.addEventListener('mouseenter', ()=>{
+if (lineEls[n.key]) lineEls[n.key].classList.add('hov');
+showTip(n.key, el.getBoundingClientRect());
+});
 el.addEventListener('mouseleave', ()=>{
 t3d.style.transform = '';
 if (lineEls[n.key]) lineEls[n.key].classList.remove('hov');
+hideTip();
 });
 treeBox.appendChild(el);
 nodeEls[n.key] = {
@@ -3074,7 +3089,7 @@ const dt = Math.min(0.05, (now - last)/1000); last = now;
 t += dt;
 const k = Math.min(1, t/dur);
 const e = k*k*(3-2*k);
-tl3d.style.transform = `rotateY(-13.5deg) rotateX(7.5deg) scaleX(${Math.max(0.02, e).toFixed(3)})`;
+tl3d.style.transform = `scaleX(${Math.max(0.02, e).toFixed(3)})`;
 tip.style.left = (len*e).toFixed(1) + 'px';
 tip.style.opacity = k < 1 ? '1' : '0';
 if (k < 1){
@@ -3089,6 +3104,57 @@ tip.style.opacity = '0';
 };
 el._raf = requestAnimationFrame(step);
 }
+/* ---------- tooltips ---------- */
+const treeTip = document.createElement('div');
+treeTip.id = 'treeTip';
+document.body.appendChild(treeTip);
+let tipKey = null;
+const TIP_FLAVOR = {
+stack:'Deeper pockets on every throw.',
+rate:'The goblins fling faster.',
+value:'Shinier coins, heavier purses.',
+goblins:'More hands, more coins.',
+chieftains:'Red kings slam silver into the dirt.',
+magnet:'Gold bends toward your will.',
+mradius:'The pull reaches further.',
+mcapacity:'More coins orbit your gaze.',
+};
+function tipDelta(k){
+const L = upgrades[k];
+switch(k){
+case 'value':      return `coin value ${L} <span class="arr">→</span> ${L+1}`;
+case 'rate':       return `throw interval ${throwInterval().toFixed(1)}s <span class="arr">→</span> ${Math.max(4, 10*Math.pow(0.85, L)).toFixed(1)}s`;
+case 'stack':      return `${L} <span class="arr">→</span> ${L+1} coins per throw`;
+case 'goblins':    return `${L} <span class="arr">→</span> ${L+1} goblins`;
+case 'chieftains': return `${L} <span class="arr">→</span> ${L+1} chieftains`;
+case 'magnet':     return `unlocks the coin magnet (hold RMB)`;
+case 'mradius':    return `magnet radius ${magnetRadius().toFixed(1)} <span class="arr">→</span> ${Math.min(10, 0.6*Math.pow(1.3, L)).toFixed(1)}`;
+case 'mcapacity':  return `${L} <span class="arr">→</span> ${L+1} magnet slots`;
+}
+return '';
+}
+function renderTipContent(key){
+const meta = TREE.find(t=>t.key===key);
+const maxed = upgrades[key] >= UPG[key].max;
+treeTip.innerHTML = `<div class="tipName">${meta.name}</div>
+<div class="tipFlavor">${TIP_FLAVOR[key]}</div>` +
+(maxed ? `<div class="tipMax">MAXED — the hole is satisfied</div>`
+: `<div class="tipDelta">${tipDelta(key)}</div>`);
+}
+function showTip(key, rect){
+tipKey = key;
+renderTipContent(key);
+treeTip.style.left = THREE.MathUtils.clamp(rect.left + rect.width/2, 140, innerWidth-140) + 'px';
+if (rect.top < 170){
+treeTip.style.top = (rect.bottom + 12) + 'px';
+treeTip.style.transform = 'translate(-50%,0)';
+} else {
+treeTip.style.top = (rect.top - 12) + 'px';
+treeTip.style.transform = 'translate(-50%,-100%)';
+}
+treeTip.classList.add('show');
+}
+function hideTip(){ tipKey = null; treeTip.classList.remove('show'); }
 function refreshTree(){
 shopCoinsEl.textContent = cheat ? '∞' : fmt(earned);
 let bought = 0, maxT = 0;
@@ -3139,6 +3205,7 @@ setRollingDigits(el.costRoll, c);
 el.wrap.classList.toggle('cant', !maxed && !(cheat || earned>=c));
 el.wrap.classList.toggle('max', maxed);
 }
+if (tipKey) renderTipContent(tipKey);
 }
 function buy(key){
 const meta = TREE.find(t=>t.key===key);
