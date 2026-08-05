@@ -88,7 +88,7 @@ text-shadow:0 2px 0 #000, 0 0 12px rgba(0,0,0,.9); opacity:0; transition:opacity
 font-family:'MedievalSharp',cursive; font-size:17px; color:#ffe58a; opacity:0; transition:all .3s; text-shadow:0 2px 4px #000; }
 #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 #vignette { position:absolute; inset:0; box-shadow:inset 0 0 190px rgba(0,0,0,.5); }
-#grain { position:absolute; inset:0; pointer-events:none; opacity:.0803; background-repeat:repeat; }
+#grain { position:absolute; inset:0; pointer-events:none; opacity:.0964; background-repeat:repeat; }
 #fadeBlack { position:fixed; inset:0; background:#000; opacity:0; pointer-events:none; transition:opacity 1.1s; z-index:18; }
 #fadeBlack.on { opacity:1; }
 #letterbox { position:fixed; inset:0; pointer-events:none; z-index:17; overflow:hidden; }
@@ -307,21 +307,43 @@ animation:burstSpin 30s linear infinite; }
 70% { transform:scale(0.98,1.025) rotate(-.5deg); }
 }
 #piLogo { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) rotate(-2deg); text-align:center; opacity:0; pointer-events:none; }
-#prodIntro.logo #piLogo { animation:logoIn .9s cubic-bezier(.25,.9,.3,1.35) both, logoOut 1s ease-in 3.9s forwards; }
+#prodIntro.logo #piLogo { opacity:1; animation:logoOut 1s ease-in 3.9s forwards; }
 .piA { display:block; font-family:'MedievalSharp',cursive; font-size:clamp(64px, 12vw, 200px); line-height:.95; color:#f5cf5f;
 -webkit-text-stroke:3px #3d2a08;
 text-shadow:0 4px 0 #7a5210, 0 8px 0 #3d2a08, 0 16px 40px #000, 0 0 60px rgba(245,207,95,.3); }
+.piA .ch { display:inline-block; opacity:0; }
+#prodIntro.logo .piA .ch { animation:chIn .65s cubic-bezier(.2,1.7,.4,1) both; animation-delay:calc(.12s + var(--i)*.075s); }
+@keyframes chIn {
+0% { opacity:0; transform:translateY(.9em) scale(.2) rotate(-24deg); }
+55% { opacity:1; transform:translateY(-.09em) scale(1.18) rotate(5deg); }
+100% { opacity:1; transform:translateY(0) scale(1) rotate(0deg); }
+}
 .piB { display:block; font-family:'MedievalSharp',cursive; font-size:clamp(18px, 3.2vw, 54px); letter-spacing:.9em; text-indent:.9em;
-color:#cfe3b8; margin-top:1.2vw; text-shadow:0 2px 0 #16200c, 0 5px 18px #000; }
-@keyframes logoIn {
-0% { opacity:0; transform:translate(-50%,-50%) rotate(-9deg) scale(.4); }
-70% { opacity:1; transform:translate(-50%,-50%) rotate(-1deg) scale(1.07); }
-100% { opacity:1; transform:translate(-50%,-50%) rotate(-2deg) scale(1); }
+color:#cfe3b8; margin-top:1.2vw; text-shadow:0 2px 0 #16200c, 0 5px 18px #000; opacity:0; }
+#prodIntro.logo .piB { animation:bIn .8s ease .85s both; }
+@keyframes bIn {
+from { opacity:0; transform:translateY(.5em); }
+to { opacity:1; transform:translateY(0); }
 }
 @keyframes logoOut {
 from { opacity:1; transform:translate(-50%,-50%) rotate(-2deg) scale(1); }
 to { opacity:0; transform:translate(-50%,-50%) rotate(-2deg) scale(1.05); }
 }
+/* ---------- settings (main menu) ---------- */
+#settingsUI { position:fixed; left:18px; bottom:18px; z-index:21; display:none; flex-direction:column; align-items:flex-start; gap:8px; }
+body.menu #settingsUI { display:flex; }
+#setBtn { font-family:'MedievalSharp',cursive; font-size:14px; letter-spacing:1px; color:#cfe3b8;
+background:rgba(20,30,14,.85); border:1px solid rgba(169,196,138,.4); border-radius:9px; padding:7px 14px; cursor:pointer; transition:all .12s; }
+#setBtn:hover { color:#fff; background:rgba(40,60,25,.9); }
+#setPanel { background:linear-gradient(160deg, rgba(24,40,16,.94), rgba(11,20,8,.96));
+border:1px solid rgba(212,175,55,.45); border-radius:12px; padding:10px 12px; min-width:180px;
+box-shadow:0 8px 24px rgba(0,0,0,.55), inset 0 0 24px rgba(0,0,0,.35); }
+#setPanel.hidden { display:none; }
+.setRow { display:flex; justify-content:space-between; align-items:center; gap:14px; padding:4px 2px;
+font-size:11px; font-weight:800; color:#a9c48a; letter-spacing:1.5px; }
+.setTgl { font-family:'Nunito',sans-serif; font-weight:800; font-size:11px; min-width:46px; padding:3px 8px; border-radius:6px; cursor:pointer;
+background:#2b3f18; border:1px solid #6d8f3f; border-bottom:3px solid #465f26; color:#eef6d8; }
+.setTgl.off { background:#3a2424; border-color:#8f5b3f; border-bottom-color:#5f3626; color:#d8b8a8; }
 </style>
 </head>
 <body>
@@ -398,9 +420,18 @@ to { opacity:0; transform:translate(-50%,-50%) rotate(-2deg) scale(1.05); }
 </div>
 </div>
 <div id="prodIntro">
+<div id="settingsUI">
+<div id="setPanel" class="hidden">
+<div class="setRow"><span>MUSIC</span><button class="setTgl" data-k="music">ON</button></div>
+<div class="setRow"><span>AMBIENCE</span><button class="setTgl" data-k="ambience">ON</button></div>
+<div class="setRow"><span>EFFECTS</span><button class="setTgl" data-k="sfx">ON</button></div>
+<div class="setRow"><span>FILM GRAIN</span><button class="setTgl" data-k="grain">ON</button></div>
+</div>
+<button id="setBtn">⚙ SETTINGS</button>
+</div>
 <div id="piClick">click</div>
 <div id="piBurst"></div>
-<div id="piLogo"><div id="piLogoIn"><span class="piA">JayaBeth</span><span class="piB">PRODUCTIONS</span></div></div>
+<div id="piLogo"><div id="piLogoIn"><span class="piA"><span class="ch" style="--i:0">J</span><span class="ch" style="--i:1">a</span><span class="ch" style="--i:2">y</span><span class="ch" style="--i:3">a</span><span class="ch" style="--i:4">B</span><span class="ch" style="--i:5">e</span><span class="ch" style="--i:6">t</span><span class="ch" style="--i:7">h</span></span><span class="piB">PRODUCTIONS</span></div></div>
 </div>
 <script type="importmap">
 {
@@ -428,6 +459,12 @@ const MAX_GOBLINS = 12;
 const MAX_CHIEFS = 5;
 const EARN_SOUND_R = 10;
 const STALL_POS = new THREE.Vector3(0, 0, -23);
+const SB = { minX:-1.35, maxX:1.35, minZ:STALL_POS.z-0.05, maxZ:STALL_POS.z+0.95 }; // counter box
+const STALL_COLL = [ // round props
+{ x:-1.85, z:STALL_POS.z+0.50, r:0.55 }, // crates
+{ x: 1.85, z:STALL_POS.z+0.35, r:0.45 }, // barrel (+cat)
+{ x: 0,    z:STALL_POS.z-0.55, r:0.50 }, // Grimble himself
+];
 const WITCH_POS = new THREE.Vector3(0, 0, 23);
 const RUG_CENTER = new THREE.Vector3(STALL_POS.x, 0, STALL_POS.z + 2.6);
 const RUG_R = 1.5;
@@ -456,14 +493,30 @@ let dlgOpen = false, dlgLine = 0;
 let cine = null;
 let reMaxToastDone = false;
 let introDone = false;
+let goblinsAwakened = false;
 const autoCollect = () => prestige > 0;
 const prestigeMult = () => 1 + prestige;
+const GDLG = [
+"(waves, adjusts his hat) Well well! Fresh boots in the meadow! Come closer, come closer — mind the hole, she's moody today.",
+"Aye, that pit. Tore itself open seven winters back. And when it goes hungry…",
+"Well let's not fret o' that, lad.",
+"The meadow picked you, asked or not. A keeper! The hole lets certain folk feed it.",
+"s'pose you don't have anythin wee valuable on ye?",
+"Now don't be a gnash and question what i'm 'bout to tell ye.",
+"Goblins! Been flinging coin since before my stall had legs. Don't know why. It's a game ye?",
+"Scoop up what they throw and carry it to the pit yourself — a keeper's hands are the only basket the hole respects.",
+"Don't worry. The goblins won't mind.",
+"Probably.",
+];
 const DLG = [
 "Ah… the little coin-keeper. Yes. I smell the hole's favor on you.",
 "It ate your effort. Your stacks. Your red kings. Your clinking magnets. And still… it yawns.",
 "I can bind it to you, keeper. Let it pull gold from the air itself — no more carrying, no more throwing. It feeds itself.",
 "The price is everything you have built. Every upgrade, every coin. A sacrifice… of progress. Choose.",
 ];
+const WITCH_CFG = { name:'MAUD', lines:DLG, bail:true,
+finalHint:'<kbd>E</kbd> — SACRIFICE EVERYTHING &nbsp;·&nbsp; <kbd>Q</kbd> — NOT YET', onDone:()=>startSacrifice() };
+const GRIM_CFG = { name:'GRIMBLE', lines:GDLG, onDone:()=>startThrowCine() };
 /* ============================== UPGRADES ============================== */
 const upgrades = { value:1, rate:1, stack:1, goblins:1, chieftains:0, magnet:0, mradius:1, mcapacity:1 };
 const UPG = {
@@ -736,6 +789,19 @@ x.fillRect(i,0,16,h);
 });
 stripeTex.wrapS = THREE.RepeatWrapping; stripeTex.repeat.set(3,1);
 stripeTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+const clothTex = canvasTex(128,128,(x,w,h)=>{
+x.fillStyle='#efe6d0'; x.fillRect(0,0,w,h);
+for(let i=0;i<w;i+=2){ x.fillStyle='rgba(90,70,40,0.06)'; x.fillRect(i,0,1,h); }
+for(let j=0;j<h;j+=2){ x.fillStyle='rgba(255,255,255,0.07)'; x.fillRect(0,j,w,1); }
+for(let i=0;i<160;i++){
+x.fillStyle=`rgba(${Math.random()<0.5?'120,100,70':'255,250,235'},${0.03+Math.random()*0.05})`;
+x.fillRect(Math.random()*w, Math.random()*h, 2+Math.random()*6, 1+Math.random()*3);
+}
+x.fillStyle='rgba(191,64,48,0.16)';
+for(let i=0;i<w;i+=32){ x.fillRect(i,0,12,h); }
+});
+clothTex.wrapS = clothTex.wrapT = THREE.RepeatWrapping;
+clothTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 const signTex = canvasTex(256,96,(x,w,h)=>{
 x.fillStyle='#6b4526'; x.fillRect(0,0,w,h);
 x.strokeStyle='#3d2712'; x.lineWidth=8; x.strokeRect(4,4,w-8,h-8);
@@ -1297,6 +1363,17 @@ g.root.updateMatrixWorld(true);
 g.shadow.position.set(p.x, 0.02, p.z);
 return;
 }
+if (g.state === 'wait'){
+g.inner.position.y = Math.sin(time*2.4)*0.012;
+const swing = Math.sin(time*1.6)*0.08;
+g.armL.rotation.x = swing; g.armR.rotation.x = -swing;
+g.legL.rotation.x = 0; g.legR.rotation.x = 0;
+g.yaw = lerpAngle(g.yaw, Math.atan2(-p.x, -p.z), Math.min(1,2*dt)); // stare at the hole
+g.root.rotation.y = g.yaw;
+g.root.updateMatrixWorld(true);
+g.shadow.position.set(p.x, 0.02, p.z);
+return;
+}
 if (g.state === 'thrown'){
 g.throwT += dt;
 g.throwVel.y -= 18 * dt;
@@ -1399,7 +1476,7 @@ g.shadow.visible = Math.hypot(g.root.position.x, g.root.position.z) > HOLE_R;
 return;
 }
 g.headYawDef = 0;
-if (started){
+if (started && goblinsAwakened){
 if (g.chief){
 if (g.state !== 'slam'){
 g.slamClock += dt;
@@ -1419,7 +1496,7 @@ g.armL.rotation.x = swing; g.armR.rotation.x = -swing;
 g.legL.rotation.x = 0; g.legR.rotation.x = 0;
 const dP = Math.hypot(player.pos.x-p.x, player.pos.z-p.z);
 if (dP < 8) g.yaw = lerpAngle(g.yaw, Math.atan2(player.pos.x-p.x, player.pos.z-p.z), Math.min(1,3*dt));
-if (g.t <= 0){ pickTargetFor(g); g.state='run'; }
+if (g.t <= 0 && goblinsAwakened){ pickTargetFor(g); g.state='run'; }
 }
 else if (g.state === 'run'){
 _dir.subVectors(g.target, p); _dir.y=0; _dir.normalize();
@@ -1695,6 +1772,9 @@ const mothGeos = [];
 {
 // Stall prop geometries with vertex colors - merged for minimal draw calls
 const stallGeomParts = [];
+const woodParts = [];
+const clothParts = [];
+function tileUV(g, sx, sy){ const uv = g.getAttribute('uv'); for(let i=0;i<uv.count;i++) uv.setXY(i, uv.getX(i)*sx, uv.getY(i)*sy); }
 const woodColor = new THREE.Color(0x7a5230);
 const woodDarkColor = new THREE.Color(0x5c3c20);
 const stripeColor1 = new THREE.Color(0xefe3c8);
@@ -1722,7 +1802,7 @@ const metalColor = new THREE.Color(0x2e2a26);
 const glassColor = new THREE.Color(0xffc46a);
 
 // Helper to add geometry with vertex color
-function addProp(geo, color, position, rotation = [0,0,0], scale = [1,1,1]){
+function addProp(geo, color, position, rotation = [0,0,0], scale = [1,1,1], group = 0){
 const g = geo.clone();
 if (scale[0] !== 1 || scale[1] !== 1 || scale[2] !== 1){
 g.scale(scale[0], scale[1], scale[2]);
@@ -1737,26 +1817,26 @@ for(let i=0;i<colors.length;i+=3){
 colors[i] = color.r; colors[i+1] = color.g; colors[i+2] = color.b;
 }
 g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-stallGeomParts.push(g);
+(group === 1 ? woodParts : group === 2 ? clothParts : stallGeomParts).push(g);
 }
-
-// Counter
-addProp(new THREE.BoxGeometry(2.6,0.9,0.9), woodColor, [0,0.45,0.45]);
-addProp(new THREE.BoxGeometry(2.8,0.07,1.05), woodDarkColor, [0,0.93,0.45]);
+// Counter + top rebuilt below as textured meshes
 // Poles
 for(const sx of [-1,1]) for(const sz of [0,1]){
 addProp(new THREE.CylinderGeometry(0.05,0.06,2.35,8), woodDarkColor, [sx*1.3, 1.17, sz*0.95]);
 }
 // Canopy (striped - use average color or primary)
-addProp(new THREE.PlaneGeometry(3.1,1.6), stripeColor1, [0, 2.42, 0.48], [-Math.PI/2 + 0.24, 0, 0]);
-// Valance
-addProp(new THREE.PlaneGeometry(3.0,0.36), stripeColor1, [0, 2.16, 1.22]);
+// Canopy + valance (woven cloth)
+{
+const cg = new THREE.PlaneGeometry(3.1,1.6); tileUV(cg, 3, 1.5);
+addProp(cg, stripeColor1, [0, 2.42, 0.48], [-Math.PI/2 + 0.24, 0, 0], [1,1,1], 2);
+const vg = new THREE.PlaneGeometry(3.0,0.36); tileUV(vg, 3, 0.8);
+addProp(vg, stripeColor1, [0, 2.16, 1.22], [0,0,0], [1,1,1], 2);
+}
 // Posts
 for(const sx of [-0.62,0.62]){
 addProp(new THREE.CylinderGeometry(0.03,0.03,0.6,6), woodDarkColor, [sx, 2.48, 1.16]);
 }
-// Sign
-addProp(new THREE.BoxGeometry(1.5,0.55,0.05), signBackColor, [0, 3.0, 1.16], [-0.12, 0, 0]);
+// Sign rebuilt below with the GRIMBLE'S face texture
 // String
 addProp(new THREE.CylinderGeometry(0.008,0.008,2.7,5), woodDarkColor, [0, 2.28, 1.0], [0, 0, Math.PI/2]);
 // Pennants (use average color)
@@ -1797,19 +1877,37 @@ addProp(new THREE.TorusGeometry(0.05,0.006,6,16), compassRimColor, [-0.82, 0.98,
 addProp(new THREE.CircleGeometry(0.045,16), compassFaceColor, [-0.82, 0.982, 0.62], [-Math.PI/2, 0, 0]);
 addProp(new THREE.ConeGeometry(0.006,0.035,4), needleNColor, [-0.82, 0.985, 0.608], [-Math.PI/2, 0, 0.4]);
 addProp(new THREE.ConeGeometry(0.006,0.035,4), needleSColor, [-0.82, 0.985, 0.632], [Math.PI/2, 0, 0.4]);
-// Crates
-addProp(new THREE.BoxGeometry(0.55,0.55,0.55), crateColor, [-1.85,0.27,0.5], [0, 0.3, 0]);
-addProp(new THREE.BoxGeometry(0.45,0.45,0.45), crateColor, [-1.8,0.78,0.45], [0, -0.2, 0]);
-// Barrel
-addProp(new THREE.CylinderGeometry(0.28,0.24,0.62,12), barrelColor, [1.85,0.31,0.35]);
+// Crates (wood texture)
+{
+const c1 = new THREE.BoxGeometry(0.55,0.55,0.55); tileUV(c1, 1.2, 1.2);
+addProp(c1, crateColor, [-1.85,0.27,0.5], [0, 0.3, 0], [1,1,1], 1);
+const c2 = new THREE.BoxGeometry(0.45,0.45,0.45); tileUV(c2, 1, 1);
+addProp(c2, crateColor, [-1.8,0.78,0.45], [0, -0.2, 0], [1,1,1], 1);
+}
+// Barrel (wood texture)
+{
+const bg = new THREE.CylinderGeometry(0.28,0.24,0.62,12); tileUV(bg, 2, 1);
+addProp(bg, barrelColor, [1.85,0.31,0.35], [0,0,0], [1,1,1], 1);
+}
 for(const by of [0.14,0.48]){
 addProp(new THREE.TorusGeometry(0.265,0.015,6,16), bandColor, [1.85,by,0.35], [Math.PI/2, 0, 0]);
 }
 // Cat on barrel
 addProp(new THREE.SphereGeometry(0.17,12,10), catColor, [1.85, 0.71, 0.35], [0, 0, 0], [1.25, 0.55, 0.95]);
 addProp(new THREE.SphereGeometry(0.09,10,8), catColor, [1.99, 0.75, 0.44]);
+// ears on top of the head, tilted outward along the cat's facing
 for(const s of [-1,1]){
-addProp(new THREE.ConeGeometry(0.028,0.055,5), catColor, [1.85 + s*0.045, 0.835, 0.43], [0, 0, -s*0.25]);
+addProp(new THREE.ConeGeometry(0.028,0.055,5), catColor, [1.982 - s*0.027, 0.825, 0.435 + s*0.042], [s*0.3, 1.0, 0]);
+}
+// front paws tucked at the chest
+for(const s of [-1,1]){
+const paw = new THREE.SphereGeometry(0.028,8,6); paw.scale(1.5,0.7,1);
+addProp(paw, catColor, [2.032 - s*0.03, 0.635, 0.467 + s*0.046]);
+}
+// rear haunches
+for(const s of [-1,1]){
+const hh = new THREE.SphereGeometry(0.075,8,6); hh.scale(1,0.8,0.7);
+addProp(hh, catColor, [1.80 - s*0.049, 0.68, 0.318 + s*0.076]);
 }
 // Cat eyes closed
 addProp(new THREE.BoxGeometry(0.006,0.006,0.03), new THREE.Color(0x3a2a18), [2.068, 0.765, 0.425]);
@@ -1864,6 +1962,34 @@ const stallMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE
 const stallMesh = new THREE.Mesh(mergedStallGeo, stallMat);
 stallMesh.position.copy(STALL_POS);
 scene.add(stallMesh);
+/* textured table: walls + top now show real wood grain */
+const tableMat = new THREE.MeshLambertMaterial({ map: woodTex });
+const tableWalls = new THREE.Mesh(new THREE.BoxGeometry(2.6,0.9,0.9), tableMat);
+tableWalls.position.set(STALL_POS.x, 0.45, STALL_POS.z + 0.45);
+scene.add(tableWalls);
+const tableTop = new THREE.Mesh(new THREE.BoxGeometry(2.8,0.07,1.05), tableMat);
+tableTop.position.set(STALL_POS.x, 0.93, STALL_POS.z + 0.45);
+scene.add(tableTop);
+/* sign: painted GRIMBLE'S face on the front, wood on the other sides */
+const signSideMat = new THREE.MeshLambertMaterial({ map: woodTex });
+const signFaceMat = new THREE.MeshLambertMaterial({ map: signTex });
+const sign = new THREE.Mesh(new THREE.BoxGeometry(1.5,0.55,0.05),
+[signSideMat, signSideMat, signSideMat, signSideMat, signFaceMat, signSideMat]);
+sign.position.set(STALL_POS.x, 3.0, STALL_POS.z + 1.16);
+sign.rotation.x = -0.12;
+scene.add(sign);
+if (woodParts.length){
+const wm = new THREE.Mesh(mergeGeometries(woodParts, false),
+new THREE.MeshLambertMaterial({ map: woodTex, side: THREE.DoubleSide }));
+wm.position.copy(STALL_POS);
+scene.add(wm);
+}
+if (clothParts.length){
+const cm = new THREE.Mesh(mergeGeometries(clothParts, false),
+new THREE.MeshLambertMaterial({ map: clothTex, side: THREE.DoubleSide }));
+cm.position.copy(STALL_POS);
+scene.add(cm);
+}
 
 // Separate groups that need individual control (cat shadow, compass shadow, map shadow, lantern light)
 const stallShadows = new THREE.Group();
@@ -2059,6 +2185,7 @@ SIL[i]=silver?1:0; VMULT[i]=silver?10:1;
 ST[i]=autoCollect()?5:1;
 SLEEPF[i]=0; RESTF[i]=0; SSCL[i]=1;
 SPINT[i]=Math.random()*10; SLOT[i]=Math.random();
+return i;
 }
 function removeCoin(i, countEarn){
 if (i < 0 || i >= MAX_COINS || ST[i] === 0) return;
@@ -2573,6 +2700,18 @@ if (held >= 0){ dropCoin(); }
 camMode = 'sacCine';
 cine = { type:'sac', t:0, fromPos:camera.position.clone(), bh:null, suck, faded:false, reset:false };
 }
+function startThrowCine(){
+mouseHeld = false; rightMouseHeld = false; releaseMagnet();
+camMode = 'throwCine';
+letterbox(true);
+document.body.classList.add('cineMode');
+const g = goblins[0];
+if (heldGoblin === g) heldGoblin = null;
+if (g){ g.state = 'wait'; g.root.position.set(3.4, 0, 1.4); }
+cine = { type:'throw', t:0, fromPos:camera.position.clone(), g,
+phase:0, pt:0, capShown:false, capClick:false, thrown:false, coinIdx:-1, clink:false, clinkT:0 };
+tone(220,0.4,'sine',0.15,0,-60);
+}
 const SUCK_T = new THREE.Vector3(0,2.6,0);
 function updateCine(dt, time){
 const c = cine; c.t += dt;
@@ -2746,8 +2885,65 @@ document.body.classList.remove('cineMode');
 letterbox(false);
 hideCap();
 for (const s of c.stars) scene.remove(s);
+const b0 = goblins[0];
+if (b0){ // Bub waits by the hole, inert, until the throw cutscene
+b0.state = 'wait';
+b0.throwVel.set(0,0,0); b0.throwAV.set(0,0,0);
+b0.root.position.set(3.4, 0, 1.4);
+b0.root.quaternion.setFromEuler(new THREE.Euler(0, Math.atan2(-3.4,-1.4), 0));
+}
 snapCameraToPlayer();
 cine = null;
+if (!locked) toast('Click to take control');
+}
+return;
+}
+if (c.type === 'throw'){
+const g = c.g;
+const t = c.t;
+camera.up.set(0,1,0);
+if (c.phase === 0){
+const e = sm(Math.min(1, t/1.4));
+camera.position.lerpVectors(c.fromPos, _cA.set(4.8,1.8,4.6), e);
+camera.lookAt(g.root.position.x, 0.9, g.root.position.z);
+if (t > 1.2 && !c.capShown){ c.capShown = true; setCap('There goes one now!'); }
+if (c.capClick && c.capShown){ c.capClick = false; hideCap(); c.phase = 1; c.pt = t; }
+} else {
+const t2 = t - c.pt;
+/* windup + release */
+g.armR.rotation.x = t2 < 0.2 ? 0.7 - t2*5 : -2.75 + Math.min(1,(t2-0.2)/0.12)*1.4;
+g.armL.rotation.x = -0.4;
+if (t2 >= 0.2 && !c.thrown){
+c.thrown = true;
+const fx = Math.sin(g.yaw), fz = Math.cos(g.yaw);
+const hx = g.root.position.x + fx*0.35, hz = g.root.position.z + fz*0.35, hy = 1.05;
+const T = 0.85;
+const tgt = _tmp.set(2.15, 0, 0.9); // lands short of the rim, never in the hole
+const vel = new THREE.Vector3((tgt.x-hx)/T, (0.03-hy+0.5*20*T*T)/T, (tgt.z-hz)/T);
+c.coinIdx = spawnCoin(new THREE.Vector3(hx,hy,hz), vel);
+tone(900,0.4,'sine',0.06,0,-500);
+}
+if (c.thrown && c.coinIdx >= 0){
+const i3 = c.coinIdx*3;
+camera.position.lerpVectors(_cA.set(4.8,1.8,4.6), _cB.set(3.9,1.4,3.4), sm(Math.min(1,t2/1.2)));
+camera.lookAt(P[i3], P[i3+1]+0.1, P[i3+2]);
+if (ST[c.coinIdx] === 2 && !c.clink){
+c.clink = true; c.clinkT = t2;
+tone(1244,0.07,'triangle',0.12);
+burstSparks(P[i3], P[i3+1]+0.1, P[i3+2]);
+}
+if ((c.clink && t2 > c.clinkT + 0.9) || t2 > 6){
+/* the goblins are part of the world now */
+g.state = 'idle'; g.t = 1+Math.random();
+g.armR.rotation.x = 0; g.armL.rotation.x = 0;
+document.body.classList.remove('cineMode');
+letterbox(false);
+startCineHandoff();
+cine = null;
+}
+} else {
+camera.lookAt(g.root.position.x, 0.9, g.root.position.z);
+}
 }
 return;
 }
@@ -2938,13 +3134,17 @@ wi++; ci = 0; cur = null;
 }
 }, 34);
 }
-function openDlg(){
+let dlgCfg = null;
+const dlgNameEl = document.querySelector('.dlgName');
+function openDlg(cfg){
+dlgCfg = cfg;
 dlgOpen = true; dlgLine = 0;
+dlgNameEl.textContent = cfg.name;
 dialogEl.classList.remove('hidden');
 document.body.classList.add('talking');
 prompt.classList.remove('show');
 crosshair.classList.remove('active');
-setDlgLine(DLG[0]);
+setDlgLine(cfg.lines[0]);
 dlgHintEl.innerHTML = '<kbd>E</kbd>';
 tone(500,0.08,'triangle',0.1);
 }
@@ -2956,14 +3156,16 @@ document.body.classList.remove('talking');
 }
 function advanceDlg(){
 if (typeTimer) return; // E does NOTHING while the line is still typing
-if (dlgLine < DLG.length-1){
+const cfg = dlgCfg;
+if (dlgLine < cfg.lines.length-1){
 dlgLine++;
-setDlgLine(DLG[dlgLine]);
-if (dlgLine === DLG.length-1)
-dlgHintEl.innerHTML = '<kbd>E</kbd> — SACRIFICE EVERYTHING &nbsp;·&nbsp; <kbd>Q</kbd> — NOT YET';
+setDlgLine(cfg.lines[dlgLine]);
+if (dlgLine === cfg.lines.length-1 && cfg.finalHint) dlgHintEl.innerHTML = cfg.finalHint;
 tone(520+dlgLine*40,0.08,'triangle',0.1);
 } else {
-startSacrifice();
+const done = cfg.onDone;
+closeDlg();
+if (done) done();
 }
 }
 /* ============================== PLAYER ============================== */
@@ -3006,6 +3208,25 @@ player.pos.x = nx*BARR; player.pos.z = nz*BARR;
 const vn = player.vel.x*nx + player.vel.z*nz;
 if (vn < 0){ player.vel.x -= vn*nx; player.vel.z -= vn*nz; }
 }
+/* stall collision */
+const PR = 0.35;
+if (player.pos.x > SB.minX-PR && player.pos.x < SB.maxX+PR && player.pos.z > SB.minZ-PR && player.pos.z < SB.maxZ+PR){
+const dl = player.pos.x-(SB.minX-PR), dr = (SB.maxX+PR)-player.pos.x;
+const dtp = player.pos.z-(SB.minZ-PR), db = (SB.maxZ+PR)-player.pos.z;
+const m = Math.min(dl,dr,dtp,db);
+if (m===dl) player.pos.x = SB.minX-PR;
+else if (m===dr) player.pos.x = SB.maxX+PR;
+else if (m===dtp) player.pos.z = SB.minZ-PR;
+else player.pos.z = SB.maxZ+PR;
+}
+for (const c of STALL_COLL){
+const dx = player.pos.x-c.x, dz = player.pos.z-c.z;
+const d = Math.hypot(dx,dz), rr = c.r+PR;
+if (d < rr && d > 0.0001){
+player.pos.x += dx/d*(rr-d);
+player.pos.z += dz/d*(rr-d);
+}
+}
 player.vy -= GRAV*dt;
 player.pos.y += player.vy*dt;
 if (player.pos.y <= EYE && player.vy <= 0){
@@ -3042,6 +3263,7 @@ prevYaw = yaw;
 const raycaster = new THREE.Raycaster();
 const SCREEN_C = new THREE.Vector2(0,0);
 let nearVendor = false, nearWitch = false, nearGoblin = null;
+let vendorGreeted = false;
 let coinPickupPromptCount = 0;
 function updatePrompt(){
 nearCoin = -1;
@@ -3062,6 +3284,10 @@ else outlineMesh.scale.set(1.18, 1.9, 1.18);
 }
 const dV = Math.hypot(player.pos.x - vendor.root.position.x, player.pos.z - vendor.root.position.z);
 nearVendor = dV < 3.4;
+if (!vendorGreeted && started && locked && !shopOpen && !cine && nearVendor){
+vendorGreeted = true;
+openDlg(GRIM_CFG);
+}
 const dW = Math.hypot(player.pos.x - WITCH_POS.x, player.pos.z - WITCH_POS.z);
 nearWitch = witchVisible && dW < 3.5;
 if (!heldGoblin) {
@@ -3184,8 +3410,20 @@ if (cine) return;
 if (shopPhase === 'hole'){ ascend(); return; }
 if (shopPhase === 'iso'){ closeShopToPlay(); return; }
 if (camMode !== 'play') return;
-if (nearWitch){ openDlg(); return; }
-if (nearVendor) openShop();
+if (nearWitch){ openDlg(WITCH_CFG); return; }
+if (nearVendor){
+if (!goblinsAwakened){
+goblinsAwakened = true;
+const b0 = goblins[0];
+if (b0 && b0.state === 'wait'){
+b0.state = 'idle';
+b0.t = 1 + Math.random();
+pickTargetFor(b0);
+}
+toast('The goblins stir…');
+}
+openShop();
+}
 }
 function openShop(){
 shopOpen = true; shopPhase = 'iso'; nearVendor = false;
@@ -3631,7 +3869,7 @@ rainMat.uniforms.uFactor.value = rainFactor;
 rainMat.uniforms.uTime.value = time;
 rainMat.uniforms.uCenter.value.copy(camera.position);
 if (AC && rainGain){
-const target = 0.036*rainFactor;
+const target = (settings.ambience ? 0.036 : 0)*rainFactor;
 rainGain.gain.value += (target - rainGain.gain.value)*Math.min(1, 3*dt);
 }
 }
@@ -3673,7 +3911,7 @@ startMusic();
 } catch(e){}
 }
 function eerieTone(){
-if(!AC) return;
+if(!AC || !settings.ambience) return;
 const f = 180+Math.random()*240;
 tone(f, 2.2, 'sine', 0.05, 0, -f*0.25);
 tone(f*1.02, 2.2, 'sine', 0.04, 0.1, -f*0.2);
@@ -3690,7 +3928,7 @@ l.upX.value=0; l.upY.value=1; l.upZ.value=0; }
 else if (l.setOrientation) l.setOrientation(_camD.x,_camD.y,_camD.z, 0,1,0);
 }
 function tone(f,dur,type='sine',vol=0.2,delay=0,slide=0){
-if(!AC) return;
+if(!AC || !settings.sfx) return;
 const t=AC.currentTime+delay, o=AC.createOscillator(), g=AC.createGain();
 o.type=type; o.frequency.setValueAtTime(f,t);
 if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(40,f+slide),t+dur);
@@ -3699,7 +3937,7 @@ g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
 o.connect(g).connect(master); o.start(t); o.stop(t+dur+0.05);
 }
 function noiseS(dur,vol,f0,f1,delay=0){
-if(!AC) return;
+if(!AC || !settings.sfx) return;
 const t=AC.currentTime+delay, n=AC.createBufferSource(); n.buffer=noiseBuf;
 const f=AC.createBiquadFilter(); f.type='bandpass'; f.Q.value=1;
 f.frequency.setValueAtTime(f0,t); f.frequency.exponentialRampToValueAtTime(f1,t+dur);
@@ -3754,7 +3992,7 @@ panner.positionY.value = 1.6;
 panner.positionZ.value = STALL_POS.z;
 } else panner.setPosition(STALL_POS.x, 1.6, STALL_POS.z);
 panner.connect(master);
-musicGain = AC.createGain(); musicGain.gain.value = 0.55; musicGain.connect(panner);
+musicGain = AC.createGain(); musicGain.gain.value = settings.music ? 0.55 : 0.0001; musicGain.connect(panner);
 /* tavern-space echo */
 musicDelay = AC.createDelay(1.0); musicDelay.delayTime.value = 0.29;
 const fb = AC.createGain(); fb.gain.value = 0.28;
@@ -3773,10 +4011,10 @@ const breathG = AC.createGain(); breathG.gain.value = 0.008;
 breath.connect(breathG); breathG.connect(dg.gain);
 o1.connect(dg); o2.connect(dg); o3.connect(g3); g3.connect(dg); dg.connect(musicGain);
 o1.start(); o2.start(); o3.start(); breath.start();
-scheduleMelody();
+scheduleSong();
 }
 function fadeMusic(target){
-if (musicGain && AC) musicGain.gain.setTargetAtTime(target, AC.currentTime, 0.5);
+if (musicGain && AC) musicGain.gain.setTargetAtTime(settings.music ? target : 0.0001, AC.currentTime, 0.5);
 }
 function lutePluck(f, when, vol){
 const o = AC.createOscillator(); o.type='triangle'; o.frequency.value = f;
@@ -3816,33 +4054,53 @@ const g = AC.createGain(); g.gain.setValueAtTime(vol, when); g.gain.exponentialR
 n.connect(f); f.connect(g); g.connect(musicGain);
 n.start(when); n.stop(when+0.08);
 }
-function scheduleMelody(){
-if (!AC) return;
-if (shopOpen){ setTimeout(scheduleMelody, 1000); return; }
-const when = AC.currentTime + 0.06;
-const beat = 0.40 + Math.random()*0.08;
-const b = mBeat % 8;
-/* frame drum + shaker groove */
-if (b === 0) drumHit(when, 0.09);
-if (b === 4) drumHit(when, 0.06);
-if (b === 6 && Math.random() < 0.5) drumHit(when, 0.05);
-if (b % 2 === 1 && Math.random() < 0.75) shaker(when, 0.025);
-/* lute: wandering modal line, occasional organum fifth / bass octave */
-if (Math.random() < 0.72){
-melodyIdx = THREE.MathUtils.clamp(melodyIdx + Math.round((Math.random()-0.5)*3), 0, 7);
-const f = DORIAN[melodyIdx];
-lutePluck(f, when, 0.065);
-if (Math.random() < 0.25) lutePluck(f*1.5, when+0.02, 0.028);
-if (Math.random() < 0.18) lutePluck(f*0.5, when, 0.03);
+function bassNote(f, when, vol){
+const o = AC.createOscillator(); o.type='triangle'; o.frequency.value=f;
+const g = AC.createGain();
+g.gain.setValueAtTime(0.0001, when); g.gain.linearRampToValueAtTime(vol, when+0.02);
+g.gain.exponentialRampToValueAtTime(0.0001, when+1.1);
+o.connect(g); g.connect(musicGain); g.connect(musicDelay);
+o.start(when); o.stop(when+1.2);
 }
-/* recorder phrase at the top of each two-bar cycle */
-if (b === 0 && Math.random() < 0.8){
-const i1 = 3 + Math.floor(Math.random()*4);
-fluteNote(DORIAN[i1], when, beat*1.8, 0.05);
-if (Math.random() < 0.6) fluteNote(DORIAN[Math.max(0, i1-1+Math.floor(Math.random()*3))], when+beat*2, beat*1.6, 0.045);
+/* ---- structured market song: 8-bar loop in D dorian ---- */
+const BEAT = 0.42;
+const BASSROOTS = [73.42, 73.42, 87.31, 65.41, 73.42, 110.0, 98.0, 65.41]; // Dm Dm F C Dm Am G C
+const PHRASE = [
+[0,0,0,1],[0,1,2,1],[0,2,4,1],[0,3,2,1],
+[1,0,1,2],[1,2,0,1],[1,3,6,1],
+[2,0,2,1],[2,1,4,1],[2,2,6,2],
+[3,0,5,1],[3,1,4,1],[3,2,3,2],
+[4,0,0,1],[4,1,2,1],[4,2,4,1],[4,3,7,1],
+[5,0,6,2],[5,2,4,1],[5,3,1,1],
+[6,0,3,1],[6,1,4,1],[6,2,5,2],
+[7,0,6,1],[7,1,4,1],[7,2,2,2],
+];
+let songBar = 0, songNext = 0;
+function scheduleSong(){
+if (!AC || !musicOn){ setTimeout(scheduleSong, 500); return; }
+if (shopOpen){ songNext = 0; setTimeout(scheduleSong, 1000); return; }
+const now = AC.currentTime;
+if (songNext < now + 0.02) songNext = now + 0.06;
+const bar = songBar % 8, t0 = songNext;
+const hum = 0.98 + Math.random()*0.04; // humanize
+bassNote(BASSROOTS[bar], t0, 0.055);
+bassNote(BASSROOTS[bar]*1.5, t0 + BEAT*2*hum, 0.04);
+bassNote(BASSROOTS[bar]*2, t0 + BEAT*3, 0.03);
+drumHit(t0, 0.085);
+drumHit(t0 + BEAT*2, 0.06);
+if (bar % 2 === 1){ shaker(t0 + BEAT, 0.022); shaker(t0 + BEAT*3, 0.022); }
+for (const n of PHRASE){
+if (n[0] !== bar) continue;
+const f = DORIAN[n[2]];
+const at = t0 + n[1]*BEAT*(n[1] ? hum : 1);
+if (n[3] >= 2) fluteNote(f, at, n[3]*BEAT*0.9, 0.05);
+else lutePluck(f, at, 0.062);
+if (n[1] === 0) lutePluck(f*0.5, at, 0.028);
 }
-mBeat++;
-setTimeout(scheduleMelody, beat*1000);
+if (bar === 3 || bar === 7) fluteNote(DORIAN[7], t0 + BEAT*3.5, BEAT*0.8, 0.035);
+songBar++;
+songNext = t0 + BEAT*4;
+setTimeout(scheduleSong, Math.max(50, (songNext - AC.currentTime)*1000 - 150));
 }
 /* ============================== LENS FLARE ============================== */
 const flareEls = [
@@ -3968,10 +4226,10 @@ keys.add(e.code);
 if (!started) return;
 if (dlgOpen){
 if (e.code === 'KeyE') advanceDlg();
-else if (e.code === 'KeyQ' && dlgLine === DLG.length-1 && !typeTimer) closeDlg();
+else if (e.code === 'KeyQ' && dlgCfg && dlgCfg.bail && dlgLine === dlgCfg.lines.length-1 && !typeTimer) closeDlg();
 return;
 }
-if (cine){ if (cine.type === 'intro' && e.code === 'KeyE') cine.capClick = true; return; }
+if (cine){ if ((cine.type === 'intro' || cine.type === 'throw') && e.code === 'KeyE') cine.capClick = true; return; }
 if (e.code === 'Space' && locked && player.grounded && !shopOpen && camMode === 'play'){
 player.vy = JUMP_V; player.grounded = false; jumpS();
 }
@@ -4015,6 +4273,12 @@ treeDrag = false;
 if (e.button === 0) mouseHeld = false;
 });
 addEventListener('contextmenu', e=>e.preventDefault());
+/* safety net: in play but unlocked (denied lock, cinematic ended) → next click re-locks */
+addEventListener('mousedown', ()=>{
+if (started && !locked && !shopOpen && !cine && !dlgOpen && overlay.classList.contains('hidden')){
+try { renderer.domElement.requestPointerLock(); } catch(e){}
+}
+});
 /* First start triggers the hole-opening cinematic; later starts lock immediately */
 overlay.addEventListener('click', ()=>{
 if (menuReady) return; // 3D menu active: only the 3D button starts the game
@@ -4136,9 +4400,10 @@ g.shadow.visible = false;
 }
 
 function startFromMenu(){
-  if (!menuReady || menuFading) return;
-  menuFading = true;
-  menuHolding = false;
+if (!menuReady || menuFading) return;
+menuFading = true;
+menuHolding = false;
+if (!started){ started = true; player.pos.set(0,EYE,6.8); yaw = 0; pitch = -0.08; }
   for (const m of menuMats) m.depthWrite = false;
   document.body.classList.remove('menu');
   renderer.domElement.style.cursor = '';
@@ -4265,11 +4530,21 @@ if (menuBtn)   menuBtn.position.y   = 1.5  + Math.sin(time * 0.9 + 1.7) * 0.06;
   if (menuBtnMat) menuBtnMat.emissive.setHex(menuHolding ? 0x2c3d12 : (menuHover ? 0x1c2a10 : 0x000000));
   if (menuBar) menuBar.scale.x = Math.max(0.001, menuHold);
 }
+/* ---------- fullscreen: on by default, re-enters on next click after Esc ---------- */
+function goFullscreen(){
+if (document.fullscreenElement) return;
+try {
+const p = document.documentElement.requestFullscreen();
+if (p && p.catch) p.catch(()=>{});
+} catch(e){}
+}
+addEventListener('mousedown', goFullscreen);
 /* ---------- JayaBeth Productions intro ---------- */
 const prodIntroEl = document.getElementById('prodIntro');
 prodIntroEl.addEventListener('click', ()=>{
 if (prodIntroEl.classList.contains('clicked')) return;
 prodIntroEl.classList.add('clicked');
+goFullscreen();
 initAudio();                                   // ambience starts on the click
 if (AC && AC.state === 'suspended') AC.resume();
 setTimeout(()=>prodIntroEl.classList.add('logo'), 450);          // click fades, logo pops in
@@ -4279,6 +4554,32 @@ prodIntroDone = true;
 }, 5400);
 setTimeout(()=>{ prodIntroEl.remove(); }, 6900);
 });
+/* ---------- settings (menu) ---------- */
+const settings = { music:true, ambience:true, sfx:true, grain:true };
+try { Object.assign(settings, JSON.parse(localStorage.getItem('grimbleSettings') || '{}')); } catch(e){}
+const grainEl = document.getElementById('grain');
+const setBtn = document.getElementById('setBtn');
+const setPanel = document.getElementById('setPanel');
+setBtn.addEventListener('click', ()=> setPanel.classList.toggle('hidden'));
+setPanel.addEventListener('mousedown', e=> e.stopPropagation());
+setPanel.addEventListener('click', e=> e.stopPropagation());
+function applySettings(){
+grainEl.style.display = settings.grain ? '' : 'none';
+if (musicGain && AC) musicGain.gain.setTargetAtTime(settings.music ? (shopOpen ? 0.0001 : 0.55) : 0.0001, AC.currentTime, 0.3);
+setPanel.querySelectorAll('.setTgl').forEach(b=>{
+const on = !!settings[b.dataset.k];
+b.textContent = on ? 'ON' : 'OFF';
+b.classList.toggle('off', !on);
+});
+}
+setPanel.querySelectorAll('.setTgl').forEach(b=>{
+b.addEventListener('click', ()=>{
+settings[b.dataset.k] = !settings[b.dataset.k];
+try { localStorage.setItem('grimbleSettings', JSON.stringify(settings)); } catch(e){}
+applySettings();
+});
+});
+applySettings();
 /* ============================== MAIN LOOP ============================== */
 const clock = new THREE.Clock();
 let elapsed = 0;
@@ -4300,9 +4601,9 @@ if (shopOpen) refreshTree();
 }
 if (AC){
 const inHole = shopPhase === 'hole';
-windBus.gain.value  += ((inHole ? 0 : 1)   - windBus.gain.value)  * Math.min(1, 3*dt);
+windBus.gain.value  += (((inHole || !settings.ambience) ? 0 : 0.7) - windBus.gain.value)  * Math.min(1, 3*dt);
 /* skill-tree ambience at half volume */
-eerieBus.gain.value += ((inHole ? 0.45 : 0) - eerieBus.gain.value) * Math.min(1, 2*dt);
+eerieBus.gain.value += (((inHole && settings.ambience) ? 0.30 : 0) - eerieBus.gain.value) * Math.min(1, 2*dt);
 if (inHole && elapsed > eerieNext){ eerieTone(); eerieNext = elapsed + 4 + Math.random()*7; }
 }
 if (!paused){
