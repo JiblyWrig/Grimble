@@ -223,6 +223,30 @@ background:linear-gradient(180deg,#f9dd82,#cf9d2c); border:none; border-radius:1
 box-shadow:0 6px 0 #7a5a14, 0 12px 24px rgba(0,0,0,.5); transition:all .12s; pointer-events:auto; }
 #ovBtn:hover { transform:translateY(-2px); box-shadow:0 8px 0 #7a5a14, 0 16px 30px rgba(0,0,0,.55); background:linear-gradient(180deg,#ffe89a,#dda832); }
 #ovBtn:active { transform:translateY(3px); box-shadow:0 2px 0 #7a5a14; }
+/* ---------- production intro ---------- */
+#prodIntro { position:fixed; inset:0; background:#000; z-index:40; display:flex; align-items:center; justify-content:center;
+cursor:pointer; transition:opacity 1.3s ease; }
+#prodIntro.gone { opacity:0; pointer-events:none; }
+#piClick { font-family:'MedievalSharp',cursive; font-size:24px; color:#b9c2a8; letter-spacing:6px;
+animation:clickPulse 1.7s ease-in-out infinite; transition:opacity .5s; text-shadow:0 2px 6px #000; }
+@keyframes clickPulse { 0%,100% { opacity:.3; } 50% { opacity:.95; } }
+#prodIntro.clicked #piClick { opacity:0; animation:none; }
+#piLogo { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) rotate(-2deg); text-align:center; opacity:0; pointer-events:none; }
+#prodIntro.logo #piLogo { animation:logoIn .9s cubic-bezier(.25,.9,.3,1.35) both, logoOut 1s ease-in 5.9s forwards; }
+.piA { display:block; font-family:'MedievalSharp',cursive; font-size:clamp(64px, 12vw, 200px); line-height:.95; color:#f5cf5f;
+-webkit-text-stroke:3px #3d2a08;
+text-shadow:0 4px 0 #7a5210, 0 8px 0 #3d2a08, 0 16px 40px #000, 0 0 60px rgba(245,207,95,.3); }
+.piB { display:block; font-family:'MedievalSharp',cursive; font-size:clamp(18px, 3.2vw, 54px); letter-spacing:.9em; text-indent:.9em;
+color:#cfe3b8; margin-top:1.2vw; text-shadow:0 2px 0 #16200c, 0 5px 18px #000; }
+@keyframes logoIn {
+0% { opacity:0; transform:translate(-50%,-50%) rotate(-9deg) scale(.4); }
+70% { opacity:1; transform:translate(-50%,-50%) rotate(-1deg) scale(1.07); }
+100% { opacity:1; transform:translate(-50%,-50%) rotate(-2deg) scale(1); }
+}
+@keyframes logoOut {
+from { opacity:1; transform:translate(-50%,-50%) rotate(-2deg) scale(1); }
+to { opacity:0; transform:translate(-50%,-50%) rotate(-2deg) scale(1.05); }
+}
 </style>
 </head>
 <body>
@@ -294,6 +318,12 @@ box-shadow:0 6px 0 #7a5a14, 0 12px 24px rgba(0,0,0,.5); transition:all .12s; poi
 <p class="goal" id="ovGoal">Feed the hole. Then descend into it, and spend your earnings in the skill tree.</p>
 <button id="ovBtn">ENTER THE MEADOW</button>
 </div>
+</div>
+</div>
+</div>
+<div id="prodIntro">
+<div id="piClick">click</div>
+<div id="piLogo"><span class="piA">JayaBeth</span><span class="piB">PRODUCTIONS</span></div>
 </div>
 <script type="importmap">
 {
@@ -3496,6 +3526,7 @@ renderer.setSize(innerWidth, innerHeight);
 const menuGroup = new THREE.Group();
 scene.add(menuGroup);
 let menuReady = false, menuFading = false, menuFade = 1, menuHover = false;
+let prodIntroDone = false;
 let menuHolding = false, menuHold = 0;
 let menuTitle = null, menuBtn = null, menuBar = null;
 let menuBtnHit = [], menuBtnMat = null;
@@ -3587,7 +3618,7 @@ addEventListener('mousemove', (e) => {
   menuNdc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
 });
 addEventListener('mousedown', (e) => {
-  if (e.button === 0 && menuReady && !menuFading && !locked && menuHover) menuHolding = true;
+  if (e.button === 0 && menuReady && !menuFading && !locked && menuHover && prodIntroDone) menuHolding = true;
 });
 addEventListener('mouseup', (e) => {
   if (e.button === 0) menuHolding = false;
@@ -3617,7 +3648,7 @@ function updateMenu(dt, time){
     o.rotation.y = Math.atan2(camera.position.x - o.position.x, camera.position.z - o.position.z);
   }
   // hover picking on the 3D button
-  if (!locked && !menuFading && menuBtn){
+  if (prodIntroDone && !locked && !menuFading && menuBtn){
     menuRay.setFromCamera(menuNdc, camera);
     const hit = menuRay.intersectObjects(menuBtnHit, false).length > 0;
     if (hit !== menuHover){
@@ -3632,6 +3663,20 @@ function updateMenu(dt, time){
   if (menuBtnMat) menuBtnMat.emissive.setHex(menuHolding ? 0x2c3d12 : (menuHover ? 0x1c2a10 : 0x000000));
   if (menuBar) menuBar.scale.x = Math.max(0.001, menuHold);
 }
+/* ---------- JayaBeth Productions intro ---------- */
+const prodIntroEl = document.getElementById('prodIntro');
+prodIntroEl.addEventListener('click', ()=>{
+if (prodIntroEl.classList.contains('clicked')) return;
+prodIntroEl.classList.add('clicked');
+initAudio();                                   // ambience starts on the click
+if (AC && AC.state === 'suspended') AC.resume();
+setTimeout(()=>prodIntroEl.classList.add('logo'), 450);          // click fades, logo pops in
+setTimeout(()=>{                                                // logo done -> fade to menu
+prodIntroEl.classList.add('gone');
+prodIntroDone = true;
+}, 7400);
+setTimeout(()=>{ prodIntroEl.remove(); }, 8900);
+});
 /* ============================== MAIN LOOP ============================== */
 const clock = new THREE.Clock();
 let elapsed = 0;
