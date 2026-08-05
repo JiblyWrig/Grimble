@@ -103,6 +103,7 @@ text-shadow:0 2px 0 #000, 0 0 14px rgba(0,0,0,.9); opacity:0; transition:opacity
 pointer-events:none; max-width:80vw; }
 #cineCap.show { opacity:1; }
 #cineCap.show::after { content:'  ·  E'; font-size:14px; opacity:.55; }
+#cineCap.show.noE::after { content:none; }
 #prestigeText { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:19;
 font-family:'MedievalSharp',cursive; font-size:38px; letter-spacing:3px; color:#c9a6ef;
 text-shadow:0 0 24px rgba(150,80,255,.6), 0 2px 0 #1a0a24; opacity:0; transition:opacity 1.2s; pointer-events:none; }
@@ -2677,7 +2678,7 @@ const letterboxEl = document.getElementById('letterbox');
 const letterbox = on => letterboxEl.classList.toggle('on', on);
 const cineCapEl = document.getElementById('cineCap');
 const setCap = txt => { cineCapEl.textContent = txt; cineCapEl.classList.add('show'); };
-const hideCap = () => cineCapEl.classList.remove('show');
+const hideCap = () => cineCapEl.classList.remove('show', 'noE');
 function startIntroCine(){
 overlay.classList.add('hidden');
 document.body.classList.add('cineMode');
@@ -2760,11 +2761,60 @@ if (!goblins.length){
 const g = makeGoblin(4.4, 1.8);
 g.state = 'idle'; g.t = 1+Math.random();
 }
-goblinsAwakened = true;
+goblinsAwakened = true; tutDone = true; tutPhase = 0; tutCoinIdx = -1;
+removeTutArrow();
 cine = null;
 if (!started){ started = true; player.pos.set(0,EYE,6.8); yaw = 0; pitch = -0.08; }
 snapCameraToPlayer();
 if (!locked){ try { renderer.domElement.requestPointerLock(); } catch(e){} }
+toast('The meadow awaits…');
+}
+/* ---------- first-coin tutorial: arrow → caption → vendor nudge ---------- */
+let tutPhase = 0;   // 0 off · 1 arrow over coin · 2 carry it to the hole · 3 go to vendor · 4 talking
+let tutDone = false;
+let tutCoinIdx = -1;
+let tutSkipT = 0;
+let tutArrow = null;
+const GDLG2 = [
+"Mmmm, the hole eatin' good tonight. Say, lad... why don't we get ourselves another one of them 'helpers'.",
+];
+const GRIM2_CFG = { name:'GRIMBLE', lines:GDLG2, onDone:()=>{ tutDone = true; tutPhase = 0; openShop(); } };
+function spawnTutArrow(){
+removeTutArrow();
+const mat = new THREE.MeshBasicMaterial({ color:0xffe58a });
+const grp = new THREE.Group();
+const cone = new THREE.Mesh(new THREE.ConeGeometry(0.16,0.32,12), mat);
+cone.rotation.x = Math.PI; // points down at the coin
+const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.34,10), mat);
+shaft.position.y = 0.33;
+grp.add(cone); grp.add(shaft);
+scene.add(grp);
+tutArrow = grp;
+}
+function removeTutArrow(){ if (tutArrow){ scene.remove(tutArrow); tutArrow = null; } }
+function updateTutArrow(time){
+if (!tutArrow || tutCoinIdx < 0) return;
+const i3 = tutCoinIdx*3;
+tutArrow.position.set(P[i3], P[i3+1] + 0.62 + Math.sin(time*3.4)*0.09, P[i3+2]);
+tutArrow.rotation.y = time*2.0;
+}
+function showTutCap(txt){ setCap(txt); cineCapEl.classList.add('noE'); }
+function updateTutorial(){
+if (tutDone || tutPhase === 0 || tutPhase >= 3) return;
+const s = ST[tutCoinIdx];
+if (tutPhase === 1){
+if (s === 3){ removeTutArrow(); tutPhase = 2; }                                   // picked up
+else if (s === 0){ removeTutArrow(); tutPhase = 3; showTutCap('Go to the vendor'); } // straight in the hole
+} else if (tutPhase === 2 && s === 0){
+tutPhase = 3; showTutCap('Go to the vendor');
+}
+}
+function skipTutorial(){
+tutDone = true; tutPhase = 0; tutCoinIdx = -1; tutSkipT = 0;
+removeTutArrow();
+hideCap();
+for (const g of goblins) if (g.state === 'wait'){ g.state = 'idle'; g.t = 1+Math.random(); }
+goblinsAwakened = true;
 toast('The meadow awaits…');
 }
 const SUCK_T = new THREE.Vector3(0,2.6,0);
@@ -3003,6 +3053,7 @@ g.armR.rotation.x = 0; g.armL.rotation.x = 0;
 document.body.classList.remove('cineMode');
 letterbox(false);
 startCineHandoff();
+if (!tutDone && c.coinIdx >= 0){ tutPhase = 1; tutCoinIdx = c.coinIdx; spawnTutArrow(); }
 cine = null;
 }
 } else {
@@ -3487,6 +3538,12 @@ b0.shadow.visible = true;
 pickTargetFor(b0);
 }
 toast('The goblins stir…');
+}
+if (tutPhase === 3){
+tutPhase = 4;
+hideCap();
+openDlg(GRIM2_CFG);   // onDone opens the skill tree
+return;
 }
 openShop();
 }
@@ -4682,6 +4739,8 @@ goldBurst.update(dt);
 violetBurst.update(dt);
 dirtBurst.update(dt);
 updateFloatTexts(dt);
+updateTutorial();
+updateTutArrow(elapsed);
 updateTreeSway(elapsed);
 if (lampLight) {
   lampLight.intensity = (14 + Math.sin(elapsed*11)*1.2 + Math.sin(elapsed*23+1.7)*0.8) * (1 + 0.5*rainFactor);
@@ -4747,6 +4806,13 @@ if (cine.skipT >= 5) skipPrologue();
 if (cine) updateCine(dt, elapsed);
 }
 else if (camMode !== 'play') updateCameraAnim(dt);
+/* hold 8 for 5s skips the first-coin tutorial too */
+if (!cine && tutPhase > 0 && !tutDone){
+if (keys.has('Digit8') || keys.has('Numpad8')){
+tutSkipT += dt;
+if (tutSkipT >= 5) skipTutorial();
+} else tutSkipT = 0;
+}
 if (locked && camMode === 'play' && !shopOpen && !cine && !dlgOpen) updatePrompt();
 if (heldGoblin && locked && camMode === 'play') updateHeldGoblin();
 if (locked && camMode === 'play' && !cine){
