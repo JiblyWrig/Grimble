@@ -2926,6 +2926,7 @@ physAccum += dt;
 let n=0;
 while (physAccum >= PHYS_DT && n<3){ physAccum -= PHYS_DT; stepCoins(PHYS_DT); n++; }
 if (n===3) physAccum = 0;
+shovelPushCoins(dt);
 /* sleeping coins settle flat — centre follows the shrinking support height */
 for(let li=0; li<live.length; li++){
   const i=live[li];
@@ -3008,6 +3009,89 @@ spawnCatHeart(cx+(Math.random()-0.5)*0.35, 1.05+Math.random()*0.2, cz+(Math.rand
 tone(90+Math.random()*20, 0.25, 'sine', 0.08, 0, 30);      // purr
 tone(520+Math.random()*140, 0.12, 'triangle', 0.04, 0.06, 120); // mrrp
 }
+/* ============================== SNOW SHOVEL ============================== */
+let shovelOwned = false, shovelUsing = false, shovelPush = 0, rmbHeld = false;
+let shovelWorld = null, shovelView = null;
+const SHOVEL_SPOT = new THREE.Vector3(0.9, 0.0, -26.55);
+const shovelBlade = new THREE.Vector3(), shovelBladePrev = new THREE.Vector3(), shovelBladeVel = new THREE.Vector3();
+function buildShovelModel(){
+const g = new THREE.Group();
+const wood  = toon(0x8a5a33); addBoil(wood);
+const woodL = toon(0xb08050); addBoil(woodL);
+const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.024,0.03,1.62,8), wood);
+handle.position.y = 0.86; g.add(handle);
+const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,0.3,6), wood);
+grip.rotation.z = Math.PI/2; grip.position.y = 1.68; g.add(grip);
+const blade = new THREE.Mesh(new THREE.BoxGeometry(0.4,0.5,0.035), woodL);
+blade.position.set(0, 0.22, 0.045); blade.rotation.x = 0.12; g.add(blade);
+g.userData.blade = blade;
+addOutlineShells(g, 1.06, true);
+return g;
+}
+function spawnShovelWorld(){
+if (shovelWorld || shovelOwned) return;
+shovelWorld = buildShovelModel();
+shovelWorld.position.set(SHOVEL_SPOT.x, 0.06, SHOVEL_SPOT.z);
+shovelWorld.rotation.set(-0.3, 0.5, 0);
+scene.add(shovelWorld);
+}
+function pickupShovel(){
+if (!shovelWorld) return;
+scene.remove(shovelWorld);
+shovelWorld = null;
+shovelOwned = true;
+shovelView = buildShovelModel();
+shovelView.position.set(0.44, -0.46, -0.74);
+shovelView.rotation.set(1.12, 0, -0.5);
+if (!camera.parent) scene.add(camera);
+camera.add(shovelView);
+camera.updateMatrixWorld(true);
+shovelView.userData.blade.getWorldPosition(shovelBlade);
+shovelBladePrev.copy(shovelBlade);
+tone(320,0.12,'sine',0.12,0,60); tone(520,0.14,'triangle',0.1,0.06);
+toast('Snow shovel equipped — hold RIGHT CLICK to push');
+}
+function updateShovel(dt){
+const want = rmbHeld && shovelOwned && locked && camMode==='play' && !shopOpen && !dlgOpen && !cine;
+if (want && !shovelUsing) noiseS(0.22,0.07,800,260);
+shovelUsing = want;
+shovelPush += ((want?1:0)-shovelPush)*Math.min(1,10*dt);
+if (!shovelView) return;
+const spd = Math.hypot(player.vel.x, player.vel.z);
+const bob = Math.sin(bobPhase*2)*0.014*Math.min(1,spd/4);
+shovelView.position.set(0.44, -0.46+bob-0.10*shovelPush, -0.74-0.55*shovelPush);
+shovelView.rotation.set(1.12+0.22*shovelPush, 0, -0.5+0.12*shovelPush);
+camera.updateMatrixWorld(true);
+shovelBladePrev.copy(shovelBlade);
+shovelView.userData.blade.getWorldPosition(shovelBlade);
+shovelBladeVel.copy(shovelBlade).sub(shovelBladePrev).divideScalar(Math.max(dt,0.0001));
+if (shovelBladeVel.lengthSq() > 144) shovelBladeVel.setLength(12);
+}
+function shovelPushCoins(dt){
+if (!shovelView || shovelPush < 0.25) return;
+const R = 0.62, R2 = R*R;
+for(let li=0; li<live.length; li++){
+const i = live[li], s = ST[i];
+if (s!==1 && s!==2) continue;
+const i3 = i*3;
+const dx=P[i3]-shovelBlade.x, dy=P[i3+1]-shovelBlade.y, dz=P[i3+2]-shovelBlade.z;
+const d2 = dx*dx+dy*dy+dz*dz;
+if (d2 > R2) continue;
+const d = Math.sqrt(d2)||0.001;
+const nx=dx/d, ny=dy/d, nz=dz/d;
+if (s===2){ ST[i]=1; SLEEPF[i]=0; RESTF[i]=0; }
+P[i3]=shovelBlade.x+nx*R; P[i3+1]=shovelBlade.y+ny*R; P[i3+2]=shovelBlade.z+nz*R;
+const k=Math.min(1,18*dt);
+V[i3]  += (shovelBladeVel.x*1.1+nx*1.2 - V[i3])*k;
+V[i3+1]+= (shovelBladeVel.y*1.1+ny*0.6+0.4 - V[i3+1])*k;
+V[i3+2]+= (shovelBladeVel.z*1.1+nz*1.2 - V[i3+2])*k;
+AV[i3] += (Math.random()-0.5)*4*k; AV[i3+2] += (Math.random()-0.5)*4*k;
+}
+}
+addEventListener('mousedown', e=>{ if (e.button===2 && locked && camMode==='play' && !shopOpen && !dlgOpen && !cine) rmbHeld = true; });
+addEventListener('mouseup',   e=>{ if (e.button===2) rmbHeld = false; });
+addEventListener('blur', ()=>{ rmbHeld = false; });
+
 /* ============================== CAMERA MODES ============================== */
 const ISO_H = 29.5, ISO_R = 21;
 const ISO_LOOK = new THREE.Vector3(0, 0, 0);
@@ -3314,7 +3398,7 @@ const SHOVEL_CFG = { name:'GRIMBLE', lines:[
 "Ye got yourself quite the logistics runnin'.",
 "I'm sure ye arms must be gettin' tired by now. Say... i should have an ol' snow shovel out back.",
 "The harsh winters sure called for a solution but i won' need it right now. Why don't you go give it a holler?",
-]};
+], onDone:()=>spawnShovelWorld() };
 let shovelDlgDone = false, shovelDlgPending = false;
 function spawnTutArrow(){
 removeTutArrow();
@@ -3938,7 +4022,7 @@ prevYaw = yaw;
 /* ---------- targeting ---------- */
 const raycaster = new THREE.Raycaster();
 const SCREEN_C = new THREE.Vector2(0,0);
-let nearVendor = false, nearWitch = false, nearGoblin = null, nearTelescope = false, nearCat = false;
+let nearVendor = false, nearWitch = false, nearGoblin = null, nearTelescope = false, nearCat = false, nearShovel = false;
 let vendorGreeted = false;
 let coinPickupPromptCount = 0;
 function updatePrompt(){
@@ -3948,12 +4032,16 @@ nearWitch = false;
 nearGoblin = null;
 nearTelescope = false;
 nearCat = false;
+nearShovel = false;
 if (held < 0 && !heldGoblin && catProxy){
 raycaster.setFromCamera(SCREEN_C, camera);
 if (raycaster.intersectObject(catProxy, false).length){
 const d = Math.hypot(player.pos.x-(STALL_POS.x+1.9), player.pos.z-(STALL_POS.z+0.4));
 if (d < 4.5) nearCat = true;
 }
+}
+if (!shovelOwned && shovelWorld){
+nearShovel = Math.hypot(player.pos.x-SHOVEL_SPOT.x, player.pos.z-SHOVEL_SPOT.z) < 2.4;
 }
 if (held < 0 && !heldGoblin && live.length){
 const pc = pickCoin();
@@ -4013,6 +4101,10 @@ prompt.classList.remove('show');
 crosshair.classList.add('active');
 } else if (nearCat){
 prompt.innerHTML = '<kbd>CLICK</kbd> pet the cat';
+prompt.classList.add('show');
+crosshair.classList.add('active');
+} else if (nearShovel){
+prompt.innerHTML = '<kbd>E</kbd> take the snow shovel';
 prompt.classList.add('show');
 crosshair.classList.add('active');
 } else if (nearGoblin){
@@ -4105,7 +4197,8 @@ if (cine) return;
 if (shopPhase === 'hole'){ ascend(); return; }
 if (shopPhase === 'iso'){ closeShopToPlay(); return; }
 if (camMode !== 'play') return;
-if (nearTelescope){ openShop(false, true); return; }   // telescope = high meadow view, no hole button
+if (nearTelescope){ openShop(false, true); return; }
+if (nearShovel){ pickupShovel(); return; }   // telescope = high meadow view, no hole button
 if (nearWitch){ openDlg(WITCH_CFG); return; }
 if (nearVendor){
 if (!goblinsAwakened){
@@ -5443,6 +5536,7 @@ if (tutSkipT >= 5) skipTutorial();
 }
 if (locked && camMode === 'play' && !shopOpen && !cine && !dlgOpen) updatePrompt();
 if (heldGoblin && locked && camMode === 'play') updateHeldGoblin();
+updateShovel(dt);
 if (locked && camMode === 'play' && !cine){
 const spXZ = Math.hypot(player.vel.x, player.vel.z);
 const target = 1 + Math.min(1, spXZ/7.2)*0.5;
