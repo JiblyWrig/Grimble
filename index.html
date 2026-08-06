@@ -446,6 +446,7 @@ const STALL_COLL = [ // round props
 { x:-2.45, z:STALL_POS.z+1.60, r:0.40 }, // chalkboard
 ];
 const WITCH_POS = new THREE.Vector3(0, 0, 23);
+const TELE_POS = new THREE.Vector3(-6.5, 0, -14); // left of the path when facing the stall
 const RUG_CENTER = new THREE.Vector3(STALL_POS.x, 0, STALL_POS.z + 2.6);
 const RUG_R = 1.5;
 const UP = new THREE.Vector3(0,1,0);
@@ -680,8 +681,8 @@ transformed += jig * uBoilAmp;
 mat.customProgramCacheKey = () => 'boil';
 }
 function setBoilAmp(mat, amp){ if (mat.userData.boilAmp) mat.userData.boilAmp.value = amp; else addBoil(mat, amp); }
-function toon(color, opts={}){ const m = new THREE.MeshToonMaterial(Object.assign({ color, gradientMap:gradTex }, opts)); addBoil(m); return m; }
-function toonMap(map, opts={}){ const m = new THREE.MeshToonMaterial(Object.assign({ map, gradientMap:gradTex }, opts)); addBoil(m); return m; }
+function toon(color, opts={}){ return new THREE.MeshToonMaterial(Object.assign({ color, gradientMap:gradTex }, opts)); }
+function toonMap(map, opts={}){ return new THREE.MeshToonMaterial(Object.assign({ map, gradientMap:gradTex }, opts)); }
 /* ---------- inverted-hull outlines (storybook ink, warm dark brown) ---------- */
 const outlineMat = new THREE.MeshBasicMaterial({ color:0x2a1a10, side:THREE.BackSide });
 function addOutlineShells(root, scale, ownMat){
@@ -941,7 +942,7 @@ window.holeDustMat = m;
 {
 const FENCE_R = WORLD_R - 1;
 const N = 72;
-const fenceMat = toon(0x6e4b2a);
+const fenceMat = toon(0x6e4b2a); addBoil(fenceMat);
 const postGeo = new THREE.CylinderGeometry(0.06,0.09,1.15,6);
 const posts = new THREE.InstancedMesh(postGeo, fenceMat, N);
 const d = new THREE.Object3D();
@@ -965,7 +966,7 @@ postShell.setMatrixAt(i, d.matrix);
 }
 scene.add(postShell);
 const ringGeo = new THREE.CylinderGeometry(FENCE_R, FENCE_R, 0.09, 160, 1, true);
-const railMat = toon(0x7a5430, { side:THREE.DoubleSide });
+const railMat = toon(0x7a5430, { side:THREE.DoubleSide }); addBoil(railMat);
 const rail1 = new THREE.Mesh(ringGeo, railMat); rail1.position.y = 0.5;  scene.add(rail1);
 const rail2 = new THREE.Mesh(ringGeo, railMat); rail2.position.y = 0.92; scene.add(rail2);
 const railShellGeo = new THREE.CylinderGeometry(FENCE_R+0.035, FENCE_R+0.035, 0.15, 160, 1, true);
@@ -1116,6 +1117,7 @@ if (Math.hypot(x,z) < HOLE_R+0.25) continue;
 if (Math.hypot(x-RUG_CENTER.x, z-RUG_CENTER.z) < RUG_R+0.15) continue;
 if (x > STALL_POS.x-2.4 && x < STALL_POS.x+2.4 && z > STALL_POS.z-1.15 && z < STALL_POS.z+1.65) continue;
 if (Math.hypot(x-WITCH_POS.x, z-WITCH_POS.z) < 1.6) continue;
+if (Math.hypot(x-TELE_POS.x, z-TELE_POS.z) < 1.0) continue;
 aPos.set([x,0,z], i*3);
 aInfo.set([Math.random(), 0.194+Math.random()*0.243, 0.7+Math.random()*0.7, Math.random()], i*4);
 i++;
@@ -1481,6 +1483,7 @@ const bub = !!opts.bub;
 const skin  = toon(chief ? 0x8f2f2a : bub ? 0x9a5cff : 0x4fa896);
 const skinD = toon(chief ? 0x6d221f : bub ? 0x6d35b0 : 0x357f70);
 const cloth = toon(chief ? 0x3a2a20 : 0x8a5a33);
+addBoil(skin); addBoil(skinD); addBoil(cloth);
 const g = { state:'idle', t:1+Math.random(), target:new THREE.Vector3(), vel:new THREE.Vector3(),
 yaw:Math.random()*6.28, gait:0, throwT:0, thrown:false, clock:Math.random()*6,
 slamClock:Math.random()*5, chief, headYawDef:0, nextBlink:1+Math.random()*3, blinkT:0,
@@ -2544,6 +2547,46 @@ for (const p of pennants){
 p.m.rotation.set(Math.sin(time*p.sp + p.ph)*0.22, p.baseY, Math.sin(time*p.sp*0.83 + p.ph*1.7)*0.12);
 }
 }
+/* ============================== TELESCOPE (left of the path) ============================== */
+{
+const tele = new THREE.Group();
+const brass = toon(0x8a6a30);
+const darkW = toon(0x4a3520);
+for(let i=0;i<3;i++){
+const a = i/3*Math.PI*2 + 0.5;
+const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.035,1.15,6), darkW);
+leg.position.set(Math.cos(a)*0.3, 0.52, Math.sin(a)*0.3);
+leg.rotation.set(Math.sin(a)*0.45, 0, -Math.cos(a)*0.45);
+tele.add(leg);
+}
+const head = new THREE.Mesh(new THREE.SphereGeometry(0.07,8,6), brass);
+head.position.y = 1.05;
+tele.add(head);
+const aim = new THREE.Group();
+aim.position.y = 1.05;
+aim.rotation.x = -0.9;
+const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.09,1.15,10), brass);
+tube.position.y = 0.35;
+aim.add(tube);
+const rim = new THREE.Mesh(new THREE.TorusGeometry(0.09,0.02,6,12), brass);
+rim.rotation.x = Math.PI/2;
+rim.position.y = 0.92;
+aim.add(rim);
+const eye = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.16,8), darkW);
+eye.position.y = -0.3;
+aim.add(eye);
+tele.add(aim);
+tele.position.copy(TELE_POS);
+tele.rotation.y = Math.atan2(-TELE_POS.x, -TELE_POS.z);
+scene.add(tele);
+const tShadow = new THREE.Mesh(new THREE.PlaneGeometry(1.1,1.1),
+new THREE.MeshBasicMaterial({ map:blobTex, transparent:true, depthWrite:false, opacity:0.45 }));
+tShadow.rotation.x = -Math.PI/2;
+tShadow.position.set(TELE_POS.x, 0.02, TELE_POS.z);
+tShadow.renderOrder = 2;
+scene.add(tShadow);
+STALL_COLL.push({ x:TELE_POS.x, z:TELE_POS.z, r:0.5 });
+}
 /* ============================== COINS — INSTANCED + SoA (max 2000, no shadows) ============================== */
 const MAX_COINS = MAX_WORLD_COINS;
 const COIN_GRAV = 20;
@@ -3013,7 +3056,10 @@ camera.fov = THREE.MathUtils.lerp(fromFov, toFov, e);
 camera.updateProjectionMatrix();
 if (camT >= 1){
 camMode = (camMode === 'toIso') ? 'iso' : 'play';
-if (camMode === 'iso' && shopPhase === 'iso') holeBtns.classList.remove('hidden');
+if (camMode === 'iso' && shopPhase === 'iso'){
+if (straightToHole){ straightToHole = false; startToHole(); }
+else holeBtns.classList.remove('hidden');
+}
 }
 } else if (camMode === 'iso'){
 isoAngle += dt*0.035;
@@ -3861,7 +3907,7 @@ prevYaw = yaw;
 /* ---------- targeting ---------- */
 const raycaster = new THREE.Raycaster();
 const SCREEN_C = new THREE.Vector2(0,0);
-let nearVendor = false, nearWitch = false, nearGoblin = null, nearCat = false;
+let nearVendor = false, nearWitch = false, nearGoblin = null, nearTelescope = false, nearCat = false;
 let vendorGreeted = false;
 let coinPickupPromptCount = 0;
 function updatePrompt(){
@@ -3869,6 +3915,7 @@ nearCoin = -1;
 nearVendor = false;
 nearWitch = false;
 nearGoblin = null;
+nearTelescope = false;
 nearCat = false;
 if (held < 0 && !heldGoblin && catProxy){
 raycaster.setFromCamera(SCREEN_C, camera);
@@ -3897,6 +3944,8 @@ openDlg(GRIM_CFG);
 }
 const dW = Math.hypot(player.pos.x - WITCH_POS.x, player.pos.z - WITCH_POS.z);
 nearWitch = witchVisible && dW < 3.5;
+const dT = Math.hypot(player.pos.x - TELE_POS.x, player.pos.z - TELE_POS.z);
+nearTelescope = dT < 2.2;
 if (!heldGoblin) {
 for (const g of goblins) {
 if (g.state === 'held' || g.state === 'thrown' || g.state === 'recovering' || !g.root.visible) continue;
@@ -3937,6 +3986,10 @@ prompt.classList.add('show');
 crosshair.classList.add('active');
 } else if (nearGoblin){
 prompt.innerHTML = '<kbd>Q</kbd> grab goblin';
+prompt.classList.add('show');
+crosshair.classList.add('active');
+} else if (nearTelescope){
+prompt.innerHTML = '<kbd>E</kbd> peer through the telescope';
 prompt.classList.add('show');
 crosshair.classList.add('active');
 } else if (nearWitch){
@@ -4021,6 +4074,7 @@ if (cine) return;
 if (shopPhase === 'hole'){ ascend(); return; }
 if (shopPhase === 'iso'){ closeShopToPlay(); return; }
 if (camMode !== 'play') return;
+if (nearTelescope){ openShop(false); return; }   // telescope = high meadow view
 if (nearWitch){ openDlg(WITCH_CFG); return; }
 if (nearVendor){
 if (!goblinsAwakened){
@@ -4041,11 +4095,14 @@ hideCap();
 openDlg(GRIM2_CFG);   // onDone opens the skill tree
 return;
 }
-openShop();
+openShop(true);   // vendor now goes straight to the skill tree
 }
 }
-function openShop(){
+let straightToHole = false;
+function openShop(straight=false){
 shopOpen = true; shopPhase = 'iso'; nearVendor = false;
+straightToHole = straight;
+straightToHole = straight;
 mouseHeld = false; rightMouseHeld = false; releaseMagnet();
 shopOverlay.classList.add('hidden');
 document.body.classList.add('shop');
