@@ -249,6 +249,11 @@ background:linear-gradient(180deg,#f9dd82,#cf9d2c); border-radius:6px; padding:2
 .tnode.max .tcost { background:#3a2a44; color:#c9a6ef; }
 .tnode.max .tcost { background:#3a2a44; color:#c9a6ef; }
 .tnode.max .ico, .tnode.max .tname, .tnode.max .tlvl, .tnode.max .tcost { display:none; }
+.tnode.green .tcost { background:linear-gradient(180deg,#b8e694,#5f9f3c); }
+.tnode.green .tname { color:#b8e694; }
+.tnode.green .ico { color:#9fd478; }
+.tnode.green .maxBanner { background:linear-gradient(180deg,#3f8a34,#1e5c18 55%,#144210);
+border-top:1px solid rgba(220,255,180,.5); border-bottom:2px solid #0a2e06; }
 .udigit { height:1em; overflow:hidden; display:inline-block; vertical-align:bottom; }
 .ureel { display:block; transition:transform .5s cubic-bezier(.25,.9,.3,1); }
 .ureel span { display:block; height:1em; line-height:1em; }
@@ -521,7 +526,7 @@ const WITCH_CFG = { name:'MAUD', lines:DLG, bail:true,
 finalHint:'<kbd>E</kbd> — SACRIFICE EVERYTHING &nbsp;·&nbsp; <kbd>Q</kbd> — NOT YET', onDone:()=>startSacrifice() };
 const GRIM_CFG = { name:'GRIMBLE', lines:GDLG, onDone:()=>startThrowCine() };
 /* ============================== UPGRADES ============================== */
-const upgrades = { value:1, rate:1, stack:1, goblins:0, chieftains:0, help:0, shiny:0, whistle:0, ledger:0, width:0, holejob:0 };
+const upgrades = { value:1, rate:1, stack:1, goblins:0, chieftains:0, help:0, shiny:0, whistle:0, ledger:0, width:0, holejob:0, stranger:0 };
 const UPG = {
 help:   { base:1,  max:1 },
 value:  { base:5,  max:10 },
@@ -532,8 +537,9 @@ chieftains:{ base:50, max:MAX_CHIEFS },
 shiny:{ base:80, max:1 },
 whistle:{ base:300, max:1 },
 ledger:{ base:300, max:3 },
-width:{ base:150, max:5 },
+width:{ base:150, max:10 },
 holejob:{ base:500, max:1 },
+stranger:{ base:1000, max:1 },
 };
 
 const costOf = k => {
@@ -544,6 +550,7 @@ else if (k === 'shiny') c = 80;
 else if (k === 'whistle') c = 300;
 else if (k === 'width') c = 150 * Math.pow(2, upgrades.width);
 else if (k === 'holejob') c = 500;
+else if (k === 'stranger') c = 1000;
 else if (k === 'ledger') c = 300 * Math.pow(2, upgrades.ledger);
 else if (k === 'stack') c = upgrades.stack === 1 ? 10 : Math.floor(100 * Math.pow(2, upgrades.stack - 2));
 else if (k === 'value') c = upgrades.value === 1 ? 5 : Math.floor(200 * Math.pow(2, upgrades.value - 2));
@@ -565,6 +572,7 @@ whistle:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width
 ledger:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/><path d="M9 7h7M9 11h7"/></svg>`,
 width:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 3h8v8a4 4 0 0 1-8 0V3z"/><path d="M12 15v6"/><path d="M2 10h3M19 10h3"/><path d="M5 7l-3 3 3 3M19 7l3 3-3 3"/></svg>`,
 holejob:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 4h18"/><path d="M5 8h14"/><path d="M8 12h8"/><path d="M10 16h4"/><path d="M11 20h2"/></svg>`,
+stranger:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 21c-5 0-8-3.2-8-7.5S7.5 5 12 5s8 4.2 8 8.5-3 7.5-8 7.5z"/><path d="M12 5c0-2 1-3 2.5-3"/><circle cx="9.5" cy="11" r="2.6"/><circle cx="14.5" cy="11" r="2.6"/><circle cx="10" cy="11.3" r="0.9" fill="currentColor"/><circle cx="14" cy="11.3" r="0.9" fill="currentColor"/><path d="M8.5 16l1.5 1.8 1.5-1.8 1.5 1.8 1.5-1.8"/></svg>`,
 }; 
 
 const TREE = [
@@ -579,6 +587,7 @@ const TREE = [
 { key:'ledger',    x:-150,y:330, ico:ICO.ledger, name:"Grimble's Ledger", from:'shiny', need:()=>upgrades.shiny>0 },
 { key:'width',     x:630, y:220, ico:ICO.width,  name:'Wide Blade',  from:'rate',  need:()=>upgrades.rate>1 },
 { key:'holejob',   x:690, y:80,  ico:ICO.holejob,name:'Hole-Job',    from:'width', need:()=>upgrades.width>0 },
+{ key:'stranger',  x:770, y:220, ico:ICO.stranger,name:'Stranger',    from:'width', need:()=>upgrades.width>=2, green:true },
 ];
 let cheat = false, cheatT = 0;
 let shake = 0;
@@ -2095,6 +2104,75 @@ witch.pupL.position.set(-0.07, 0.04, 0.185);
 witch.pupR.position.set( 0.07, 0.04, 0.185);
 }
 witch.shadow.visible = true;
+}
+/* ============================== STRANGER (little green guest) ============================== */
+let stranger = null;
+function makeStranger(x, z){
+const g = new THREE.Group();
+const green  = toon(0x8dc63f); addBoil(green);
+const greenD = toon(0x6da32c); addBoil(greenD);
+const white = new THREE.MeshBasicMaterial({ color:0xffffff });
+const black = new THREE.MeshBasicMaterial({ color:0x141414 });
+const inner = new THREE.Group(); g.add(inner);
+const body = new THREE.Mesh(new THREE.SphereGeometry(0.62,16,14), green);
+body.scale.set(1.15,0.95,1.0); body.position.y = 0.55; inner.add(body);
+const belly = new THREE.Mesh(new THREE.SphereGeometry(0.5,12,10), greenD);
+belly.scale.set(1.05,0.7,0.9); belly.position.set(0,0.32,0.18); inner.add(belly);
+for(const s of [-1,1]){
+const foot = new THREE.Mesh(new THREE.SphereGeometry(0.2,10,8), green);
+foot.scale.set(1.2,0.5,1.6); foot.position.set(s*0.34, 0.1, 0.52); inner.add(foot);
+}
+const armR = new THREE.Mesh(new THREE.SphereGeometry(0.16,10,8), green);
+armR.scale.set(1.3,0.7,0.9); armR.position.set(0.62,0.5,0.15); armR.rotation.z = 0.5; inner.add(armR);
+const armL = new THREE.Mesh(new THREE.SphereGeometry(0.16,10,8), green);
+armL.scale.set(1.3,0.7,0.9); armL.position.set(-0.66,0.95,0.1); armL.rotation.z = 0.9; inner.add(armL);
+let eyeL, eyeR;
+for(const s of [-1,1]){
+const eye = new THREE.Mesh(new THREE.SphereGeometry(0.26,12,10), white);
+eye.position.set(s*0.24, 0.86, 0.42); eye.scale.set(1,1.15,0.6); inner.add(eye);
+if (s<0) eyeL = eye; else eyeR = eye;
+const pup = new THREE.Mesh(new THREE.SphereGeometry(0.09,8,8), black);
+pup.position.set(s*0.20, 0.86, 0.63); inner.add(pup);
+}
+for(const tx of [-0.28,-0.09,0.1,0.29]){
+const tooth = new THREE.Mesh(new THREE.ConeGeometry(0.065,0.13,4), white);
+tooth.position.set(tx, 0.47, 0.56 - Math.abs(tx)*0.1);
+inner.add(tooth);
+}
+for(const s of [-1,1]){
+const fang = new THREE.Mesh(new THREE.ConeGeometry(0.06,0.12,4), white);
+fang.rotation.x = Math.PI;
+fang.position.set(s*0.44, 0.62, 0.44);
+inner.add(fang);
+}
+const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.05,0.34,6), greenD);
+stalk.position.set(0.1,1.28,0); stalk.rotation.z = -0.5; inner.add(stalk);
+const tip = new THREE.Mesh(new THREE.SphereGeometry(0.09,8,8), green);
+tip.scale.set(1,1.4,1); tip.position.set(0.22,1.42,0); inner.add(tip);
+const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1.6,1.6),
+new THREE.MeshBasicMaterial({ map:blobTex, transparent:true, depthWrite:false }));
+shadow.rotation.x = -Math.PI/2; shadow.position.y = 0.02; shadow.renderOrder = 2;
+g.add(shadow);
+addOutlineShells(g, 1.06);
+g.position.set(x, 0, z);
+g.rotation.y = Math.atan2(-x, -z);
+scene.add(g);
+stranger = { inner, eyeL, eyeR, armL, nextBlink:2+Math.random()*3, blinkT:0 };
+STALL_COLL.push({ x, z, r:0.8 });
+return stranger;
+}
+function updateStranger(dt, time){
+if (!stranger) return;
+const b = Math.sin(time*1.7);
+stranger.inner.scale.set(1, 1 + b*0.025, 1);
+stranger.inner.position.y = b*0.015;
+stranger.armL.rotation.z = 0.9 + Math.sin(time*2.2)*0.15;
+if (time >= stranger.nextBlink){
+stranger.blinkT += dt;
+const bp = stranger.blinkT/0.22;
+if (bp >= 1){ stranger.blinkT = 0; stranger.nextBlink = time + 2 + Math.random()*4; }
+else { const s = 1.15*(1 - Math.sin(bp*Math.PI)*0.9); stranger.eyeL.scale.y = s; stranger.eyeR.scale.y = s; }
+} else { stranger.eyeL.scale.y = 1.15; stranger.eyeR.scale.y = 1.15; }
 }
 /* ============================== VENDOR + STALL (with cat) ============================== */
 const vendor = { nextBlink:2.2, blinkT:0, waveAmt:0, nextEarT:3, earTwitch:0, earSide:1 };
@@ -3990,7 +4068,7 @@ c.suck = c.suck.filter(it => it.ci === undefined);
 }
 function doPrestigeReset(){
 prestige++;
-for (const k in upgrades) upgrades[k] = (k==='chieftains'||k==='help'||k==='goblins'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob') ? 0 : 1;
+for (const k in upgrades) upgrades[k] = (k==='chieftains'||k==='help'||k==='goblins'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob'||k==='stranger') ? 0 : 1;
 earned = 0;
 setCoinDisplay(0);
 while (live.length) removeCoin(live[0], false);
@@ -4496,6 +4574,7 @@ lineEls[n.key] = ln;
 }
 const el = document.createElement('div');
 el.className = 'tnode';
+if (n.green) el.classList.add('green');
 el.style.left = n.x+'px'; el.style.top = n.y+'px';
 el.innerHTML = `<div class="ico">${n.ico}</div><div class="tname">${n.name}</div>
 <div class="tlvl"><span class="ulvl-max" style="display:none">OWNED</span><span class="ulvl-roll"></span><span class="ulvl-static"></span></div>
@@ -4610,6 +4689,7 @@ whistle:'One blast. Five seconds of glorious chaos.',
 ledger:'Grimble sharpens his prices… in your favor.',
 width:'A broader birch for grander sweeps.',
 holejob:'The hole does the work. You take the credit.',
+stranger:'A stranger wanders into the meadow.',
 };
 function tipDelta(k){
 const L = upgrades[k];
@@ -4625,6 +4705,7 @@ case 'whistle':    return `press <kbd>1</kbd> — 5s frenzy, 5min cooldown`;
 case 'ledger':     return `-${L*5}% costs <span class="arr">→</span> -${(L+1)*5}% costs`;
 case 'width':      return `blade ×${(1+0.1*L).toFixed(2)} <span class="arr">→</span> ×${(1+0.1*(L+1)).toFixed(2)}`;
 case 'holejob':    return `press <kbd>2</kbd> — the hole inhales, 5min cooldown`;
+case 'stranger':   return `a green guest takes a seat in the meadow`;
 }
 return '';
 }
@@ -4655,7 +4736,7 @@ function refreshTree(){
 shopCoinsEl.textContent = cheat ? '∞' : fmt(earned);
 let bought = 0, maxT = 0;
 for (const k in UPG){
-const start = (k==='chieftains'||k==='help'||k==='goblins'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob') ? 0 : 1;
+const start = (k==='chieftains'||k==='help'||k==='goblins'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob'||k==='stranger') ? 0 : 1;
 bought += upgrades[k]-start;
 maxT += UPG[k].max-start;
 }
@@ -4725,6 +4806,10 @@ if (shovelView){ const pos = shovelView.position.clone(), rot = shovelView.rotat
 toast('The blade broadens…');
 }
 if (key === 'holejob') toast('Hole-Job ready — press 2');
+if (key === 'stranger'){
+if (!stranger) makeStranger(17, 14);
+toast('A stranger wanders into the meadow…');
+}
 if (key === 'help'){
 let need = 2 - goblins.length; // top up to exactly 2, never more
 while (need > 0){
@@ -5690,6 +5775,7 @@ if (d < bd){ bd = d; ng = g; }
 if (ng) grassMat.uniforms.uGoblin.value.set(ng.root.position.x, 0, ng.root.position.z);
 updateVendor(dt, elapsed);
 updateWitch(dt, elapsed);
+updateStranger(dt, elapsed);
 updateCoins(dt, elapsed);
 updateCoinSmears();
 updateButterflies(dt, elapsed);
