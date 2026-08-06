@@ -5160,7 +5160,6 @@ const lfoG = AC.createGain(); lfoG.gain.value = 140;
 lfo.connect(lfoG); lfoG.connect(nF.frequency);
 nSrc.connect(nF); nF.connect(nG); nG.connect(eerieBus);
 nSrc.start(); lfo.start();
-startWind();
 startMusic();
 } catch(e){}
 }
@@ -5272,70 +5271,27 @@ const f = 260 + Math.random()*180;
 noiseS(0.07, 0.07, f, f*2.1);
 tone(85+Math.random()*25, 0.05, 'sine', 0.035);
 };
-let windOn = false, wFilter, wGain, aFilter, aGain;
-function startWind(){
-if (!AC || windOn) return; windOn = true;
-const src = AC.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
-wFilter = AC.createBiquadFilter(); wFilter.type='lowpass'; wFilter.frequency.value = 480; wFilter.Q.value = 0.4;
-wGain = AC.createGain(); wGain.gain.value = 0.0315;
-src.connect(wFilter); wFilter.connect(wGain); wGain.connect(windBus);
-const src2 = AC.createBufferSource(); src2.buffer = noiseBuf; src2.loop = true; src2.playbackRate.value = 0.77;
-aFilter = AC.createBiquadFilter(); aFilter.type='bandpass'; aFilter.frequency.value = 1200; aFilter.Q.value = 0.9;
-aGain = AC.createGain(); aGain.gain.value = 0.009;
-src2.connect(aFilter); aFilter.connect(aGain); aGain.connect(windBus);
-src.start(); src2.start();
-windWander();
+function loadAudio(name, url){
+return fetch(url)
+.then(r=>{ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+.then(b=>new Promise((res,rej)=>AC.decodeAudioData(b,res,rej)))
+.then(buf=>{ customBuf[name]=buf; })
+.catch(e=>console.warn('custom audio not loaded:', url, e));
 }
-function windWander(){
-if (!AC) return;
-const t = AC.currentTime;
-const dur = 1.6 + Math.random()*3.2;
-wFilter.frequency.setTargetAtTime(380 + Math.random()*260, t, 2.5);
-wGain.gain.setTargetAtTime(0.0252 + Math.random()*0.0126, t, 2.5);
-aFilter.frequency.setTargetAtTime(900 + Math.random()*800, t, 2.0);
-aGain.gain.setTargetAtTime(0.0054 + Math.random()*0.0063, t, 2.0);
-setTimeout(windWander, dur*800);
+function startCustomAmbience(vol=0.8){
+const buf = customBuf.ambience;
+if (!buf || customAmb || !AC) return;
+customAmb = AC.createBufferSource();
+customAmb.buffer = buf; customAmb.loop = true;
+const g = AC.createGain(); g.gain.value = vol;
+customAmb.connect(g); g.connect(windBus);   // follows the AMBIENCE setting + tree ducking
+customAmb.start();
 }
-/* ---------- bird ambience: 8 call types, random pitch/pan/timing ---------- */
-let birdNext = 3;
-function bTone(f,dur,vol,delay,slide,pan,type='sine',vib=0){
-if(!AC || !settings.ambience) return;
-const t=AC.currentTime+delay, o=AC.createOscillator(), g=AC.createGain(), p=AC.createStereoPanner();
-o.type=type; o.frequency.setValueAtTime(f,t);
-if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(300,f+slide),t+dur);
-if(vib){ const l=AC.createOscillator(); l.frequency.value=vib; const lg=AC.createGain(); lg.gain.value=f*0.06; l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(t+dur+0.05); }
-g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(vol,t+0.01);
-g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
-p.pan.value=pan;
-o.connect(g); g.connect(p); p.connect(master);
-o.start(t); o.stop(t+dur+0.05);
+function initCustomAudio(){
+if (customInit) return; customInit = true;
+loadAudio('ambience','audio/ambience.mp3').then(()=>startCustomAmbience());
 }
-function birdChirp(pan,vol){ const n=1+Math.floor(Math.random()*3), f=1800+Math.random()*2200;
-for(let i=0;i<n;i++) bTone(f*(0.9+Math.random()*0.2), 0.07+Math.random()*0.05, vol, i*(0.11+Math.random()*0.05), f*0.5*(Math.random()<0.8?1:-1), pan); }
-function birdDescend(pan,vol){ bTone(2600+Math.random()*900, 0.35+Math.random()*0.2, vol, 0, -(1200+Math.random()*600), pan); }
-function birdTrill(pan,vol){ bTone(2200+Math.random()*1600, 0.25+Math.random()*0.3, vol, 0, (Math.random()-0.5)*800, pan, 'sine', 28+Math.random()*14); }
-function birdTwoTone(pan,vol){ const f=2000+Math.random()*1200; bTone(f,0.09,vol,0,0,pan); bTone(f*0.78,0.11,vol,0.12,0,pan); }
-function birdChatter(pan,vol){ const n=3+Math.floor(Math.random()*4);
-for(let i=0;i<n;i++) bTone(1400+Math.random()*1800, 0.045, vol*0.8, i*0.07+Math.random()*0.02, (Math.random()-0.5)*900, pan, 'triangle'); }
-function birdCuckoo(pan,vol){ const f=700+Math.random()*120; bTone(f,0.16,vol*0.7,0,0,pan); bTone(f*0.75,0.2,vol*0.7,0.22,0,pan); }
-function birdHoot(pan,vol){ bTone(480+Math.random()*80, 0.4, vol*0.5, 0, -40, pan, 'sine', 6); bTone(480+Math.random()*80, 0.5, vol*0.45, 0.5, -60, pan, 'sine', 6); }
-function birdSong(pan,vol){ let t=0; const n=3+Math.floor(Math.random()*4);
-for(let i=0;i<n;i++){ const f=1600+Math.random()*2600, d=0.06+Math.random()*0.09;
-bTone(f, d, vol, t, (Math.random()-0.3)*f*0.6, pan, 'sine', Math.random()<0.4?20:0);
-t += d + 0.03+Math.random()*0.08; } }
-const BIRD_CALLS = [birdChirp,birdChirp,birdChirp,birdDescend,birdTrill,birdTwoTone,birdChatter,birdSong,birdSong,birdCuckoo,birdHoot];
-function updateBirds(dt, time){
-if (!AC || !settings.ambience) return;
-const clear = 1 - rainFactor;
-if (clear < 0.35) return; // birds shelter when it rains
-if (time >= birdNext){
-birdNext = time + (3 + Math.random()*13) * (1.6 - clear);
-const pan = (Math.random()*2-1)*0.8;
-const vol = 0.028 + Math.random()*0.05;
-BIRD_CALLS[Math.floor(Math.random()*BIRD_CALLS.length)](pan, vol);
-if (Math.random() < 0.3) BIRD_CALLS[Math.floor(Math.random()*BIRD_CALLS.length)]((Math.random()*2-1)*0.8, vol*0.7); // answer from elsewhere
-}
-}
+
 let musicOn = false, musicGain = null, musicDelay = null;
 const DORIAN = [293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25, 587.33];
 let melodyIdx = 3, mBeat = 0;
@@ -6044,7 +6000,6 @@ if (inHole && elapsed > eerieNext){ eerieTone(); eerieNext = elapsed + 4 + Math.
 }
 if (!paused){
 updateRain(dt, elapsed);
-updateBirds(dt, elapsed);
 for (const g of goblins){ updateGoblin(g, dt, elapsed); updateGoblinSmear(g, dt); }
 let ng = goblins[0], bd = Infinity;
 for (const g of goblins){
