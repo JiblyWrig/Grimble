@@ -75,11 +75,7 @@ background:radial-gradient(circle, rgba(255,246,214,.95), rgba(255,208,110,.35) 
 width:5px; height:5px; border-radius:50%; background:#fff; box-shadow:0 0 6px rgba(0,0,0,.8); transition:background .15s; }
 #chRing { position:absolute; left:0; top:0; transform:translate(-50%,-50%); width:30px; height:30px; border-radius:50%;
 border:2px solid rgba(242,193,78,0); transition:border-color .18s; }
-#chMag { position:absolute; left:0; top:0; transform:translate(-50%,-50%); display:none;
-filter:drop-shadow(0 0 4px rgba(220,182,247,.9)); }
-#crosshair.magnet #chMag { display:block; }
-#crosshair.magnet #chDot { display:none; }
-#crosshair.magnet #chRing { border-color:rgba(220,182,247,.75); }
+
 #crosshair.active #chRing { border-color:rgba(242,193,78,.95); box-shadow:0 0 14px rgba(242,193,78,.5); animation:pulse 1s infinite; }
 #crosshair.active #chDot { background:#f2c14e; }
 @keyframes pulse { 50%{ transform:translate(-50%,-50%) scale(1.18);} }
@@ -347,13 +343,6 @@ background:#2b3f18; border:1px solid #6d8f3f; border-bottom:3px solid #465f26; c
 <div id="chWrap">
 <div id="chRing"></div>
 <div id="chDot"></div>
-<div id="chMag">
-<svg viewBox="0 0 24 24" width="15" height="15">
-<path d="M6 3v8a6 6 0 0 0 12 0V3h-4v8a2 2 0 0 1-4 0V3z" fill="#dcb6f7"/>
-<rect x="6" y="3" width="4" height="4" fill="#fff"/>
-<rect x="14" y="3" width="4" height="4" fill="#fff"/>
-</svg>
-</div>
 </div>
 </div>
 <div id="prompt"></div>
@@ -446,7 +435,7 @@ const STALL_COLL = [ // round props
 { x:-2.45, z:STALL_POS.z+1.60, r:0.40 }, // chalkboard
 ];
 const WITCH_POS = new THREE.Vector3(0, 0, 23);
-const TELE_POS = new THREE.Vector3(-6.5, 0, -14); // left of the path when facing the stall
+const TELE_POS = new THREE.Vector3(-17, 0, -14); // far left, out by the fence
 const RUG_CENTER = new THREE.Vector3(STALL_POS.x, 0, STALL_POS.z + 2.6);
 const RUG_R = 1.5;
 const UP = new THREE.Vector3(0,1,0);
@@ -499,7 +488,7 @@ const WITCH_CFG = { name:'MAUD', lines:DLG, bail:true,
 finalHint:'<kbd>E</kbd> — SACRIFICE EVERYTHING &nbsp;·&nbsp; <kbd>Q</kbd> — NOT YET', onDone:()=>startSacrifice() };
 const GRIM_CFG = { name:'GRIMBLE', lines:GDLG, onDone:()=>startThrowCine() };
 /* ============================== UPGRADES ============================== */
-const upgrades = { value:1, rate:1, stack:1, goblins:1, chieftains:0, magnet:0, mradius:1, mcapacity:1, help:0 };
+const upgrades = { value:1, rate:1, stack:1, goblins:1, chieftains:0, help:0 };
 const UPG = {
 help:   { base:1,  max:1 },
 value:  { base:5,  max:10 },
@@ -507,13 +496,9 @@ rate:   { base:10, max:7 },
 stack:  { base:10, max:8 },
 goblins:{ base:15, max:MAX_GOBLINS },
 chieftains:{ base:50, max:MAX_CHIEFS },
-magnet: { base:12, max:1 },
-mradius:{ base:8,  max:12 },
-mcapacity:{ base:10, max:10 },
 };
 const costOf = k => k === 'help' ? 1 : Math.floor(UPG[k].base * Math.pow(2, upgrades[k]-1));
 const throwInterval = () => Math.max(4, 10 * Math.pow(0.85, upgrades.rate-1));
-const magnetRadius = () => Math.min(10, 0.6 * Math.pow(1.3, upgrades.mradius-1));
 const allMaxed = () => Object.keys(UPG).every(k => upgrades[k] >= UPG[k].max);
 const ICO = {
 stack:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg>`,
@@ -521,9 +506,6 @@ rate:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1
 value:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><path d="M12 8l1.2 2.6 2.8.3-2 1.9.5 2.8-2.5-1.4-2.5 1.4.5-2.8-2-1.9 2.8-.3z"/></svg>`,
 goblins:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="13" r="6"/><path d="M6.5 10.5L2 7.5l5.5 1.5M17.5 10.5L22 7.5l-5.5 1.5"/><circle cx="10" cy="12.5" r="0.8" fill="currentColor"/><circle cx="14" cy="12.5" r="0.8" fill="currentColor"/></svg>`,
 chief:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="14" r="5.5"/><path d="M7.5 9.5L8 5.5l2.2 2.5L12 4.5l1.8 3.5L16 5.5l.5 4z"/><circle cx="10" cy="13.5" r="0.8" fill="currentColor"/><circle cx="14" cy="13.5" r="0.8" fill="currentColor"/></svg>`,
-magnet:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 4v8a5 5 0 0 0 10 0V4"/><rect x="7" y="4" width="3.5" height="4"/><rect x="13.5" y="4" width="3.5" height="4"/></svg>`,
-mradius:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/><path d="M9.5 8v4a2.5 2.5 0 0 0 5 0V8"/></svg>`,
-mcapacity:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 8h8l3 12H5z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/><circle cx="12" cy="14.5" r="2"/></svg>`,
 help:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="m7 15-1.76-1.76a2 2 0 0 0-2.83 2.82l3.6 3.6A8 8 0 0 0 12 22h2a8 8 0 0 0 8-8V7a2 2 0 0 0-4 0v5"/></svg>`,
 };
 const TREE = [
@@ -533,14 +515,9 @@ const TREE = [
 { key:'value',     x:130, y:360, ico:ICO.value,  name:'Coin Value',  from:'stack',  need:()=>upgrades.stack>1 },
 { key:'goblins',   x:70,  y:220, ico:ICO.goblins,name:'Goblins',     from:'value',  need:()=>upgrades.value>1 },
 { key:'chieftains',x:90,  y:60,  ico:ICO.chief,  name:'Chieftains',  from:'goblins',need:()=>upgrades.goblins>2 },
-{ key:'magnet',    x:350, y:205, ico:ICO.magnet, name:'Magnet',      from:'stack',  need:()=>upgrades.goblins>1 },
-{ key:'mradius',   x:240, y:75,  ico:ICO.mradius,name:'Mag. Radius', from:'magnet', need:()=>upgrades.magnet>0 },
-{ key:'mcapacity', x:465, y:75,  ico:ICO.mcapacity,name:'Mag. Cap.', from:'magnet', need:()=>upgrades.magnet>0 },
 ];
 let cheat = false, cheatT = 0;
 let shake = 0;
-let magnetActiveNow = false;
-let rightMouseHeld = false;
 function fmt(n){
 if (n < 10000) return String(n);
 if (n < 1e6){ const v = Math.floor(n/100)/10; return (v%1 ? v.toFixed(1) : v) + 'k'; }
@@ -2556,7 +2533,7 @@ for(let i=0;i<3;i++){
 const a = i/3*Math.PI*2 + 0.5;
 const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.035,1.15,6), darkW);
 leg.position.set(Math.cos(a)*0.3, 0.52, Math.sin(a)*0.3);
-leg.rotation.set(Math.sin(a)*0.45, 0, -Math.cos(a)*0.45);
+leg.rotation.set(-Math.sin(a)*0.45, 0, Math.cos(a)*0.45); // tops lean IN to meet the head
 tele.add(leg);
 }
 const head = new THREE.Mesh(new THREE.SphereGeometry(0.07,8,6), brass);
@@ -2609,13 +2586,6 @@ scene.add(m);
 const outlineMesh = new THREE.Mesh(coinGeo, new THREE.MeshBasicMaterial({ color:0xffffff, side:THREE.BackSide }));
 outlineMesh.visible = false;
 scene.add(outlineMesh);
-/* pooled pulse sprites for the magnet (capacity ≤ 10) */
-const PULSE_MAX = 12, pulsePool = [];
-for(let p=0;p<PULSE_MAX;p++){
-const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map:ringTex, transparent:true, opacity:0,
-depthWrite:false, blending:THREE.AdditiveBlending }));
-sp.visible = false; scene.add(sp); pulsePool.push(sp);
-}
 /* --- state: structure of arrays --- */
 const P  = new Float32Array(MAX_COINS*3);
 const V  = new Float32Array(MAX_COINS*3);
@@ -2634,7 +2604,6 @@ const CXA = new Int32Array(MAX_COINS), CYA = new Int32Array(MAX_COINS), CZA = ne
 const live = [], livePos = new Int32Array(MAX_COINS);
 const freeStack = []; for(let i=MAX_COINS-1;i>=0;i--) freeStack.push(i);
 let held = -1, nearCoin = -1, spinAng = 0, earned = 0, pickupCount = 0, mouseHeld = false;
-const magnetCoins = [];
 /* --- spatial hash (typed arrays, zero allocation) --- */
 const HASH_SIZE = 8192, HASH_MASK = HASH_SIZE-1;
 const hHead = new Int32Array(HASH_SIZE), hNext = new Int32Array(MAX_COINS);
@@ -2644,7 +2613,7 @@ if (!freeStack.length){
 let victim = -1;
 for(let li=0; li<live.length; li++){
 const s = ST[live[li]];
-if (s!==3 && s!==4){ victim = live[li]; break; }
+if (s!==3){ victim = live[li]; break; }
 }
 if (victim < 0) return;
 removeCoin(victim, false);
@@ -2664,7 +2633,6 @@ return i;
 }
 function removeCoin(i, countEarn){
 if (i < 0 || i >= MAX_COINS || ST[i] === 0) return;
-const mi = magnetCoins.indexOf(i); if (mi>=0) magnetCoins.splice(mi,1);
 if (held === i) held = -1;
 if (nearCoin === i) nearCoin = -1;
 const lp = livePos[i], last = live.pop();
@@ -2686,15 +2654,6 @@ if (Math.hypot(player.pos.x, player.pos.z) < EARN_SOUND_R) earnSound();
 burstSparks(P[i*3], -2, P[i*3+2]);
 if (shopOpen) refreshTree();
 }
-}
-function releaseMagnet(){
-for (const i of magnetCoins){
-if (ST[i]===4){
-ST[i]=1; SLEEPF[i]=0; RESTF[i]=0;
-V[i*3]=(Math.random()-0.5)*1.2; V[i*3+1]=-0.1; V[i*3+2]=(Math.random()-0.5)*1.2;
-}
-}
-magnetCoins.length = 0;
 }
 /* manual ray-sphere picking (fast for 2000 coins) */
 function pickCoin(){
@@ -2757,52 +2716,10 @@ _qTmp.setFromUnitVectors(UP,_toCam);
 _qT2.setFromAxisAngle(_toCam, spinAng).multiply(_qTmp);
 Q[held].slerp(_qT2, 1-Math.exp(-9*dt));
 }
-/* magnet */
-magnetActiveNow = rightMouseHeld && upgrades.magnet > 0 && locked && camMode === 'play' && !shopOpen && !cine && !dlgOpen && !heldGoblin;
-if (!magnetActiveNow && magnetCoins.length) releaseMagnet();
-if (magnetActiveNow){
-const rad = magnetRadius();
-if (magnetCoins.length < upgrades.mcapacity){
-for(let li=0; li<live.length && magnetCoins.length<upgrades.mcapacity; li++){
-const i=live[li], s=ST[i];
-if (s!==1 && s!==2) continue;
-const i3=i*3;
-if (P[i3+1] > -0.2 && Math.hypot(P[i3]-player.pos.x, P[i3+2]-player.pos.z) < rad){
-ST[i]=4; SLEEPF[i]=0; RESTF[i]=0;
-magnetCoins.push(i);
-}
-}
-}
-camera.getWorldDirection(_camD);
-_camR.crossVectors(_camD, UP).normalize();
-_camU.crossVectors(_camR, _camD);
-for(let mi=0; mi<magnetCoins.length; mi++){
-const i=magnetCoins[mi];
-if (ST[i]!==4){ magnetCoins.splice(mi,1); mi--; continue; }
-const col=mi%3, row=(mi/3)|0, i3=i*3;
-_holdT.copy(camera.position).addScaledVector(_camD,1.38)
-.addScaledVector(_camR,(col-1)*0.34).addScaledVector(_camU, 0.16-row*0.34);
-V[i3]   += ((_holdT.x-P[i3])*70   - V[i3]*9)*dt;
-V[i3+1] += ((_holdT.y-P[i3+1])*70 - V[i3+1]*9)*dt;
-V[i3+2] += ((_holdT.z-P[i3+2])*70 - V[i3+2]*9)*dt;
-P[i3]+=V[i3]*dt; P[i3+1]+=V[i3+1]*dt; P[i3+2]+=V[i3+2]*dt;
-SPINT[i]+=dt;
-_qTmp.setFromEuler(_euler.set(SPINT[i]*0.7, SPINT[i]*1.1, 0));
-Q[i].slerp(_qTmp, Math.min(1,5*dt));
-}
-}
-for(let p=0;p<PULSE_MAX;p++) pulsePool[p].visible=false;
-for(let mi=0; mi<magnetCoins.length && mi<PULSE_MAX; mi++){
-const i=magnetCoins[mi], i3=i*3, sp=pulsePool[mi];
-sp.visible=true; sp.position.set(P[i3],P[i3+1],P[i3+2]);
-const ph=(time*1.3+SLOT[i])%1;
-sp.material.opacity=0.22*(1-ph);
-sp.scale.setScalar(0.45+ph*0.55);
-}
 /* PASS A — integrate + environment (sleeping coins skipped) */
 for(let li=live.length-1; li>=0; li--){
 const i=live[li], i3=i*3, s=ST[i];
-if (s===0 || s===3 || s===4 || SLEEPF[i]) continue;
+if (s===0 || s===3 || SLEEPF[i]) continue;
 if (s===5){
 const dx=-P[i3], dy=1.6-P[i3+1], dz=-P[i3+2];
 const dist=Math.hypot(dx,dy,dz);
@@ -3058,7 +2975,10 @@ if (camT >= 1){
 camMode = (camMode === 'toIso') ? 'iso' : 'play';
 if (camMode === 'iso' && shopPhase === 'iso'){
 if (straightToHole){ straightToHole = false; startToHole(); }
-else holeBtns.classList.remove('hidden');
+else {
+holeBtn.style.display = teleView ? 'none' : '';
+holeBtns.classList.remove('hidden');
+}
 }
 }
 } else if (camMode === 'iso'){
@@ -3207,7 +3127,7 @@ toast('Hold 8 to skip');
 function startWitchCine(){
 witchSpawned = true;
 letterbox(true);
-mouseHeld = false; rightMouseHeld = false; releaseMagnet();
+mouseHeld = false;
 camMode = 'witchCine';
 cine = { type:'witch', t:0, fromPos:camera.position.clone(), fx:false, ring:null };
 tone(220,0.5,'sine',0.15,0,-80);
@@ -3215,7 +3135,7 @@ tone(220,0.5,'sine',0.15,0,-80);
 function startSacrifice(){
 closeDlg();
 letterbox(true);
-mouseHeld = false; rightMouseHeld = false; releaseMagnet();
+mouseHeld = false;
 const suck = [];
 for (const g of goblins){
 suck.push({ o:g.root, s:g.root.position.clone(), sh:g.shadow, d:Math.random()*0.9, t:0, sc:g.baseScale, ph:Math.random()*6.28 });
@@ -3229,7 +3149,7 @@ camMode = 'sacCine';
 cine = { type:'sac', t:0, fromPos:camera.position.clone(), bh:null, suck, faded:false, reset:false };
 }
 function startThrowCine(){
-mouseHeld = false; rightMouseHeld = false; releaseMagnet();
+mouseHeld = false;
 camMode = 'throwCine';
 letterbox(true);
 document.body.classList.add('cineMode');
@@ -3699,11 +3619,11 @@ c.suck = c.suck.filter(it => it.ci === undefined);
 }
 function doPrestigeReset(){
 prestige++;
-for (const k in upgrades) upgrades[k] = (k==='magnet'||k==='chieftains'||k==='help') ? 0 : 1;
+for (const k in upgrades) upgrades[k] = (k==='chieftains'||k==='help') ? 0 : 1;
 earned = 0;
 setCoinDisplay(0);
 while (live.length) removeCoin(live[0], false);
-held = -1; magnetCoins.length = 0;
+held = -1;
 for (const g of goblins){ scene.remove(g.root); scene.remove(g.shadow); if (g.smear) scene.remove(g.smear); }
 goblins.length = 0;
 makeGoblin(1.8, 7.6);
@@ -4074,7 +3994,7 @@ if (cine) return;
 if (shopPhase === 'hole'){ ascend(); return; }
 if (shopPhase === 'iso'){ closeShopToPlay(); return; }
 if (camMode !== 'play') return;
-if (nearTelescope){ openShop(false); return; }   // telescope = high meadow view
+if (nearTelescope){ openShop(false, true); return; }   // telescope = high meadow view, no hole button
 if (nearWitch){ openDlg(WITCH_CFG); return; }
 if (nearVendor){
 if (!goblinsAwakened){
@@ -4099,11 +4019,12 @@ openShop(true);   // vendor now goes straight to the skill tree
 }
 }
 let straightToHole = false;
-function openShop(straight=false){
+let teleView = false;
+function openShop(straight=false, tele=false){
 shopOpen = true; shopPhase = 'iso'; nearVendor = false;
 straightToHole = straight;
-straightToHole = straight;
-mouseHeld = false; rightMouseHeld = false; releaseMagnet();
+teleView = tele;
+mouseHeld = false;
 shopOverlay.classList.add('hidden');
 document.body.classList.add('shop');
 document.body.classList.remove('locked');
@@ -4116,6 +4037,8 @@ tone(660,0.09,'triangle',0.16); tone(880,0.12,'triangle',0.14,0.07);
 }
 function closeShopToPlay(){
 shopOpen = false; shopPhase = 'none'; hideTip();
+teleView = false;
+holeBtn.style.display = '';
 holeBtns.classList.add('hidden');
 shopOverlay.classList.add('hidden');
 document.body.classList.remove('shop');
@@ -4150,6 +4073,7 @@ const treeProg = document.getElementById('treeProg');
 const treeBox = document.getElementById('treeBox');
 const treeSvg = document.getElementById('treeLines');
 const holeBtns = document.getElementById('holeBtns');
+const holeBtn = document.getElementById('holeBtn');
 const nodeEls = {}, lineEls = {};
 for (const n of TREE){
 if (n.from){
@@ -4281,9 +4205,6 @@ rate:'The goblins fling faster.',
 value:'Shinier coins, heavier purses.',
 goblins:'More hands, more coins.',
 chieftains:'Red kings slam silver into the dirt.',
-magnet:'Gold bends toward your will.',
-mradius:'The pull reaches further.',
-mcapacity:'More coins orbit your gaze.',
 };
 function tipDelta(k){
 const L = upgrades[k];
@@ -4294,9 +4215,6 @@ case 'rate':       return `throw interval ${throwInterval().toFixed(1)}s <span c
 case 'stack':      return `${L} <span class="arr">→</span> ${L+1} coins per throw`;
 case 'goblins':    return `${L} <span class="arr">→</span> ${L+1} goblins`;
 case 'chieftains': return `${L} <span class="arr">→</span> ${L+1} chieftains`;
-case 'magnet':     return `unlocks the coin magnet (hold RMB)`;
-case 'mradius':    return `magnet radius ${magnetRadius().toFixed(1)} <span class="arr">→</span> ${Math.min(10, 0.6*Math.pow(1.3, L)).toFixed(1)}`;
-case 'mcapacity':  return `${L} <span class="arr">→</span> ${L+1} magnet slots`;
 }
 return '';
 }
@@ -4327,7 +4245,7 @@ function refreshTree(){
 shopCoinsEl.textContent = cheat ? '∞' : fmt(earned);
 let bought = 0, maxT = 0;
 for (const k in UPG){
-const start = (k==='magnet'||k==='chieftains'||k==='help') ? 0 : 1;
+const start = (k==='chieftains'||k==='help') ? 0 : 1;
 bought += upgrades[k]-start;
 maxT += UPG[k].max-start;
 }
@@ -4349,7 +4267,7 @@ if (!vis) continue;
 const lvl = upgrades[n.key];
 const maxed = lvl >= UPG[n.key].max;
 const c = costOf(n.key);
-if (n.key === 'magnet' || n.key === 'help') {
+if (n.key === 'help') {
 el.lvlMax.style.display = lvl > 0 ? '' : 'none';
 el.lvlRoll.style.display = lvl > 0 ? 'none' : '';
 el.lvlStatic.style.display = lvl > 0 ? 'none' : '';
@@ -4425,7 +4343,6 @@ break;
 }
 toast('A chieftain answers the call…');
 }
-if (key === 'magnet') toast('The coins hum within reach…');
 refreshTree();
 tone(980,0.1,'triangle',0.18); tone(1310,0.14,'triangle',0.15,0.08);
 }
@@ -4912,7 +4829,7 @@ if (nearGoblin) pickupGoblin(nearGoblin);
 }
 });
 addEventListener('keyup', e=>keys.delete(e.code));
-addEventListener('blur', ()=>{ keys.clear(); mouseHeld=false; rightMouseHeld=false; releaseMagnet(); treeDrag=false; });
+addEventListener('blur', ()=>{ keys.clear(); mouseHeld=false; treeDrag=false; });
 addEventListener('mousemove', e=>{
 if (treeDrag){
 treePanXT += e.clientX-tdx; treePanYT += e.clientY-tdy;
@@ -4926,12 +4843,7 @@ pitch = THREE.MathUtils.clamp(pitch, -1.5, 1.5);
 });
 addEventListener('mousedown', e=>{
 if (shopOpen && document.pointerLockElement) document.exitPointerLock();
-if (e.button === 2) {
-if (locked && started && camMode === 'play' && !shopOpen && !cine && !dlgOpen) {
-rightMouseHeld = true;
-}
-return;
-}
+if (e.button === 2) return;
 if (!locked || !started || shopOpen || camMode !== 'play' || cine || dlgOpen) return;
 mouseHeld = true;
 if (heldGoblin) { throwGoblin(); return; }
@@ -4941,7 +4853,6 @@ if (nearCat){ petCat(); return; }
 });
 addEventListener('mouseup', e=>{
 if (e.button === 2) {
-rightMouseHeld = false;
 treeDrag = false;
 }
 if (e.button === 0) mouseHeld = false;
@@ -4983,7 +4894,7 @@ player.pos.set(0,EYE,6.8); yaw = 0; pitch = -0.08;
 }
 } else {
 document.body.classList.remove('locked');
-mouseHeld = false; rightMouseHeld = false; releaseMagnet();
+mouseHeld = false;
 if (started && !shopOpen && !cine) showPause();
 }
 });
@@ -5417,10 +5328,9 @@ if (locked && camMode === 'play' && !shopOpen && !cine && !dlgOpen) updatePrompt
 if (heldGoblin && locked && camMode === 'play') updateHeldGoblin();
 if (locked && camMode === 'play' && !cine){
 const spXZ = Math.hypot(player.vel.x, player.vel.z);
-const target = 1 + Math.min(1, spXZ/7.2)*0.5 + (magnetActiveNow ? 0.15 : 0);
+const target = 1 + Math.min(1, spXZ/7.2)*0.5;
 chScale += (target - chScale)*Math.min(1, 10*dt);
 chWrap.style.transform = `scale(${chScale.toFixed(3)})`;
-crosshair.classList.toggle('magnet', magnetActiveNow);
 }
 if (shopOpen && shopPhase !== 'hole'){
 const n = live.length;
