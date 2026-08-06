@@ -442,6 +442,7 @@ const UP = new THREE.Vector3(0,1,0);
 /* shared scratch vectors/quaternions — declared up front so every updater can use them */
 const _v1 = new THREE.Vector3();
 const _qTmp = new THREE.Quaternion(), _qT2 = new THREE.Quaternion();
+const IDQ = new THREE.Quaternion();   
 const _holdT = new THREE.Vector3(), _acc = new THREE.Vector3();
 const _camD = new THREE.Vector3(), _camR = new THREE.Vector3(), _camU = new THREE.Vector3(), _toCam = new THREE.Vector3();
 const _euler = new THREE.Euler();
