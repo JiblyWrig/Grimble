@@ -233,6 +233,7 @@ pointer-events:none; opacity:0; }
 background:linear-gradient(180deg,#f9dd82,#cf9d2c); border-radius:6px; padding:2px 9px; }
 .tnode.max .tcost { background:#3a2a44; color:#c9a6ef; }
 .tnode.max .tcost { background:#3a2a44; color:#c9a6ef; }
+.tnode.max .ico, .tnode.max .tname, .tnode.max .tlvl, .tnode.max .tcost { display:none; }
 .udigit { height:1em; overflow:hidden; display:inline-block; vertical-align:bottom; }
 .ureel { display:block; transition:transform .5s cubic-bezier(.25,.9,.3,1); }
 .ureel span { display:block; height:1em; line-height:1em; }
@@ -495,16 +496,22 @@ const WITCH_CFG = { name:'MAUD', lines:DLG, bail:true,
 finalHint:'<kbd>E</kbd> — SACRIFICE EVERYTHING &nbsp;·&nbsp; <kbd>Q</kbd> — NOT YET', onDone:()=>startSacrifice() };
 const GRIM_CFG = { name:'GRIMBLE', lines:GDLG, onDone:()=>startThrowCine() };
 /* ============================== UPGRADES ============================== */
-const upgrades = { value:1, rate:1, stack:1, goblins:1, chieftains:0, help:0 };
+const upgrades = { value:1, rate:1, stack:1, goblins:0, chieftains:0, help:0 };
 const UPG = {
 help:   { base:1,  max:1 },
 value:  { base:5,  max:10 },
-rate:   { base:10, max:7 },
+rate:   { base:100, max:7 },
 stack:  { base:10, max:8 },
-goblins:{ base:15, max:MAX_GOBLINS },
+goblins:{ base:15, max:1 },
 chieftains:{ base:50, max:MAX_CHIEFS },
 };
-const costOf = k => k === 'help' ? 1 : Math.floor(UPG[k].base * Math.pow(2, upgrades[k]-1));
+const costOf = k => {
+if (k === 'help') return 1;
+if (k === 'goblins') return 15;
+if (k === 'stack') return upgrades.stack === 1 ? 10 : Math.floor(100 * Math.pow(2, upgrades.stack - 2));
+if (k === 'value') return upgrades.value === 1 ? 5 : Math.floor(200 * Math.pow(2, upgrades.value - 2));
+return Math.floor(UPG[k].base * Math.pow(2, upgrades[k]-1));
+};
 const throwInterval = () => Math.max(4, 10 * Math.pow(0.85, upgrades.rate-1));
 const allMaxed = () => Object.keys(UPG).every(k => upgrades[k] >= UPG[k].max);
 const ICO = {
@@ -520,8 +527,8 @@ const TREE = [
 { key:'stack',     x:350, y:340, ico:ICO.stack,  name:'Coin Stack',  from:'help',   need:()=>upgrades.help>0 },
 { key:'rate',      x:570, y:360, ico:ICO.rate,   name:'Prod. Rate',  from:'stack',  need:()=>upgrades.stack>1 },
 { key:'value',     x:130, y:360, ico:ICO.value,  name:'Coin Value',  from:'stack',  need:()=>upgrades.stack>1 },
-{ key:'goblins',   x:70,  y:220, ico:ICO.goblins,name:'Goblins',     from:'value',  need:()=>upgrades.value>1 },
-{ key:'chieftains',x:90,  y:60,  ico:ICO.chief,  name:'Chieftains',  from:'goblins',need:()=>upgrades.goblins>2 },
+{ key:'goblins',   x:70,  y:220, ico:ICO.goblins,name:'+ Goblin',    from:'value',  need:()=>upgrades.value>1 },
+{ key:'chieftains',x:90,  y:60,  ico:ICO.chief,  name:'Chieftains',  from:'goblins',need:()=>upgrades.goblins>0 },
 ];
 let cheat = false, cheatT = 0;
 let shake = 0;
@@ -3099,8 +3106,15 @@ camera.lookAt(_targ);
 if (camT >= 1){
 camMode = 'hole';
 shopPhase = 'hole';
+if (!treeIntroZoomDone){
+treeIntroZoomDone = true;
+treeZoom = treeZoomT = 1.6;
+treePanX = treePanXT = 0;
+treePanY = treePanYT = -336;
+} else {
 treeZoom = 1; treePanX = 0; treePanY = 0;
 treeZoomT = 1; treePanXT = 0; treePanYT = 0;
+}
 applyTreeTransform();
 refreshTree();
 shopOverlay.classList.remove('hidden');
@@ -3296,6 +3310,12 @@ const GDLG2 = [
 "Mmmm, the hole eatin' good tonight. Say, lad... why don't we get ourselves another one of them 'helpers'.",
 ];
 const GRIM2_CFG = { name:'GRIMBLE', lines:GDLG2, onDone:()=>{ tutDone = true; tutPhase = 0; openShop(); } };
+const SHOVEL_CFG = { name:'GRIMBLE', lines:[
+"Ye got yourself quite the logistics runnin'.",
+"I'm sure ye arms must be gettin' tired by now. Say... i should have an ol' snow shovel out back.",
+"The harsh winters sure called for a solution but i won' need it right now. Why don't you go give it a holler?",
+]};
+let shovelDlgDone = false, shovelDlgPending = false;
 function spawnTutArrow(){
 removeTutArrow();
 const mat = new THREE.MeshBasicMaterial({ color:0xffe58a });
@@ -3710,7 +3730,7 @@ c.suck = c.suck.filter(it => it.ci === undefined);
 }
 function doPrestigeReset(){
 prestige++;
-for (const k in upgrades) upgrades[k] = (k==='chieftains'||k==='help') ? 0 : 1;
+for (const k in upgrades) upgrades[k] = (k==='chieftains'||k==='help'||k==='goblins') ? 0 : 1;
 earned = 0;
 setCoinDisplay(0);
 while (live.length) removeCoin(live[0], false);
@@ -4192,7 +4212,7 @@ el.style.left = n.x+'px'; el.style.top = n.y+'px';
 el.innerHTML = `<div class="ico">${n.ico}</div><div class="tname">${n.name}</div>
 <div class="tlvl"><span class="ulvl-max" style="display:none">OWNED</span><span class="ulvl-roll"></span><span class="ulvl-static"></span></div>
 <span class="tcost"><span class="ucost-max" style="display:none">MAX</span><span class="ucost-roll"></span><span class="ucost-star"> ★</span></span>
-<div class="maxBanner">MAXED</div>`;
+<div class="maxBanner">Bought</div>`;
 el.addEventListener('click', ev=>{ ev.stopPropagation(); buy(n.key); });
 el.addEventListener('mouseenter', ()=>{
 if (lineEls[n.key]) lineEls[n.key].classList.add('hov');
@@ -4336,7 +4356,7 @@ function refreshTree(){
 shopCoinsEl.textContent = cheat ? '∞' : fmt(earned);
 let bought = 0, maxT = 0;
 for (const k in UPG){
-const start = (k==='chieftains'||k==='help') ? 0 : 1;
+const start = (k==='chieftains'||k==='help'||k==='goblins') ? 0 : 1;
 bought += upgrades[k]-start;
 maxT += UPG[k].max-start;
 }
@@ -4397,6 +4417,7 @@ setCoinDisplay(earned);
 coinNum.classList.remove('bump'); void coinNum.offsetWidth; coinNum.classList.add('bump');
 }
 upgrades[key]++;
+if (key === 'value' && !shovelDlgDone) shovelDlgPending = true;
 if (key === 'help'){
 let need = 2 - goblins.length; // top up to exactly 2, never more
 while (need > 0){
@@ -4442,6 +4463,7 @@ document.getElementById('holeBtn').addEventListener('click', e=>{ e.stopPropagat
 document.getElementById('leaveBtn').addEventListener('click', e=>{ e.stopPropagation(); closeShopToPlay(); });
 let treeZoom = 1, treePanX = 0, treePanY = 0, treeDrag = false, tdx = 0, tdy = 0;
 let treeZoomT = 1, treePanXT = 0, treePanYT = 0;
+let treeIntroZoomDone = false;
 function applyTreeTransform(){ treeBox.style.transform = `translate(${treePanX}px,${treePanY}px) scale(${treeZoom})`; }
 function updateTreeCam(dt){
 if (shopPhase !== 'hole') return;
@@ -5368,6 +5390,10 @@ if (started && witchSpawned && !reMaxToastDone && prestige > 0 && allMaxed() && 
 reMaxToastDone = true;
 toast('The witch awaits at the far end…');
 }
+}
+if (shovelDlgPending && started && locked && !cine && !dlgOpen && !shopOpen && camMode === 'play'){
+shovelDlgPending = false; shovelDlgDone = true;
+openDlg(SHOVEL_CFG);
 }
 grassMat.uniforms.uTime.value = elapsed;
 holeDustMat.uniforms.uTime.value = elapsed;
