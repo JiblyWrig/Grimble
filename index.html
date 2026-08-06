@@ -775,10 +775,6 @@ const g=x.createRadialGradient(64,64,4,64,64,64);
 g.addColorStop(0,'rgba(0,0,0,0.55)'); g.addColorStop(1,'rgba(0,0,0,0)');
 x.fillStyle=g; x.fillRect(0,0,w,h);
 });
-const ringTex = canvasTex(64,64,(x)=>{
-x.strokeStyle='rgba(255,240,190,0.9)'; x.lineWidth=4;
-x.beginPath(); x.arc(32,32,20,0,7); x.stroke();
-}, false);
 const violetGlowTex = canvasTex(64,64,(x)=>{
 const g=x.createRadialGradient(32,32,2,32,32,32);
 g.addColorStop(0,'rgba(200,140,255,0.9)'); g.addColorStop(0.5,'rgba(140,70,220,0.35)'); g.addColorStop(1,'rgba(120,40,200,0)');
@@ -2568,9 +2564,19 @@ STALL_COLL.push({ x:TELE_POS.x, z:TELE_POS.z, r:0.5 });
 const MAX_COINS = MAX_WORLD_COINS;
 const COIN_GRAV = 20;
 const COIN_R = 0.21;
-const COIN_D = COIN_R*2, COIN_D2 = COIN_D*COIN_D;
-const COIN_E = 0.32, COIN_BE = 0.45;
+const COIN_H = 0.05;    // coin thickness (stacking distance)
+const COL_R = 0.20;     // horizontal collision radius
+const STACK_H = 0.06;   // vertical rest distance when piled
+const BOUNCE = 0.38;    // ground restitution
+const G_FRICT = 7.0;    // ground friction
+const AIR_ANG = 1.2;    // spin damping in air
+const GND_ANG = 9.0;    // spin damping on contact
+const SLEEP_V = 0.14;   // "not moving" speed threshold
+const SLEEP_T = 1.0;    // seconds of stillness before idle
+const PHYS_DT = 1/60;   // fixed physics step
 const CELL = 0.5, CELL_INV = 1/CELL;
+let physAccum = 0;
+const CONTACT = new Uint8Array(MAX_COINS);
 const coinGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.045, 18);
 const coinMat  = toonMap(coinFaceTex);
 const coinMatS = toonMap(coinFaceTexS);
@@ -2591,13 +2597,12 @@ const P  = new Float32Array(MAX_COINS*3);
 const V  = new Float32Array(MAX_COINS*3);
 const AV = new Float32Array(MAX_COINS*3);
 const Q  = []; for(let i=0;i<MAX_COINS;i++) Q.push(new THREE.Quaternion());
-const ST = new Uint8Array(MAX_COINS);     // 0 free 1 air 2 rest 3 held 4 magnet 5 auto
+const ST = new Uint8Array(MAX_COINS);     // 0 free 1 air 2 rest 3 held 5 auto
 const SIL = new Uint8Array(MAX_COINS);
 const VMULT = new Float32Array(MAX_COINS);
 const SLEEPF = new Uint8Array(MAX_COINS);
-const RESTF  = new Uint16Array(MAX_COINS);
+const RESTF  = new Float32Array(MAX_COINS);
 const SPINT  = new Float32Array(MAX_COINS);
-const SLOT   = new Float32Array(MAX_COINS);
 const GNDT   = new Float32Array(MAX_COINS); // time spent sliding on the ground
 const SSCL   = new Float32Array(MAX_COINS);  // sacrifice shrink (1 = full)
 const CXA = new Int32Array(MAX_COINS), CYA = new Int32Array(MAX_COINS), CZA = new Int32Array(MAX_COINS);
@@ -2628,7 +2633,7 @@ Q[i].set((Math.random()-0.5)*0.3,(Math.random()-0.5)*0.3,(Math.random()-0.5)*0.3
 SIL[i]=silver?1:0; VMULT[i]=silver?10:1;
 ST[i]=autoCollect()?5:1;
 SLEEPF[i]=0; RESTF[i]=0; SSCL[i]=1; GNDT[i]=0;
-SPINT[i]=Math.random()*10; SLOT[i]=Math.random();
+SPINT[i]=Math.random()*10;
 return i;
 }
 function removeCoin(i, countEarn){
@@ -2697,6 +2702,130 @@ coinMeshG.count=ng; coinMeshS.count=ns;
 coinMeshG.instanceMatrix.needsUpdate = true;
 coinMeshS.instanceMatrix.needsUpdate = true;
 }
+function coinAwake(i){ return ST[i]===1 && !SLEEPF[i]; }
+function buildCoinHash(){
+hHead.fill(-1);
+for(let li=0; li<live.length; li++){
+const i=live[li], s=ST[i];
+if (s!==1 && s!==2) continue;
+const i3=i*3;
+const cx=Math.floor(P[i3]*CELL_INV), cy=Math.floor(P[i3+1]*CELL_INV), cz=Math.floor(P[i3+2]*CELL_INV);
+CXA[i]=cx; CYA[i]=cy; CZA[i]=cz;
+const k=hKey(cx,cy,cz);
+hNext[i]=hHead[k]; hHead[k]=i;
+}
+}
+function resolveCoinPair(i,j){
+const i3=i*3, j3=j*3;
+const dx=P[j3]-P[i3], dz=P[j3+2]-P[i3+2];
+const h2=dx*dx+dz*dz;
+const minH=COL_R*2;
+if (h2 > minH*minH) return;
+const dy=P[j3+1]-P[i3+1];
+const ady=Math.abs(dy);
+if (ady >= STACK_H) return;
+const h=Math.sqrt(h2)||0.0001;
+const vi2=V[i3]*V[i3]+V[i3+1]*V[i3+1]+V[i3+2]*V[i3+2];
+const vj2=V[j3]*V[j3]+V[j3+1]*V[j3+1]+V[j3+2]*V[j3+2];
+if (!coinAwake(i) && coinAwake(j) && vj2 > 0.3){ SLEEPF[i]=0; RESTF[i]=0; }
+if (!coinAwake(j) && coinAwake(i) && vi2 > 0.3){ SLEEPF[j]=0; RESTF[j]=0; }
+const ai=coinAwake(i), aj=coinAwake(j);
+if (!ai && !aj) return;
+CONTACT[i]=1; CONTACT[j]=1;
+const vpen = STACK_H - ady;
+if (h < minH*0.7){
+// one coin on top of the other: resolve vertically (piling)
+const up = dy > 0 ? j : i, dn = dy > 0 ? i : j;
+const iu=up*3, id=dn*3;
+const su = coinAwake(up) ? (coinAwake(dn)?0.5:1) : 0;
+const sd = coinAwake(dn) ? (coinAwake(up)?0.5:1) : 0;
+P[iu+1] += vpen*su;
+P[id+1] -= vpen*sd;
+const rv = V[iu+1] - V[id+1];
+if (rv < 0){
+if (su) V[iu+1] -= rv*0.6*su;
+if (sd) V[id+1] += rv*0.6*sd;
+}
+const fr = Math.exp(-4*PHYS_DT);
+if (su){ V[iu]*=fr; V[iu+2]*=fr; }
+if (sd){ V[id]*=fr; V[id+2]*=fr; }
+} else {
+// side by side: push apart horizontally
+const hpen = minH - h;
+const nx=dx/h, nz=dz/h;
+const si = ai ? (aj?0.5:1) : 0;
+const sj = aj ? (ai?0.5:1) : 0;
+P[i3]   -= nx*hpen*si; P[i3+2] -= nz*hpen*si;
+P[j3]   += nx*hpen*sj; P[j3+2] += nz*hpen*sj;
+const rv = (V[j3]-V[i3])*nx + (V[j3+2]-V[i3+2])*nz;
+if (rv < 0){
+if (si){ V[i3] += nx*rv*0.6*si; V[i3+2] += nz*rv*0.6*si; }
+if (sj){ V[j3] -= nx*rv*0.6*sj; V[j3+2] -= nz*rv*0.6*sj; }
+}
+}
+}
+function stepCoins(dt){
+/* integrate awake coins */
+for(let li=0; li<live.length; li++){
+const i=live[li];
+if (!coinAwake(i)) continue;
+const i3=i*3;
+V[i3+1] -= COIN_GRAV*dt;
+const ad = Math.exp(-AIR_ANG*dt);
+AV[i3]*=ad; AV[i3+1]*=ad; AV[i3+2]*=ad;
+P[i3]+=V[i3]*dt; P[i3+1]+=V[i3+1]*dt; P[i3+2]+=V[i3+2]*dt;
+const avL=Math.hypot(AV[i3],AV[i3+1],AV[i3+2]);
+if (avL>0.01){ _qTmp.setFromAxisAngle(_v1.set(AV[i3]/avL,AV[i3+1]/avL,AV[i3+2]/avL), avL*dt); Q[i].premultiply(_qTmp); }
+const dC=Math.hypot(P[i3],P[i3+2]);
+if (dC > WORLD_R-1.7){
+const sc=(WORLD_R-1.7)/dC; P[i3]*=sc; P[i3+2]*=sc;
+const nx=P[i3]/(WORLD_R-1.7), nz=P[i3+2]/(WORLD_R-1.7);
+const vn=V[i3]*nx+V[i3+2]*nz;
+if (vn>0){ V[i3]-=vn*1.6; V[i3+2]-=vn*1.6; }
+}
+CONTACT[i]=0;
+if (P[i3+1] < REST_Y){
+P[i3+1] = REST_Y;
+if (V[i3+1] < 0){
+const b = -V[i3+1]*BOUNCE;
+V[i3+1] = b < 0.6 ? 0 : b;   // kill micro-bounces so coins settle
+}
+const f = Math.exp(-G_FRICT*dt);
+V[i3]*=f; V[i3+2]*=f;
+const af = Math.exp(-GND_ANG*dt);
+AV[i3]*=af; AV[i3+1]*=af; AV[i3+2]*=af;
+CONTACT[i]=1;
+}
+}
+/* coin–coin contacts, 2 solver iterations for stable piles */
+buildCoinHash();
+for(let iter=0; iter<2; iter++){
+for(let li=0; li<live.length; li++){
+const i=live[li], s=ST[i];
+if (s!==1 && s!==2) continue;
+for(let ox=-1;ox<=1;ox++) for(let oy=-1;oy<=1;oy++) for(let oz=-1;oz<=1;oz++){
+let j=hHead[hKey(CXA[i]+ox, CYA[i]+oy, CZA[i]+oz)];
+while (j >= 0){
+if (j > i) resolveCoinPair(i,j);
+j=hNext[j];
+}
+}
+}
+}
+/* sleep: 1s of stillness => idle */
+for(let li=0; li<live.length; li++){
+const i=live[li];
+if (!coinAwake(i)) continue;
+const i3=i*3;
+const sp2 = V[i3]*V[i3]+V[i3+1]*V[i3+1]+V[i3+2]*V[i3+2];
+if (CONTACT[i] && sp2 < SLEEP_V*SLEEP_V) RESTF[i]+=dt; else RESTF[i]=0;
+if (RESTF[i] >= SLEEP_T){
+SLEEPF[i]=1; ST[i]=2;
+V[i3]=0; V[i3+1]=0; V[i3+2]=0;
+AV[i3]=0; AV[i3+1]=0; AV[i3+2]=0;
+}
+}
+}
 function updateCoins(dt, time){
 const frozen = shopOpen || camMode !== 'play';
 /* held coin spring */
@@ -2716,11 +2845,11 @@ _qTmp.setFromUnitVectors(UP,_toCam);
 _qT2.setFromAxisAngle(_toCam, spinAng).multiply(_qTmp);
 Q[held].slerp(_qT2, 1-Math.exp(-9*dt));
 }
-/* PASS A — integrate + environment (sleeping coins skipped) */
+
+/* auto-collect (post-prestige) coins home to the hole */
 for(let li=live.length-1; li>=0; li--){
-const i=live[li], i3=i*3, s=ST[i];
-if (s===0 || s===3 || SLEEPF[i]) continue;
-if (s===5){
+const i=live[li]; if (ST[i]!==5) continue;
+const i3=i*3;
 const dx=-P[i3], dy=1.6-P[i3+1], dz=-P[i3+2];
 const dist=Math.hypot(dx,dy,dz);
 if (dist < 0.5){ ST[i]=1; V[i3]=0; V[i3+1]=-7; V[i3+2]=0; }
@@ -2732,112 +2861,21 @@ SPINT[i]+=dt;
 _qTmp.setFromEuler(_euler.set(SPINT[i]*0.8, SPINT[i]*1.3, 0));
 Q[i].slerp(_qTmp, Math.min(1,6*dt));
 }
-continue;
 }
-V[i3+1] -= COIN_GRAV*dt;
-P[i3]+=V[i3]*dt; P[i3+1]+=V[i3+1]*dt; P[i3+2]+=V[i3+2]*dt;
-const dC=Math.hypot(P[i3],P[i3+2]);
-if (dC > WORLD_R-1.7){
-const sc=(WORLD_R-1.7)/dC; P[i3]*=sc; P[i3+2]*=sc;
-const nx=P[i3]/(WORLD_R-1.7), nz=P[i3+2]/(WORLD_R-1.7);
-const vn=V[i3]*nx+V[i3+2]*nz;
-if (vn>0){ V[i3]-=vn*1.6; V[i3+2]-=vn*1.6; }
-}
-const d=Math.hypot(P[i3],P[i3+2]);
-if (d < HOLE_R-0.08){
-if (P[i3+1] < EARN_Y){ removeCoin(i,true); continue; }
-if (P[i3+1] < 0.35 && d > HOLE_R-0.2){
-const sc=(HOLE_R-0.2)/d; P[i3]*=sc; P[i3+2]*=sc;
-const nx=P[i3]/(HOLE_R-0.2), nz=P[i3+2]/(HOLE_R-0.2);
-const vn=V[i3]*nx+V[i3+2]*nz;
-if (vn>0){ V[i3]-=vn*1.6; V[i3+2]-=vn*1.6; }
-}
-RESTF[i]=0;
-} else if (P[i3+1] < REST_Y){
-P[i3+1]=REST_Y;
-if (V[i3+1] < -1.2){
-V[i3+1] = -V[i3+1]*COIN_BE;
-V[i3]*=0.72; V[i3+2]*=0.72;
-AV[i3]*=0.65; AV[i3+1]*=0.65; AV[i3+2]*=0.65;
-AV[i3]+=(Math.random()-0.5)*4; AV[i3+2]+=(Math.random()-0.5)*4;
-ST[i]=1; RESTF[i]=0; GNDT[i]=0;
-} else {
-V[i3+1]=0;
-const f=Math.exp(-3*dt);
-V[i3]*=f; V[i3+2]*=f; AV[i3]*=f; AV[i3+1]*=f; AV[i3+2]*=f;
-GNDT[i]+=dt;
-if (V[i3]*V[i3]+V[i3+2]*V[i3+2] < 0.02 || GNDT[i] > 0.5){
-ST[i]=2;
-if (GNDT[i] > 0.5){ V[i3]=0; V[i3+2]=0; AV[i3]=0; AV[i3+1]=0; AV[i3+2]=0; }
-if (++RESTF[i] > 45) SLEEPF[i]=1;
-} else RESTF[i]=0;
-}
-} else { RESTF[i]=0; GNDT[i]=0; }
-}
-/* PASS B — spatial hash build (resting/sleeping included so they can be found + woken) */
-hHead.fill(-1);
+/* fixed-step rigid body simulation */
+if (!frozen){
+physAccum += dt;
+let n=0;
+while (physAccum >= PHYS_DT && n<3){ physAccum -= PHYS_DT; stepCoins(PHYS_DT); n++; }
+if (n===3) physAccum = 0;
+} else physAccum = 0;
+/* sleeping coins settle flat */
 for(let li=0; li<live.length; li++){
-const i=live[li], s=ST[i];
-if (s!==1 && s!==2) continue;
-const i3=i*3;
-const cx=Math.floor(P[i3]*CELL_INV), cy=Math.floor(P[i3+1]*CELL_INV), cz=Math.floor(P[i3+2]*CELL_INV);
-CXA[i]=cx; CYA[i]=cy; CZA[i]=cz;
-const k=hKey(cx,cy,cz);
-hNext[i]=hHead[k]; hHead[k]=i;
-}
-/* PASS C — coin/coin collisions (only awake coins scan) */
-for(let li=0; li<live.length; li++){
-const i=live[li], s=ST[i];
-if ((s!==1 && s!==2) || SLEEPF[i]) continue;
-const i3=i*3;
-for(let ox=-1;ox<=1;ox++) for(let oy=-1;oy<=1;oy++) for(let oz=-1;oz<=1;oz++){
-let j=hHead[hKey(CXA[i]+ox, CYA[i]+oy, CZA[i]+oz)];
-while (j >= 0){
-if (j !== i && (SLEEPF[j] || j > i)){
-const j3=j*3;
-const dx=P[j3]-P[i3], dy=P[j3+1]-P[i3+1], dz=P[j3+2]-P[i3+2];
-const d2=dx*dx+dy*dy+dz*dz;
-if (d2 < COIN_D2 && d2 > 1e-9){
-const dist=Math.sqrt(d2);
-const nx=dx/dist, ny=dy/dist, nz=dz/dist;
-const pen=(COIN_D-dist)*0.5;
-P[i3]-=nx*pen; P[i3+1]-=ny*pen; P[i3+2]-=nz*pen;
-P[j3]+=nx*pen; P[j3+1]+=ny*pen; P[j3+2]+=nz*pen;
-if (SLEEPF[j]){ SLEEPF[j]=0; RESTF[j]=0; ST[j]=1; GNDT[j]=0; }
-const vn=(V[j3]-V[i3])*nx+(V[j3+1]-V[i3+1])*ny+(V[j3+2]-V[i3+2])*nz;
-if (vn < 0){
-const imp=-(1+COIN_E)*vn*0.5;
-V[i3]-=nx*imp; V[i3+1]-=ny*imp; V[i3+2]-=nz*imp;
-V[j3]+=nx*imp; V[j3+1]+=ny*imp; V[j3+2]+=nz*imp;
-if (vn < -1.5){
-ST[i]=1; ST[j]=1; RESTF[i]=0; RESTF[j]=0; GNDT[i]=0; GNDT[j]=0;
-AV[i3]+=(Math.random()-0.5)*3; AV[i3+2]+=(Math.random()-0.5)*3;
-AV[j3]+=(Math.random()-0.5)*3; AV[j3+2]+=(Math.random()-0.5)*3;
-}
-}
-}
-}
-j=hNext[j];
-}
-}
-}
-/* PASS D — spin, rest pose, safety clamp */
-for(let li=0; li<live.length; li++){
-const i=live[li], s=ST[i];
-if ((s!==1 && s!==2) || SLEEPF[i]) continue;
-const i3=i*3;
-const d=Math.hypot(P[i3],P[i3+2]);
-if (d >= HOLE_R-0.08 && P[i3+1] < REST_Y) P[i3+1]=REST_Y;
-const avL=Math.hypot(AV[i3],AV[i3+1],AV[i3+2]);
-if (avL > 0.01){
-_qTmp.setFromAxisAngle(_v1.set(AV[i3]/avL,AV[i3+1]/avL,AV[i3+2]/avL), avL*dt);
-Q[i].premultiply(_qTmp);
-}
-if (s===2) Q[i].slerp(IDQ, Math.min(1, 6*dt));
+const i=live[li];
+if (ST[i]===2) Q[i].slerp(IDQ, Math.min(1, 10*dt));
 }
 composeCoinInstances();
 }
-const IDQ = new THREE.Quaternion();
 /* ---------- "+N" over hole (50% more transparent) ---------- */
 const floatTexts = [];
 function holePopup(txt){
