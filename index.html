@@ -442,6 +442,12 @@ const UP = new THREE.Vector3(0,1,0);
 /* shared scratch vectors/quaternions — declared up front so every updater can use them */
 const _v1 = new THREE.Vector3();
 const _qTmp = new THREE.Quaternion(), _qT2 = new THREE.Quaternion();
+const COIN_HH = 0.0225;   // half the coin mesh thickness (0.045 / 2)
+function supportOf(q){
+  const ay = 1 - 2*(q.x*q.x + q.z*q.z);
+  const hl = Math.sqrt(Math.max(0, 1 - ay*ay));
+  return COIN_R*hl + COIN_HH*Math.abs(ay);
+}
 const IDQ = new THREE.Quaternion();   
 const _holdT = new THREE.Vector3(), _acc = new THREE.Vector3();
 const _camD = new THREE.Vector3(), _camR = new THREE.Vector3(), _camU = new THREE.Vector3(), _toCam = new THREE.Vector3();
@@ -2785,17 +2791,50 @@ const vn=V[i3]*nx+V[i3+2]*nz;
 if (vn>0){ V[i3]-=vn*1.6; V[i3+2]-=vn*1.6; }
 }
 CONTACT[i]=0;
-if (P[i3+1] < REST_Y){
-P[i3+1] = REST_Y;
-if (V[i3+1] < 0){
-const b = -V[i3+1]*BOUNCE;
-V[i3+1] = b < 0.6 ? 0 : b;   // kill micro-bounces so coins settle
-}
-const f = Math.exp(-G_FRICT*dt);
-V[i3]*=f; V[i3+2]*=f;
-const af = Math.exp(-GND_ANG*dt);
-AV[i3]*=af; AV[i3+1]*=af; AV[i3+2]*=af;
-CONTACT[i]=1;
+/* ---- ground contact at the true lowest point (no more clipping) ---- */
+const q=Q[i], qx=q.x, qy=q.y, qz=q.z, qw=q.w;
+const ax=2*(qx*qy-qz*qw), ay=1-2*(qx*qx+qz*qz), az=2*(qx*qw+qy*qz);
+const hl=Math.sqrt(Math.max(0,1-ay*ay));
+const sup=COIN_R*hl+COIN_HH*Math.abs(ay);
+if (P[i3+1] < sup+0.001){
+  P[i3+1]=sup;
+  const impact=-V[i3+1];
+  if (impact>0){
+    const b=impact*BOUNCE;
+    V[i3+1]= b<0.55 ? 0 : b;
+    if (impact>2.5){
+      AV[i3]  +=(Math.random()-0.5)*impact*1.6;
+      AV[i3+2]+=(Math.random()-0.5)*impact*1.6;
+    }
+  }
+  const f=Math.exp(-G_FRICT*dt);
+  V[i3]*=f; V[i3+2]*=f;
+  CONTACT[i]=1;
+  const spd=Math.hypot(V[i3],V[i3+2]);
+  if (spd>0.8 && hl>0.3){
+    /* rolling on the rim like a wheel */
+    let hx=-V[i3+2]/spd, hz=V[i3]/spd;
+    if (ax*hx+az*hz<0){ hx=-hx; hz=-hz; }
+    _v1.set(ax,ay,az).normalize(); _tmp.set(hx,0,hz);
+    _qTmp.setFromUnitVectors(_v1,_tmp);
+    _qT2.slerpQuaternions(IDQ,_qTmp,Math.min(1,10*dt));
+    Q[i].premultiply(_qT2);
+    const wR=spd/COIN_R;
+    const k=1-Math.exp(-8*dt);
+    AV[i3]+=(hx*wR-AV[i3])*k; AV[i3+1]+=(0-AV[i3+1])*k; AV[i3+2]+=(hz*wR-AV[i3+2])*k;
+    const rf=Math.exp(-1.4*dt);
+    V[i3]*=rf; V[i3+2]*=rf;
+  } else {
+    /* slow: tip over onto a face with the dying rattle */
+    _v1.set(ax,ay,az).normalize(); _tmp.set(0, ay>=0?1:-1, 0);
+    _qTmp.setFromUnitVectors(_v1,_tmp);
+    const tip=Math.min(1,(2.5+6*(1-Math.min(1,spd/0.8)))*dt);
+    _qT2.slerpQuaternions(IDQ,_qTmp,tip);
+    Q[i].premultiply(_qT2);
+    const af=Math.exp(-GND_ANG*dt);
+    AV[i3]*=af; AV[i3+2]*=af;
+    AV[i3+1]=THREE.MathUtils.clamp(AV[i3+1]+Math.sign(AV[i3+1]||1)*hl*14*dt,-25,25)*Math.exp(-1.8*dt);
+  }
 }
 }
 /* coin–coin contacts, 2 solver iterations for stable piles */
@@ -2870,10 +2909,13 @@ let n=0;
 while (physAccum >= PHYS_DT && n<3){ physAccum -= PHYS_DT; stepCoins(PHYS_DT); n++; }
 if (n===3) physAccum = 0;
 } else physAccum = 0;
-/* sleeping coins settle flat */
+/* sleeping coins settle flat — centre follows the shrinking support height */
 for(let li=0; li<live.length; li++){
-const i=live[li];
-if (ST[i]===2) Q[i].slerp(IDQ, Math.min(1, 10*dt));
+  const i=live[li];
+  if (ST[i]!==2) continue;
+  const i3=i*3, s0=supportOf(Q[i]);
+  Q[i].slerp(IDQ, Math.min(1, 10*dt));
+  P[i3+1] += supportOf(Q[i]) - s0;
 }
 composeCoinInstances();
 }
