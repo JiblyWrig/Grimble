@@ -29,6 +29,9 @@ box-shadow:0 8px 24px rgba(0,0,0,.55), inset 0 0 24px rgba(0,0,0,.35);
 }
 #coinCard { position:absolute; bottom:18px; left:50%; transform:translateX(-50%);
 padding:10px 20px 10px 14px; display:flex; align-items:center; gap:13px; }
+#coinCard.reveal { animation:cardIn .5s cubic-bezier(.2,1.4,.4,1); }
+@keyframes cardIn { from { transform:translateX(-50%) translateY(28px); opacity:0; }
+to { transform:translateX(-50%) translateY(0); opacity:1; } }
 #coinCol { display:flex; flex-direction:column; line-height:1; }
 #coinNum { font-family:'MedievalSharp',cursive; font-size:30px; color:#f5cf5f; text-shadow:0 2px 0 #6b4a10, 0 3px 8px #000;
 display:flex; line-height:1em; }
@@ -649,10 +652,14 @@ gradTex.minFilter = gradTex.magFilter = THREE.NearestFilter;
 gradTex.needsUpdate = true;
 /* ---------- hand-drawn "boil": everything subtly wiggles like cranked animation ---------- */
 const boilUniforms = { uBoil:{ value:0 } };
-function addBoil(mat, amp=0.0026){
+const BOIL_FULL = 0.0026;          // global strength (after the 80% reduction)
+const BOIL_HALF = BOIL_FULL * 0.5; // Grimble + every market object
+function addBoil(mat, amp=BOIL_FULL){
+mat.userData.boiled = true;
+mat.userData.boilAmp = { value: amp };
 mat.onBeforeCompile = (shader)=>{
 shader.uniforms.uBoil = boilUniforms.uBoil;
-shader.uniforms.uBoilAmp = { value: amp };
+shader.uniforms.uBoilAmp = mat.userData.boilAmp;
 shader.vertexShader = 'uniform float uBoil; uniform float uBoilAmp;\n' + shader.vertexShader.replace(
 '#include <begin_vertex>',
 `#include <begin_vertex>
@@ -672,8 +679,9 @@ transformed += jig * uBoilAmp;
 };
 mat.customProgramCacheKey = () => 'boil';
 }
-function toon(color, opts={}){ return new THREE.MeshToonMaterial(Object.assign({ color, gradientMap:gradTex }, opts)); }
-function toonMap(map, opts={}){ return new THREE.MeshToonMaterial(Object.assign({ map, gradientMap:gradTex }, opts)); }
+function setBoilAmp(mat, amp){ if (mat.userData.boilAmp) mat.userData.boilAmp.value = amp; else addBoil(mat, amp); }
+function toon(color, opts={}){ const m = new THREE.MeshToonMaterial(Object.assign({ color, gradientMap:gradTex }, opts)); addBoil(m); return m; }
+function toonMap(map, opts={}){ const m = new THREE.MeshToonMaterial(Object.assign({ map, gradientMap:gradTex }, opts)); addBoil(m); return m; }
 /* ---------- inverted-hull outlines (storybook ink, warm dark brown) ---------- */
 const outlineMat = new THREE.MeshBasicMaterial({ color:0x2a1a10, side:THREE.BackSide });
 function addOutlineShells(root, scale, ownMat){
@@ -945,10 +953,24 @@ d.updateMatrix();
 posts.setMatrixAt(i, d.matrix);
 }
 scene.add(posts);
+/* inverted-hull outline shells for the fence */
+const fenceShellMat = new THREE.MeshBasicMaterial({ color:0x2a1a10, side:THREE.BackSide });
+const postShell = new THREE.InstancedMesh(postGeo, fenceShellMat, N);
+for(let i=0;i<N;i++){
+posts.getMatrixAt(i, d.matrix);
+d.matrix.decompose(d.position, d.quaternion, d.scale);
+d.scale.multiplyScalar(1.08);
+d.updateMatrix();
+postShell.setMatrixAt(i, d.matrix);
+}
+scene.add(postShell);
 const ringGeo = new THREE.CylinderGeometry(FENCE_R, FENCE_R, 0.09, 160, 1, true);
 const railMat = toon(0x7a5430, { side:THREE.DoubleSide });
 const rail1 = new THREE.Mesh(ringGeo, railMat); rail1.position.y = 0.5;  scene.add(rail1);
 const rail2 = new THREE.Mesh(ringGeo, railMat); rail2.position.y = 0.92; scene.add(rail2);
+const railShellGeo = new THREE.CylinderGeometry(FENCE_R+0.035, FENCE_R+0.035, 0.15, 160, 1, true);
+const rail1Shell = new THREE.Mesh(railShellGeo, fenceShellMat); rail1Shell.position.y = 0.5;  scene.add(rail1Shell);
+const rail2Shell = new THREE.Mesh(railShellGeo, fenceShellMat); rail2Shell.position.y = 0.92; scene.add(rail2Shell);
 }
 /* ============================== FOREST (sway x2) ============================== */
 let treeSwayData = [];
@@ -1462,6 +1484,7 @@ const cloth = toon(chief ? 0x3a2a20 : 0x8a5a33);
 const g = { state:'idle', t:1+Math.random(), target:new THREE.Vector3(), vel:new THREE.Vector3(),
 yaw:Math.random()*6.28, gait:0, throwT:0, thrown:false, clock:Math.random()*6,
 slamClock:Math.random()*5, chief, headYawDef:0, nextBlink:1+Math.random()*3, blinkT:0,
+nextEarT:1+Math.random()*5, earTwitch:0, earSide:1,
 throwVel:new THREE.Vector3(), throwAV:new THREE.Vector3(), throwQuat:new THREE.Quaternion(),
 coinQueue:[], coinQueueT:0, squirmT:Math.random()*6 };
 g.root = new THREE.Group();
@@ -1561,6 +1584,14 @@ g.eyeL.scale.set(eb, blinkScale*eb, eb); g.eyeR.scale.set(eb, blinkScale*eb, eb)
 g.pupL.scale.set(eb, blinkScale*eb, eb); g.pupR.scale.set(eb, blinkScale*eb, eb);
 g.eyeL.material.color.setHex(0xfff6cc);
 g.eyeR.material.color.setHex(0xfff6cc);
+/* individual ear twitch */
+if (time >= g.nextEarT){ g.earTwitch = 0.4; g.earSide = Math.random()<0.5?-1:1; g.nextEarT = time + 2 + Math.random()*7; }
+if (g.earTwitch > 0){
+g.earTwitch -= dt;
+const p = 1 - Math.max(0,g.earTwitch)/0.4;
+const wig = Math.sin(p*Math.PI*2)*0.4*(1-p*0.4);
+if (g.earSide < 0) g.earL.rotation.z = 1.85 + wig; else g.earR.rotation.z = -1.85 - wig;
+}
 g.coinQueueT += dt;
 if (g.coinQueue.length > 0 && g.coinQueueT >= g.coinQueue[0].delay) {
 const q = g.coinQueue.shift();
@@ -1592,6 +1623,11 @@ if (!awake){ // dark lash line so the closed eyes read clearly
 g.eyeL.material.color.setHex(0x2f5a4e);
 g.eyeR.material.color.setHex(0x2f5a4e);
 }
+/* starfish pose: arms + legs splayed straight out while lying */
+g.armL.rotation.set(0, 0, -1.45);
+g.armR.rotation.set(0, 0,  1.45);
+g.legL.rotation.set(0, 0, -0.22);
+g.legR.rotation.set(0, 0,  0.22);
 g.inner.position.y = Math.sin(time*2.0)*0.01; // breathing
 g.root.updateMatrixWorld(true);
 g.shadow.position.set(p.x, 0.02, p.z);
@@ -1707,6 +1743,12 @@ const targetQuat = new THREE.Quaternion();
 targetQuat.setFromEuler(new THREE.Euler(0, g.yaw, 0));
 g.root.quaternion.slerp(targetQuat, Math.min(1, 5*dt));
 g.root.position.y = THREE.MathUtils.lerp(g.root.position.y, 0, Math.min(1, 3*dt));
+/* ease limbs back from the starfish splay so he doesn't walk sideways */
+const ez = Math.min(1, 5*dt);
+g.armL.rotation.z += (0 - g.armL.rotation.z)*ez;
+g.armR.rotation.z += (0 - g.armR.rotation.z)*ez;
+g.legL.rotation.z += (0 - g.legL.rotation.z)*ez;
+g.legR.rotation.z += (0 - g.legR.rotation.z)*ez;
 if (g.throwT > 0.8){
 g.state = 'idle';
 g.t = 1 + Math.random();
@@ -2008,7 +2050,7 @@ witch.pupR.position.set( 0.07, 0.04, 0.185);
 witch.shadow.visible = true;
 }
 /* ============================== VENDOR + STALL (with cat) ============================== */
-const vendor = { nextBlink:2.2, blinkT:0, waveAmt:0 };
+const vendor = { nextBlink:2.2, blinkT:0, waveAmt:0, nextEarT:3, earTwitch:0, earSide:1 };
 let lampLight;
 let catBodyMesh = null;
 let catProxy = null;
@@ -2317,6 +2359,7 @@ pup.position.set(0.088*s,0.06,0.215); vendor.head.add(pup);
 if(s<0) vendor.pupL = pup; else vendor.pupR = pup;
 const ear = new THREE.Mesh(new THREE.ConeGeometry(0.06,0.22,8), skin);
 ear.position.set(0.25*s,0.1,-0.02); ear.rotation.z = -s*1.85; vendor.head.add(ear);
+if(s<0) vendor.earL = ear; else vendor.earR = ear;
 }
 const beard = new THREE.Mesh(new THREE.ConeGeometry(0.14,0.3,8), grey);
 beard.position.set(0,-0.2,0.13); beard.rotation.x = 0.3; vendor.head.add(beard);
@@ -2352,7 +2395,7 @@ vendor.shadow.renderOrder = 2;
 scene.add(vendor.shadow);
 /* inverted-hull outlines: Grimble, stall props (cat included), table, sign */
 addOutlineShells(vendor.root, 1.05);
-addMergedShell(stallMesh, 0.02);
+addMergedShell(stallMesh, 0.014);
 addMergedShell(tableWalls, 0.02);
 addMergedShell(tableTop, 0.02);
 addMergedShell(sign, 0.015);
@@ -2479,6 +2522,19 @@ else blinkScale = 1 - Math.sin(bp*Math.PI)*0.94;
 }
 vendor.eyeL.scale.y = vendor.eyeR.scale.y = blinkScale;
 vendor.pupL.scale.y = vendor.pupR.scale.y = blinkScale;
+/* individual ear twitch */
+if (time >= vendor.nextEarT){ vendor.earTwitch = 0.4; vendor.earSide = Math.random()<0.5?-1:1; vendor.nextEarT = time + 2 + Math.random()*6; }
+if (vendor.earL){
+let wl = 0, wr = 0;
+if (vendor.earTwitch > 0){
+vendor.earTwitch -= dt;
+const p = 1 - Math.max(0,vendor.earTwitch)/0.4;
+const wig = Math.sin(p*Math.PI*2)*0.4*(1-p*0.4);
+if (vendor.earSide < 0) wl = wig; else wr = wig;
+}
+vendor.earL.rotation.z = 1.85 + wl;
+vendor.earR.rotation.z = -1.85 + wr;
+}
 vendor.shadow.position.set(p.x, 0.02, p.z);
 // cat breathing
 if (catBodyMesh) catBodyMesh.scale.y = 0.55 * (1 + Math.sin(time*1.6)*0.09);
@@ -2529,6 +2585,7 @@ const SLEEPF = new Uint8Array(MAX_COINS);
 const RESTF  = new Uint16Array(MAX_COINS);
 const SPINT  = new Float32Array(MAX_COINS);
 const SLOT   = new Float32Array(MAX_COINS);
+const GNDT   = new Float32Array(MAX_COINS); // time spent sliding on the ground
 const SSCL   = new Float32Array(MAX_COINS);  // sacrifice shrink (1 = full)
 const CXA = new Int32Array(MAX_COINS), CYA = new Int32Array(MAX_COINS), CZA = new Int32Array(MAX_COINS);
 const live = [], livePos = new Int32Array(MAX_COINS);
@@ -2558,7 +2615,7 @@ AV[i3]=(Math.random()-0.5)*24; AV[i3+1]=(Math.random()-0.5)*24; AV[i3+2]=(Math.r
 Q[i].set((Math.random()-0.5)*0.3,(Math.random()-0.5)*0.3,(Math.random()-0.5)*0.3,1).normalize();
 SIL[i]=silver?1:0; VMULT[i]=silver?10:1;
 ST[i]=autoCollect()?5:1;
-SLEEPF[i]=0; RESTF[i]=0; SSCL[i]=1;
+SLEEPF[i]=0; RESTF[i]=0; SSCL[i]=1; GNDT[i]=0;
 SPINT[i]=Math.random()*10; SLOT[i]=Math.random();
 return i;
 }
@@ -2573,6 +2630,10 @@ freeStack.push(i); ST[i]=0;
 if (countEarn){
 const gain = upgrades.value * (VMULT[i]||1) * prestigeMult();
 earned += gain;
+if (coinCard.style.display === 'none'){
+coinCard.style.display = '';
+coinCard.classList.add('reveal');
+}
 if (!cheat){
 setCoinDisplay(earned);
 coinNum.classList.remove('bump'); void coinNum.offsetWidth; coinNum.classList.add('bump');
@@ -2739,17 +2800,19 @@ V[i3+1] = -V[i3+1]*COIN_BE;
 V[i3]*=0.72; V[i3+2]*=0.72;
 AV[i3]*=0.65; AV[i3+1]*=0.65; AV[i3+2]*=0.65;
 AV[i3]+=(Math.random()-0.5)*4; AV[i3+2]+=(Math.random()-0.5)*4;
-ST[i]=1; RESTF[i]=0;
+ST[i]=1; RESTF[i]=0; GNDT[i]=0;
 } else {
 V[i3+1]=0;
 const f=Math.exp(-3*dt);
 V[i3]*=f; V[i3+2]*=f; AV[i3]*=f; AV[i3+1]*=f; AV[i3+2]*=f;
-if (V[i3]*V[i3]+V[i3+2]*V[i3+2] < 0.02){
+GNDT[i]+=dt;
+if (V[i3]*V[i3]+V[i3+2]*V[i3+2] < 0.02 || GNDT[i] > 0.5){
 ST[i]=2;
+if (GNDT[i] > 0.5){ V[i3]=0; V[i3+2]=0; AV[i3]=0; AV[i3+1]=0; AV[i3+2]=0; }
 if (++RESTF[i] > 45) SLEEPF[i]=1;
 } else RESTF[i]=0;
 }
-} else RESTF[i]=0;
+} else { RESTF[i]=0; GNDT[i]=0; }
 }
 /* PASS B — spatial hash build (resting/sleeping included so they can be found + woken) */
 hHead.fill(-1);
@@ -2780,14 +2843,14 @@ const nx=dx/dist, ny=dy/dist, nz=dz/dist;
 const pen=(COIN_D-dist)*0.5;
 P[i3]-=nx*pen; P[i3+1]-=ny*pen; P[i3+2]-=nz*pen;
 P[j3]+=nx*pen; P[j3+1]+=ny*pen; P[j3+2]+=nz*pen;
-if (SLEEPF[j]){ SLEEPF[j]=0; RESTF[j]=0; ST[j]=1; }
+if (SLEEPF[j]){ SLEEPF[j]=0; RESTF[j]=0; ST[j]=1; GNDT[j]=0; }
 const vn=(V[j3]-V[i3])*nx+(V[j3+1]-V[i3+1])*ny+(V[j3+2]-V[i3+2])*nz;
 if (vn < 0){
 const imp=-(1+COIN_E)*vn*0.5;
 V[i3]-=nx*imp; V[i3+1]-=ny*imp; V[i3+2]-=nz*imp;
 V[j3]+=nx*imp; V[j3+1]+=ny*imp; V[j3+2]+=nz*imp;
 if (vn < -1.5){
-ST[i]=1; ST[j]=1; RESTF[i]=0; RESTF[j]=0;
+ST[i]=1; ST[j]=1; RESTF[i]=0; RESTF[j]=0; GNDT[i]=0; GNDT[j]=0;
 AV[i3]+=(Math.random()-0.5)*3; AV[i3+2]+=(Math.random()-0.5)*3;
 AV[j3]+=(Math.random()-0.5)*3; AV[j3+2]+=(Math.random()-0.5)*3;
 }
@@ -4681,6 +4744,8 @@ f.el.style.opacity = (inten*f.f).toFixed(3);
 }
 /* ============================== HUD refs & state ============================== */
 const coinNum = document.getElementById('coinNum');
+const coinCard = document.getElementById('coinCard');
+coinCard.style.display = 'none'; // hidden until the first coin is deposited
 const prompt = document.getElementById('prompt');
 const crosshair = document.getElementById('crosshair');
 const chWrap = document.getElementById('chWrap');
@@ -4888,8 +4953,7 @@ const menuMats = [];
 const menuNdc = new THREE.Vector2(0, 0);
 const _clickNdc = new THREE.Vector2();
 const menuRay = new THREE.Raycaster();
-function menuMat(m){ m.transparent = true; addBoil(m, 0.002); menuMats.push(m); return m; }
-
+function menuMat(m){ m.transparent = true; addBoil(m, 0.020); menuMats.push(m); return m; }
 function buildMenu(font){
 // ---- "GRIMBLE" as one mesh per letter so each letter can jiggle ----
 const titleFace = menuMat(new THREE.MeshToonMaterial({ color: 0xf5cf5f, gradientMap: gradTex }));
@@ -5042,7 +5106,6 @@ const k = Math.min(1, t/1.8);
 menuTitle.position.y = THREE.MathUtils.lerp(8.9, 3.35, bounceOut(k)) + Math.sin(time*0.9)*0.09;
 if (k >= 1 && !menuTitleLanded){
 menuTitleLanded = true;
-shake = Math.max(shake, 0.9);
 thumpS();
 tone(70, 0.5, 'sine', 0.3, 0, -30);
 noiseS(0.4, 0.2, 250, 70);
@@ -5320,17 +5383,16 @@ renderer.render(scene, camera);
 }
 /* boil every static toon/lambert surface that wasn't created through the factories */
 scene.traverse(o=>{
-if (o.userData && o.userData.noBoil) return;
 if (o.material){
 const mats = Array.isArray(o.material) ? o.material : [o.material];
 for (const m of mats){
 if ((m.isMeshToonMaterial || m.isMeshLambertMaterial) && !m.userData.boiled){
-m.userData.boiled = true;
 addBoil(m);
 }
 }
 }
 });
+addBoil(outlineMat, 0.013);
 updateRainDisplay();
 animate();
 </script>
