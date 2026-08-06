@@ -269,9 +269,9 @@ border-top:1px solid rgba(220,255,180,.5); border-bottom:2px solid #0a2e06; }
 .ureel span { display:block; height:1em; line-height:1em; }
 .ulvl-roll, .ucost-roll { display:inline-block; }
 .ulvl-static, .ucost-star, .ulvl-max, .ucost-max { display:inline-block; vertical-align:bottom; }
-#ascendBtn { font-family:'MedievalSharp',cursive; font-size:15px; letter-spacing:1px; color:#cfe3b8;
-background:rgba(255,255,255,.06); border:1px solid rgba(169,196,138,.4); border-radius:9px;
-padding:7px 26px; cursor:pointer; transition:all .12s; position:fixed; left:50%; bottom:26px;
+#ascendBtn { font-family:'MedievalSharp',cursive; font-size:19.5px; letter-spacing:1.3px; color:#cfe3b8;
+background:rgba(255,255,255,.06); border:1px solid rgba(169,196,138,.4); border-radius:12px;
+padding:9px 34px; cursor:pointer; transition:all .12s; position:fixed; left:50%; bottom:26px;
 transform:translateX(-50%); z-index:2; }
 #ascendBtn:hover { background:rgba(255,255,255,.12); color:#fff; }
 .treeFoot { font-size:10px; color:#5d6a52; font-weight:700; letter-spacing:.5px; z-index:1; position:relative; }
@@ -314,7 +314,7 @@ animation:burstSpin 30s linear infinite; }
 70% { transform:scale(0.98,1.025) rotate(-.5deg); }
 }
 #piLogo { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) rotate(-2deg); text-align:center; opacity:0; pointer-events:none; }
-#prodIntro.logo #piLogo { opacity:1; animation:logoOut 1s ease-in 3.9s forwards; }
+#prodIntro.logo #piLogo { opacity:1; }
 .piA { display:block; font-family:'MedievalSharp',cursive; font-size:clamp(64px, 12vw, 200px); line-height:.95; color:#f5cf5f;
 -webkit-text-stroke:3px #3d2a08;
 text-shadow:0 4px 0 #7a5210, 0 8px 0 #3d2a08, 0 16px 40px #000, 0 0 60px rgba(245,207,95,.3); }
@@ -332,10 +332,16 @@ color:#cfe3b8; margin-top:1.2vw; text-shadow:0 2px 0 #16200c, 0 5px 18px #000; o
 from { opacity:0; transform:translateY(.5em); }
 to { opacity:1; transform:translateY(0); }
 }
-@keyframes logoOut {
-from { opacity:1; transform:translate(-50%,-50%) rotate(-2deg) scale(1); }
-to { opacity:0; transform:translate(-50%,-50%) rotate(-2deg) scale(1.05); }
+@keyframes chOut {
+0%   { opacity:1; transform:translate(0,0) rotate(0) scale(1); }
+18%  { transform:translate(calc(var(--ox)*0.06), -0.35em) rotate(calc(var(--orot)*0.2)) scale(1.15,0.9); }
+30%  { transform:translate(calc(var(--ox)*0.12), 0.05em) scale(0.9,1.1); }
+100% { opacity:1; transform:translate(var(--ox), var(--oy)) rotate(var(--orot)) scale(1); }
 }
+#prodIntro.leave .piA .ch { animation:chOut .8s cubic-bezier(.45,0,.9,.6) both; animation-delay:var(--od); }
+#prodIntro.leave #piLogoIn { animation:none; }
+#prodIntro.leave .piB { animation:bOut .45s ease-in forwards; }
+@keyframes bOut { to { opacity:0; transform:translateY(1.2em) scale(.9); } }
 /* ---------- settings (main menu) ---------- */
 #settingsUI { position:fixed; left:18px; bottom:18px; z-index:45; display:flex; flex-direction:column; align-items:flex-start; gap:8px; }
 #prodIntro:not(.gone) ~ #settingsUI { display:none; }
@@ -498,9 +504,9 @@ let grassMat = null;
 let holeRim = null;
 let plugGrass = null;
 /* Rain every 5 minutes: 300s clear, 10s fade in, 120s rain, 10s fade out */
-const RAIN_CYCLE = 440;
+const RAIN_CYCLE = 390;
 const RAIN_START = 300;
-const RAIN_FULL_END = 430;
+const RAIN_FULL_END = 380;
 let cycleT = 0, rainFactor = 0;
 /* ============================== PRESTIGE STATE ============================== */
 let prestige = 0;
@@ -543,8 +549,8 @@ rate:   { base:100, max:7 },
 stack:  { base:10, max:8 },
 goblins:{ base:15, max:1 },
 chieftains:{ base:50, max:MAX_CHIEFS },
-shiny:{ base:80, max:1 },
-whistle:{ base:300, max:1 },
+shiny:{ base:50, max:1 },
+whistle:{ base:100, max:1 },
 ledger:{ base:300, max:3 },
 width:{ base:150, max:10 },
 holejob:{ base:500, max:1 },
@@ -555,8 +561,8 @@ const costOf = k => {
 let c;
 if (k === 'help') c = 1;
 else if (k === 'goblins') c = 15;
-else if (k === 'shiny') c = 80;
-else if (k === 'whistle') c = 300;
+else if (k === 'shiny') c = 50;
+else if (k === 'whistle') c = 100;
 else if (k === 'width') c = 150 * Math.pow(2, upgrades.width);
 else if (k === 'holejob') c = 500;
 else if (k === 'stranger') c = 1000;
@@ -664,7 +670,7 @@ clouds.push(s); scene.add(s);
 }
 /* ---------- GPU rain ---------- */
 function isMobile(){ return /Mobi|Android/i.test(navigator.userAgent); }
-const RAIN_N = isMobile() ? 400 : 900;
+const RAIN_N = isMobile() ? 600 : 1400;
 const rainMat = new THREE.ShaderMaterial({
 transparent:true, depthWrite:false,
 uniforms:{ uTime:{value:0}, uCenter:{value:new THREE.Vector3()}, uFactor:{value:0} },
@@ -679,7 +685,7 @@ float y = mod(aBase.y - uTime*spd, hgt);
 vec3 p = vec3(uCenter.x + aBase.x, y + 0.5, uCenter.z + aBase.z);
 vA = uFactor * (1.0 - smoothstep(18.0, 21.0, y)) * smoothstep(0.0, 1.5, y);
 vec4 mv = modelViewMatrix * vec4(p,1.0);
-gl_PointSize = (150.0/max(1.0,-mv.z)) * (0.8+0.5*fract(aPh*9.1));
+gl_PointSize = (210.0/max(1.0,-mv.z)) * (0.8+0.5*fract(aPh*9.1));
 gl_Position = projectionMatrix * mv;
 }`,
 fragmentShader:`
@@ -688,7 +694,7 @@ void main(){
 float mx = 1.0 - smoothstep(0.05, 0.16, abs(gl_PointCoord.x-0.5));
 float my = 1.0 - smoothstep(0.15, 0.5, abs(gl_PointCoord.y-0.5));
 float m = mx*my;
-gl_FragColor = vec4(vec3(0.74,0.81,0.91), m*vA*0.6);
+gl_FragColor = vec4(vec3(0.74,0.81,0.91), m*vA*0.75);
 }`
 });
 {
@@ -1639,11 +1645,7 @@ g.shadow = new THREE.Mesh(new THREE.PlaneGeometry(chief?1.8:1.2, chief?1.8:1.2),
 new THREE.MeshBasicMaterial({ map:blobTex, transparent:true, depthWrite:false }));
 g.shadow.rotation.x = -Math.PI/2; g.shadow.position.y = 0.02; g.shadow.renderOrder = 2;
 scene.add(g.shadow);
-g.smear = new THREE.Sprite(new THREE.SpriteMaterial({ map:smearTex,
-color: chief ? 0xff9a8a : bub ? 0xd7b6ff : 0xaef0dd,
-transparent:true, opacity:0, depthWrite:false, blending:THREE.AdditiveBlending }));
-g.smear.visible = false;
-scene.add(g.smear);
+g.smear = null;
 addOutlineShells(g.root, 1.06, true);
 pickTargetFor(g);
 goblins.push(g);
@@ -2193,11 +2195,22 @@ STALL_COLL.push({ x, z, r:0.8 });
 stranger = { root:g, inner, eyeL, eyeR, pupL, pupR, shadow, nextBlink:2+Math.random()*3, blinkT:0 };
 return stranger;
 }
+const FIZZ_LINES = [
+"oh! oh gosh— hi. hello. i'm Fizz. sorry. am i standing in a weird spot? i always stand in weird spots.",
+"i, um… heard about this place from far away. the coins, the hole, the whole… goblin energy. everyone talks about it. i wanted to be part of the action too.",
+"i flew a very long way. my ship is parked behind that fence. please don't look at it, it's embarrassing.",
+"i've been watching your goblins. they're fascinating. messy, but fascinating. i have some ideas about, um… combining them? someday. if that's okay. no pressure. sorry.",
+];
+const FIZZ_CFG = { name:'FIZZ', lines:FIZZ_LINES };
+let strangerTalked = false;
+let strangerCinePending = false;
 function updateStranger(dt, time){
 if (!stranger) return;
 const b = Math.sin(time*1.7);
 stranger.inner.scale.set(1, 1 + b*0.025, 1);
 stranger.inner.position.y = b*0.015;
+const yawT = Math.atan2(player.pos.x - stranger.root.position.x, player.pos.z - stranger.root.position.z);
+stranger.root.rotation.y = lerpAngle(stranger.root.rotation.y, yawT, Math.min(1, 3*dt));
 stranger.inner.worldToLocal(_v1.set(player.pos.x, player.pos.y - 0.3, player.pos.z)).normalize();
 const ex = THREE.MathUtils.clamp(_v1.x, -1, 1) * 0.07;
 const ey = THREE.MathUtils.clamp(_v1.y, -0.8, 1) * 0.06;
@@ -2210,14 +2223,6 @@ if (bp >= 1){ stranger.blinkT = 0; stranger.nextBlink = time + 2 + Math.random()
 else { const s = 1.15*(1 - Math.sin(bp*Math.PI)*0.9); stranger.eyeL.scale.y = s; stranger.eyeR.scale.y = s; }
 } else { stranger.eyeL.scale.y = 1.15; stranger.eyeR.scale.y = 1.15; }
 }
-const FIZZ_LINES = [
-"oh! oh gosh— hi. hello. i'm Fizz. sorry. am i standing in a weird spot? i always stand in weird spots.",
-"i, um… heard about this place from far away. the coins, the hole, the whole… goblin energy. everyone talks about it. i wanted to be part of the action too.",
-"i flew a very long way. my ship is parked behind that fence. please don't look at it, it's embarrassing.",
-"i've been watching your goblins. they're fascinating. messy, but fascinating. i have some ideas about, um… combining them? someday. if that's okay. no pressure. sorry.",
-];
-const FIZZ_CFG = { name:'FIZZ', lines:FIZZ_LINES };
-let strangerTalked = false;
 function startStrangerCine(){
 mouseHeld = false;
 camMode = 'strangerCine';
@@ -2251,7 +2256,6 @@ cine = { type:'stranger', t:0, fromPos:camera.position.clone(), ufo, beam, light
 tone(60,1.6,'sine',0.3,0,-20);
 tone(880,0.5,'sine',0.05,0.2,220);
 }
-let strangerCinePending = false;
 /* ============================== VENDOR + STALL (with cat) ============================== */
 const vendor = { nextBlink:2.2, blinkT:0, waveAmt:0, nextEarT:3, earTwitch:0, earSide:1 };
 let lampLight;
@@ -3328,7 +3332,7 @@ const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.024,0.03,1.62,8), woo
 handle.position.y = 0.86; g.add(handle);
 const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,0.34,6), wood);
 grip.rotation.z = Math.PI/2; grip.position.y = 1.68; g.add(grip);
-const wm = 1 + 0.1*(upgrades.width||0);
+const wm = 1 + 0.2*(upgrades.width||0);
 const blade = new THREE.Mesh(new THREE.BoxGeometry(0.8*wm,0.5,0.035), woodL);
 blade.position.set(0, 0.22, 0.045); blade.rotation.x = 0.12; g.add(blade);
 for (const s of [-1,1]){
@@ -3362,12 +3366,9 @@ camera.updateMatrixWorld(true);
 shovelView.userData.blade.getWorldPosition(shovelBlade);
 shovelBlade.y = Math.min(shovelBlade.y, 0.5);
 shovelBladePrev.copy(shovelBlade);
-tone(320,0.12,'sine',0.12,0,60); tone(520,0.14,'triangle',0.1,0.06);
-showTutCap('Hold RIGHT CLICK to push coins into the hole');
 }
 function updateShovel(dt){
 const want = rmbHeld && shovelOwned && locked && camMode==='play' && !shopOpen && !dlgOpen && !cine;
-if (want && !shovelUsing) noiseS(0.22,0.07,800,260);
 if (want && !shovelTutDone){ shovelTutDone = true; hideCap(); }
 shovelUsing = want;
 shovelPush += ((want?1:0)-shovelPush)*Math.min(1,10*dt);
@@ -3388,11 +3389,6 @@ shovelView.userData.blade.getWorldPosition(shovelBlade);
 shovelBlade.y = Math.min(shovelBlade.y, 0.5);
 shovelBladeVel.copy(shovelBlade).sub(shovelBladePrev).divideScalar(Math.max(dt,0.0001));
 if (shovelBladeVel.lengthSq() > 144) shovelBladeVel.setLength(12);
-scrapeT += dt;
-if (shovelUsing && scrapeT > 0.12){
-scrapeT = 0;
-noiseS(0.09, 0.03, 700, 250);
-}
 }
 function shovelPushCoins(dt){
 if (!shovelView || shovelPush < 0.25) return;
@@ -3415,7 +3411,7 @@ V[i3]  += (shovelBladeVel.x*1.1+nx*1.2 - V[i3])*k;
 V[i3+1]+= (shovelBladeVel.y*1.1+ny*0.6+0.4 - V[i3+1])*k;
 V[i3+2]+= (shovelBladeVel.z*1.1+nz*1.2 - V[i3+2])*k;
 AV[i3] += (Math.random()-0.5)*4*k; AV[i3+2] += (Math.random()-0.5)*4*k;
-const SIDE = 0.34*(1 + 0.1*upgrades.width);
+const SIDE = 0.34*(1 + 0.2*upgrades.width);
 const lat = (P[i3]-shovelBlade.x)*_camR.x + (P[i3+2]-shovelBlade.z)*_camR.z;
 if (Math.abs(lat) > SIDE){
 const over = lat - Math.sign(lat)*SIDE;
@@ -4088,6 +4084,7 @@ const e = sm((t-5.6)/1.2);
 c.beam.material.opacity = 0.22*(1-e);
 u.position.y = 12+e*30;
 stranger.root.position.y = 0;
+stranger.shadow.visible = true;
 stranger.shadow.visible = true;
 camera.position.lerpVectors(_tmp.set(13.5,2.2,19.5), _cB.set(15,1.7,17.5), e);
 camera.lookAt(17,1,14);
@@ -4843,7 +4840,7 @@ case 'chieftains': return `${L} <span class="arr">→</span> ${L+1} chieftains`;
 case 'shiny':      return `no silver chance <span class="arr">→</span> 1% silver throws`;
 case 'whistle':    return `press <kbd>1</kbd> — 5s frenzy, 5min cooldown`;
 case 'ledger':     return `-${L*5}% costs <span class="arr">→</span> -${(L+1)*5}% costs`;
-case 'width':      return `blade ×${(1+0.1*L).toFixed(2)} <span class="arr">→</span> ×${(1+0.1*(L+1)).toFixed(2)}`;
+case 'width':      return `blade ×${(1+0.2*L).toFixed(2)} <span class="arr">→</span> ×${(1+0.2*(L+1)).toFixed(2)}`;
 case 'holejob':    return `press <kbd>2</kbd> — the hole inhales, 5min cooldown`;
 case 'stranger':   return `a green guest takes a seat in the meadow`;
 }
@@ -4930,7 +4927,11 @@ if (meta && meta.need && !meta.need()) return;
 const lvl = upgrades[key];
 if (lvl >= UPG[key].max) return;
 const c = costOf(key);
-if (!cheat && earned < c) return;
+if (!cheat && earned < c){
+tone(80,0.18,'sine',0.28,0,-40);
+tone(55,0.28,'sine',0.22,0.06,-25);
+return;
+}
 if (!cheat){
 earned -= c;
 setCoinDisplay(earned);
@@ -4948,6 +4949,7 @@ toast('The blade broadens…');
 if (key === 'holejob') toast('Hole-Job ready — press 2');
 if (key === 'stranger'){
 strangerCinePending = true;
+toast('A stranger wanders into the meadow…');
 if (!stranger) startStrangerCine();
 else toast('Fizz waves shyly.');
 }
@@ -5112,18 +5114,29 @@ if (AC && rainGain){
 const target = (settings.ambience ? 0.036 : 0)*rainFactor;
 rainGain.gain.value += (target - rainGain.gain.value)*Math.min(1, 3*dt);
 }
+if (AC && rainGain2){
+const t2 = (settings.ambience ? 0.05 : 0)*rainFactor;
+rainGain2.gain.value += (t2 - rainGain2.gain.value)*Math.min(1, 3*dt);
+}
+if (AC && settings.ambience){
+if (rainFactor > 0.15 && Math.random() < dt*rainFactor*7) tone(1600+Math.random()*1800, 0.03, 'sine', 0.012*rainFactor, 0, -700); // droplet ticks
+if (rainFactor > 0.6 && Math.random() < dt*0.02){ tone(48+Math.random()*26, 1.7, 'sine', 0.22, 0, -18); noiseS(1.9, 0.12, 140, 40); } // distant thunder
+}
 }
 /* ============================== AUDIO ============================== */
-let AC, master, noiseBuf, rainGain, windBus, eerieBus, eerieNext = 0;
+let AC, master, noiseBuf, rainGain, rainGain2, windBus, eerieBus, eerieNext = 0;
 function initAudio(){
 if (AC) return;
 try {
 AC = new (window.AudioContext||window.webkitAudioContext)();
-master = AC.createGain(); master.gain.value = 1.0;
+master = AC.createGain(); master.gain.value = 0.0001;   // starts silent, swells in below
 const comp = AC.createDynamicsCompressor();
 comp.threshold.value = -14; comp.knee.value = 18; comp.ratio.value = 5;
 comp.attack.value = 0.004; comp.release.value = 0.24;
 master.connect(comp); comp.connect(AC.destination);
+const _ft = AC.currentTime;
+master.gain.setValueAtTime(0.0001, _ft);
+master.gain.exponentialRampToValueAtTime(1.0, _ft + 2);   // ~2s fade-in so the click isn't abrupt
 noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate);
 const d = noiseBuf.getChannelData(0);
 for(let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
@@ -5134,6 +5147,11 @@ const rF = AC.createBiquadFilter(); rF.type='bandpass'; rF.frequency.value = 260
 rainGain = AC.createGain(); rainGain.gain.value = 0;
 rSrc.connect(rF); rF.connect(rainGain); rainGain.connect(master);
 rSrc.start();
+const rSrc2 = AC.createBufferSource(); rSrc2.buffer = noiseBuf; rSrc2.loop = true; rSrc2.playbackRate.value = 0.9;
+const rF2 = AC.createBiquadFilter(); rF2.type='lowpass'; rF2.frequency.value = 900;
+rainGain2 = AC.createGain(); rainGain2.gain.value = 0;
+rSrc2.connect(rF2); rF2.connect(rainGain2); rainGain2.connect(master);
+rSrc2.start();
 const nSrc = AC.createBufferSource(); nSrc.buffer = noiseBuf; nSrc.loop = true; nSrc.playbackRate.value = 0.5;
 const nF = AC.createBiquadFilter(); nF.type='bandpass'; nF.frequency.value = 320; nF.Q.value = 6;
 const nG = AC.createGain(); nG.gain.value = 0.22;
@@ -5211,6 +5229,38 @@ const g=AC.createGain(); g.gain.setValueAtTime(vol*pg.k,t); g.gain.exponentialRa
 const p=AC.createStereoPanner(); p.pan.value=pg.pan;
 n.connect(f); f.connect(g); g.connect(p); p.connect(master);
 n.start(t); n.stop(t+dur);
+}
+
+/* ---------- custom audio files: put them in an /audio folder next to index.html ---------- */
+const customBuf = {};
+let customInit = false, customAmb = null;
+function loadAudio(name, url){
+return fetch(url)
+.then(r=>{ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+.then(b=>new Promise((res,rej)=>AC.decodeAudioData(b,res,rej)))
+.then(buf=>{ customBuf[name]=buf; })
+.catch(e=>console.warn('custom audio not loaded:', url, e)); // game carries on with synth ambience
+}
+function startCustomAmbience(vol=0.6){
+const buf = customBuf.ambience;
+if (!buf || customAmb || !AC) return;
+customAmb = AC.createBufferSource();
+customAmb.buffer = buf; customAmb.loop = true;
+const g = AC.createGain(); g.gain.value = vol;
+customAmb.connect(g); g.connect(windBus); // follows the AMBIENCE setting + ducks in the tree
+customAmb.start();
+}
+function initCustomAudio(){
+if (customInit) return; customInit = true;
+loadAudio('ambience','audio/ambience.mp3').then(()=>startCustomAmbience());
+/* more files: loadAudio('crickets','audio/crickets.mp3') etc. */
+}
+function playCustom(name, vol=1, loop=false){ // one-shot helper for any loaded file
+const buf = customBuf[name]; if(!buf || !AC) return null;
+const s = AC.createBufferSource(); s.buffer = buf; s.loop = loop;
+const g = AC.createGain(); g.gain.value = vol;
+s.connect(g); g.connect(master); s.start();
+return { src:s, gain:g };
 }
 const ching  = () => { tone(1244,0.09,'triangle',0.12); tone(1864,0.22,'sine',0.1,0.05); };
 const earnSound = () => { [880,1174,1568,2093].forEach((f,i)=>tone(f,0.18,'triangle',0.1,i*0.07)); noiseS(0.5,0.035,4000,8000,0.12); };
@@ -5293,7 +5343,7 @@ function startMusic(){
 if (!AC || musicOn) return; musicOn = true;
 const panner = AC.createPanner();
 panner.distanceModel = 'inverse';
-panner.refDistance = 4; panner.maxDistance = 90; panner.rolloffFactor = 1.4;
+panner.refDistance = 4; panner.maxDistance = 45; panner.rolloffFactor = 2.8;
 if (panner.positionX){
 panner.positionX.value = STALL_POS.x;
 panner.positionY.value = 1.6;
@@ -5779,6 +5829,7 @@ if (!started){ started = true; player.pos.set(0,EYE,6.8); yaw = 0; pitch = -0.08
   initAudio();
   if (AC && AC.state === 'suspended') AC.resume();
   ensureFirstGoblin();
+  initCustomAudio();
   if (!introDone){ introDone = true; startIntroCine(); }
   else { try { renderer.domElement.requestPointerLock(); } catch(e){} }
 }
@@ -5920,15 +5971,26 @@ prodIntroEl.classList.add('clicked');
 goFullscreen();
 initAudio();                                   // ambience starts on the click
 if (AC && AC.state === 'suspended') AC.resume();
+initCustomAudio();
 setTimeout(()=>prodIntroEl.classList.add('logo'), 450);          // click fades, logo pops in
-setTimeout(()=>{                                                // logo done -> fade to menu
+setTimeout(()=>{                                                // letters hop & run off-screen
+prodIntroEl.querySelectorAll('.piA .ch').forEach((el,i)=>{
+const dir = Math.random()<0.5 ? -1 : 1;
+el.style.setProperty('--ox', (dir*(45+Math.random()*55)).toFixed(0)+'vw');
+el.style.setProperty('--oy', ((Math.random()-0.4)*90).toFixed(0)+'vh');
+el.style.setProperty('--orot', ((Math.random()-0.5)*760).toFixed(0)+'deg');
+el.style.setProperty('--od', (i*0.07+Math.random()*0.06).toFixed(2)+'s');
+});
+prodIntroEl.classList.add('leave');
+}, 3400);
+setTimeout(()=>{                                                // letters gone -> fade to menu
 prodIntroEl.classList.add('gone');
 prodIntroDone = true;
-}, 5400);
-setTimeout(()=>{ prodIntroEl.remove(); }, 6900);
+}, 5000);
+setTimeout(()=>{ prodIntroEl.remove(); }, 6400);
 });
 /* ---------- settings + fullscreen ---------- */
-const settings = { music:true, ambience:true, sfx:true, grain:true };
+const settings = { music:true, ambience:true, sfx:true, grain:false };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('grimbleSettings')||'{}')); } catch(e){}
 const setBtn = document.getElementById('setBtn');
 const setPanel = document.getElementById('setPanel');
@@ -6049,6 +6111,10 @@ toast('The witch awaits at the far end…');
 if (shovelDlgPending && started && locked && !cine && !dlgOpen && !shopOpen && camMode === 'play'){
 shovelDlgPending = false; shovelDlgDone = true;
 openDlg(SHOVEL_CFG);
+}
+if (strangerCinePending && started && !cine && !dlgOpen && !shopOpen && camMode === 'play'){
+strangerCinePending = false;
+startStrangerCine();
 }
 if (strangerCinePending && started && !cine && !dlgOpen && !shopOpen && camMode === 'play'){
 strangerCinePending = false;
