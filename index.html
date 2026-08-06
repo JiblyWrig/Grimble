@@ -1698,65 +1698,6 @@ function buildGoblinModel(opts={}){
   return { root, inner, head, armL, armR, legL, legR, eyeL, eyeR, pupL, pupR, earL, earR,
            eyeBase:eb, pupZ, cols:[pal.skin,pal.skinD,pal.cloth], mats:[skin,skinD,cloth] };
 }
-function goblinPalette(opts){
-  const chief=opts.chief, bub=opts.bub, tier=opts.tier||1;
-  if (chief) return { skin:0x8f2f2a, skinD:0x6d221f, cloth:0x3a2a20 };
-  if (bub)   return { skin:0x9a5cff, skinD:0x6d35b0, cloth:0x8a5a33 };
-  if (tier>=2){
-    const shade=Math.min(tier-2,3);
-    const skins  =[0x2e7d32,0x1b5e20,0x124a16,0x0c3a10];   // dark green, darker per tier
-    const skinDs =[0x1b4d1e,0x123c14,0x0c2e0e,0x08220a];
-    return { skin:skins[shade], skinD:skinDs[shade], cloth:0x5a4630 };
-  }
-  return { skin:0x4fa896, skinD:0x357f70, cloth:0x8a5a33 };
-}
-function buildGoblinModel(opts={}){
-  const chief=!!opts.chief, bub=!!opts.bub;
-  const pal=goblinPalette(opts);
-  const skin=toon(pal.skin), skinD=toon(pal.skinD), cloth=toon(pal.cloth);
-  const root=new THREE.Group();
-  const inner=new THREE.Group();
-  root.add(inner);
-  const body=new THREE.Mesh(new THREE.SphereGeometry(0.27,12,10), skinD);
-  body.scale.set(1,1.15,0.9); body.position.y=0.56; inner.add(body);
-  const head=new THREE.Group(); head.position.y=0.97; inner.add(head);
-  if (bub) head.scale.setScalar(1.2);
-  head.add(new THREE.Mesh(new THREE.SphereGeometry(0.21,12,10), skin));
-  const nose=new THREE.Mesh(new THREE.SphereGeometry(0.05,8,6), skin);
-  nose.position.set(0,-0.03,0.2); nose.visible=!bub; head.add(nose);
-  const eb=bub?1.4:1, pupZ=bub?0.245:0.21;
-  let eyeL,eyeR,pupL,pupR,earL,earR;
-  for(const s of [-1,1]){
-    const eye=new THREE.Mesh(new THREE.SphereGeometry(0.055,8,8), new THREE.MeshBasicMaterial({color:0xfff6cc}));
-    eye.position.set(0.085*s,0.05,0.165); eye.scale.setScalar(eb); head.add(eye);
-    if(s<0)eyeL=eye; else eyeR=eye;
-    const pup=new THREE.Mesh(new THREE.SphereGeometry(0.026,6,6), new THREE.MeshBasicMaterial({color:0x1c1408}));
-    pup.position.set(0.085*s,0.05,pupZ); pup.scale.setScalar(eb); head.add(pup);
-    if(s<0)pupL=pup; else pupR=pup;
-    const ear=new THREE.Mesh(new THREE.ConeGeometry(0.065,0.24,8), skin);
-    ear.position.set(0.24*s,0.1,-0.02); ear.rotation.z=-s*1.85; ear.visible=!bub; head.add(ear);
-    if(s<0)earL=ear; else earR=ear;
-  }
-  if (chief){
-    const crown=new THREE.Mesh(new THREE.ConeGeometry(0.09,0.14,5), toon(0x4a4a52));
-    crown.position.set(0,1.2,0); inner.add(crown);
-  }
-  const mkLimb=(w,l)=>{ const piv=new THREE.Group(); const m=new THREE.Mesh(new THREE.BoxGeometry(w,l,w), skin);
-    m.position.y=-l/2; piv.add(m); return piv; };
-  const armL=mkLimb(0.07,0.34); armL.position.set(-0.28,0.74,0); inner.add(armL);
-  const armR=mkLimb(0.07,0.34); armR.position.set( 0.28,0.74,0); inner.add(armR);
-  const legL=mkLimb(0.09,0.36); legL.position.set(-0.12,0.38,0); inner.add(legL);
-  const legR=mkLimb(0.09,0.36); legR.position.set( 0.12,0.38,0); inner.add(legR);
-  if (!bub){
-    const belt=new THREE.Mesh(new THREE.TorusGeometry(0.26,0.045,8,16), cloth);
-    belt.rotation.x=Math.PI/2; belt.position.y=0.42; inner.add(belt);
-    const pouch=new THREE.Mesh(new THREE.BoxGeometry(0.13,0.12,0.09), cloth);
-    pouch.position.set(0.2,0.36,0.16); inner.add(pouch);
-  }
-  addOutlineShells(root, 1.06, true);
-  return { root, inner, head, armL, armR, legL, legR, eyeL, eyeR, pupL, pupR, earL, earR,
-           eyeBase:eb, pupZ, cols:[pal.skin,pal.skinD,pal.cloth], mats:[skin,skinD,cloth] };
-}
 function makeGoblin(x, z, opts={}){
   const chief=!!opts.chief, bub=!!opts.bub, tier=opts.tier||1;
   const model=buildGoblinModel(opts);
