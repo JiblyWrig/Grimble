@@ -1059,7 +1059,7 @@ uniforms:{ uTime:{value:0}, uPlayer:{value:new THREE.Vector3(0,0,6.8)}, uGoblin:
 vertexShader:`
 attribute vec3 aPos; attribute vec4 aInfo;
 uniform float uTime; uniform vec3 uPlayer; uniform vec3 uGoblin;
-varying float vH; varying float vTint; varying float vFog;
+varying float vH; varying float vTint; varying float vFog; varying vec2 vPos;
 void main(){
 float ph = aInfo.x*6.28318;
 float hs = aInfo.y;
@@ -1080,15 +1080,31 @@ vec2 dG = aPos.xz - uGoblin.xz; float lG = length(dG);
 off += (dG/max(lG,0.001)) * smoothstep(0.85,0.0,lG)*0.18*bend;
 vec3 world = vec3(aPos.x + xz.x + off.x, p.y, aPos.z + xz.y + off.y);
 vec4 mv = modelViewMatrix * vec4(world,1.0);
-vFog = -mv.z; vH = h; vTint = aInfo.w;
+vFog = -mv.z; vH = h; vTint = aInfo.w; vPos = aPos.xz;
 gl_Position = projectionMatrix * mv;
 }`,
 fragmentShader:`
 precision mediump float;
 uniform vec3 uFogColor;
-varying float vH; varying float vTint; varying float vFog;
+varying float vH; varying float vTint; varying float vFog; varying vec2 vPos;
+float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+float vnoise(vec2 p){
+vec2 i = floor(p), f = fract(p);
+vec2 u = f*f*(3.0-2.0*f);
+return mix(mix(hash(i),hash(i+vec2(1,0)),u.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),u.x), u.y);
+}
 void main(){
-vec3 col = mix(vec3(0.10,0.23,0.07), vec3(0.36,0.62,0.18), smoothstep(0.05,1.0,vH));
+float hgt = smoothstep(0.05,1.0,vH);
+/* large-scale meadow patches: two greens + dry yellow */
+float nG = vnoise(vPos*0.07);
+float nY = vnoise(vPos*0.16 + 7.31);
+float patchG = smoothstep(0.35,0.65,nG);
+float patchY = smoothstep(0.60,0.80,nY);
+vec3 greenA = mix(vec3(0.10,0.23,0.07), vec3(0.36,0.62,0.18), hgt);
+vec3 greenB = mix(vec3(0.07,0.19,0.10), vec3(0.23,0.52,0.27), hgt);
+vec3 dry    = mix(vec3(0.42,0.38,0.11), vec3(0.60,0.53,0.19), hgt);
+vec3 col = mix(greenA, greenB, patchG);
+col = mix(col, dry, patchY*0.7);
 col = mix(col, vec3(0.55,0.66,0.16), vTint*0.5);
 col *= 0.8 + 0.3*vH;
 col = mix(col, uFogColor, smoothstep(28.0,100.0,vFog));
@@ -1259,6 +1275,67 @@ const goldBurst = makeBurst(0xffd75e);
 const violetBurst = makeBurst(0xb470ef);
 const dirtBurst = makeBurst(0x8a6a44, false);
 function burstSparks(x,y,z){ goldBurst.burst(x,y,z); }
+/* ---------- smear trails: stretched billboards behind fast movers ---------- */
+const smearTex = canvasTex(64,64,(x)=>{
+const g = x.createRadialGradient(32,32,2,32,32,30);
+g.addColorStop(0,'rgba(255,255,255,0.85)');
+g.addColorStop(0.5,'rgba(255,255,255,0.28)');
+g.addColorStop(1,'rgba(255,255,255,0)');
+x.fillStyle = g; x.fillRect(0,0,64,64);
+}, false);
+const _smV = new THREE.Vector3();
+function orientSmear(sp, vx, vy, vz, spd){
+_smV.set(vx,vy,vz).divideScalar(spd).applyQuaternion(_qT2.copy(camera.quaternion).invert());
+sp.material.rotation = Math.atan2(_smV.y, _smV.x);
+}
+function updateGoblinSmear(g, dt){
+const s = g.smear; if (!s) return;
+if (g.state === 'thrown'){
+const spd2 = g.throwVel.lengthSq();
+if (spd2 > 16){
+const spd = Math.sqrt(spd2);
+s.position.copy(g.root.position);
+s.position.y += 0.45*g.baseScale;
+s.position.addScaledVector(_smV.copy(g.throwVel).divideScalar(spd), -0.5*g.baseScale);
+orientSmear(s, g.throwVel.x, g.throwVel.y, g.throwVel.z, spd);
+s.scale.set(THREE.MathUtils.clamp(spd*0.13,0.7,2.4)*g.baseScale, 0.4*g.baseScale, 1);
+s.material.opacity = THREE.MathUtils.clamp((spd-4)/10,0,0.5);
+s.visible = true;
+return;
+}
+}
+if (s.visible){
+s.material.opacity -= dt*2.5;
+if (s.material.opacity <= 0){ s.visible = false; s.material.opacity = 0; }
+}
+}
+const COIN_SMEAR_N = 24;
+const coinSmears = [];
+for(let i=0;i<COIN_SMEAR_N;i++){
+const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map:smearTex, color:0xffe9a8,
+transparent:true, opacity:0, depthWrite:false, blending:THREE.AdditiveBlending }));
+sp.visible = false; scene.add(sp); coinSmears.push(sp);
+}
+function updateCoinSmears(){
+let idx = 0;
+for(let li=0; li<live.length && idx<COIN_SMEAR_N; li++){
+const i = live[li];
+if (ST[i] !== 1) continue;
+const i3 = i*3;
+const vx=V[i3], vy=V[i3+1], vz=V[i3+2];
+const spd2 = vx*vx+vy*vy+vz*vz;
+if (spd2 < 36) continue;
+const spd = Math.sqrt(spd2);
+const sp = coinSmears[idx++];
+sp.position.set(P[i3]-vx/spd*0.3, P[i3+1]-vy/spd*0.3, P[i3+2]-vz/spd*0.3);
+orientSmear(sp, vx, vy, vz, spd);
+sp.scale.set(THREE.MathUtils.clamp(spd*0.09,0.4,1.4), 0.16, 1);
+sp.material.color.setHex(SIL[i] ? 0xe8ecff : 0xffe9a8);
+sp.material.opacity = THREE.MathUtils.clamp((spd-6)/14,0,0.5);
+sp.visible = true;
+}
+for(let k=idx;k<COIN_SMEAR_N;k++) coinSmears[k].visible = false;
+}
 /* ============================== INTRO: dirt plug over hole ============================== */
 const introPlug = new THREE.Mesh(
 new THREE.CircleGeometry(HOLE_R + 0.08, 48),
@@ -1335,6 +1412,11 @@ g.shadow = new THREE.Mesh(new THREE.PlaneGeometry(chief?1.8:1.2, chief?1.8:1.2),
 new THREE.MeshBasicMaterial({ map:blobTex, transparent:true, depthWrite:false }));
 g.shadow.rotation.x = -Math.PI/2; g.shadow.position.y = 0.02; g.shadow.renderOrder = 2;
 scene.add(g.shadow);
+g.smear = new THREE.Sprite(new THREE.SpriteMaterial({ map:smearTex,
+color: chief ? 0xff9a8a : bub ? 0xd7b6ff : 0xaef0dd,
+transparent:true, opacity:0, depthWrite:false, blending:THREE.AdditiveBlending }));
+g.smear.visible = false;
+scene.add(g.smear);
 pickTargetFor(g);
 goblins.push(g);
 return g;
@@ -2132,7 +2214,7 @@ mo.position.set(0.045*s,-0.05,0.2); mo.rotation.z = s*-0.35; vendor.head.add(mo)
 }
 for(const s of [-1,1]){
 const brow = new THREE.Mesh(new THREE.BoxGeometry(0.11,0.04,0.05), grey);
-brow.position.set(0.088*s, 0.15, 0.18);
+brow.position.set(0.088*s, 0.12, 0.19);
 brow.rotation.z = s*-0.22;
 vendor.head.add(brow);
 if(s<0) vendor.browL = brow; else vendor.browR = brow;
@@ -2264,8 +2346,8 @@ vendor.armR.rotation.x = -2.5*vendor.waveAmt;
 vendor.armR.rotation.z = Math.sin(time*7)*0.4*vendor.waveAmt;
 if (vendor.browL){
 const lift = vendor.waveAmt*0.03;
-vendor.browL.position.y = 0.15 + lift;
-vendor.browR.position.y = 0.15 + lift;
+vendor.browL.position.y = 0.12 + lift;
+vendor.browR.position.y = 0.12 + lift;
 }
 vendor.armL.rotation.x = Math.sin(time*1.6)*0.08;
 let blinkScale = 1;
@@ -2942,6 +3024,7 @@ const bub = goblins.find(g=>g.isBub);
 if (bub){
 if (heldGoblin === bub) heldGoblin = null;
 scene.remove(bub.root); scene.remove(bub.shadow);
+if (bub.smear) scene.remove(bub.smear);
 goblins.splice(goblins.indexOf(bub), 1);
 }
 for (const g of goblins){
@@ -3192,6 +3275,7 @@ if (b0){
 
   scene.remove(b0.root);
   scene.remove(b0.shadow);
+if (b0.smear) scene.remove(b0.smear);
 
   goblins.splice(goblins.indexOf(b0), 1);
 }
@@ -3391,7 +3475,7 @@ earned = 0;
 setCoinDisplay(0);
 while (live.length) removeCoin(live[0], false);
 held = -1; magnetCoins.length = 0;
-for (const g of goblins){ scene.remove(g.root); scene.remove(g.shadow); }
+for (const g of goblins){ scene.remove(g.root); scene.remove(g.shadow); if (g.smear) scene.remove(g.smear); }
 goblins.length = 0;
 makeGoblin(1.8, 7.6);
 player.pos.set(0,EYE,6.8); player.vel.set(0,0,0); player.vy = 0;
@@ -4987,7 +5071,7 @@ if (inHole && elapsed > eerieNext){ eerieTone(); eerieNext = elapsed + 4 + Math.
 }
 if (!paused){
 updateRain(dt, elapsed);
-for (const g of goblins) updateGoblin(g, dt, elapsed);
+for (const g of goblins){ updateGoblin(g, dt, elapsed); updateGoblinSmear(g, dt); }
 let ng = goblins[0], bd = Infinity;
 for (const g of goblins){
 if (g.state === 'held' || !g.root.visible) continue;
@@ -4998,6 +5082,7 @@ if (ng) grassMat.uniforms.uGoblin.value.set(ng.root.position.x, 0, ng.root.posit
 updateVendor(dt, elapsed);
 updateWitch(dt, elapsed);
 updateCoins(dt, elapsed);
+updateCoinSmears();
 updateButterflies(dt, elapsed);
 goldBurst.update(dt);
 violetBurst.update(dt);
