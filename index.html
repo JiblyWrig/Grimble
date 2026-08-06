@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Grimble</title>
 <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&display=swap" rel="stylesheet">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 html,body { width:100%; height:100%; overflow:hidden; background:#0a140a; font-family:'Nunito',sans-serif; user-select:none; }
@@ -143,6 +144,15 @@ border:8px solid transparent; border-top-color:#7a5a1e; border-bottom:none; }
 text-shadow:0 2px 0 #6b4a10, 0 3px 8px #000; }
 #dlgText { font-family:'MedievalSharp',cursive; color:#e8f2d6; font-size:21px; line-height:1.5; min-height:76px; }
 #dialog.grimVoice #dlgText { font-size:25.2px; } /* Grimble speaks 20% larger */
+#dialog.fizz { background:linear-gradient(160deg,#06231d,#03110d);
+border:2px solid #2ee6a8; border-radius:18px;
+box-shadow:0 0 26px rgba(46,230,168,.3), 0 12px 32px rgba(0,0,0,.7), inset 0 0 30px rgba(46,230,168,.08);
+animation:fizzPulse 2.4s ease-in-out infinite; }
+@keyframes fizzPulse { 50% { box-shadow:0 0 40px rgba(46,230,168,.45), 0 12px 32px rgba(0,0,0,.7), inset 0 0 34px rgba(46,230,168,.12); } }
+#dialog.fizz .dlgName { font-family:'Comfortaa',cursive; color:#7dfcd0; letter-spacing:6px; font-size:19px;
+text-shadow:0 0 12px rgba(46,230,168,.6); }
+#dialog.fizz #dlgText { font-family:'Comfortaa',cursive; font-size:16.5px; color:#d8fff2; }
+#dialog.fizz #dlgHint kbd { background:#0d3a2e; border-color:#2ee6a8; border-bottom-color:#1a7a5a; color:#c9ffe9; }
 .dlgWord { display:inline-block; animation:wordSway 2.2s ease-in-out infinite; }
 @keyframes wordSway { 0%,100% { transform:translateY(0) rotate(0deg); } 50% { transform:translateY(-3px) rotate(0.6deg); } }
 #dlgHint { margin-top:10px; font-size:12px; color:#a9c48a; font-weight:800; letter-spacing:1px; }
@@ -328,6 +338,7 @@ to { opacity:0; transform:translate(-50%,-50%) rotate(-2deg) scale(1.05); }
 }
 /* ---------- settings (main menu) ---------- */
 #settingsUI { position:fixed; left:18px; bottom:18px; z-index:45; display:flex; flex-direction:column; align-items:flex-start; gap:8px; }
+#prodIntro:not(.gone) ~ #settingsUI { display:none; }
 body.locked #settingsUI, body.shop #settingsUI, body.talking #settingsUI, body.cineMode #settingsUI { display:none; }
 #setBtn { font-family:'MedievalSharp',cursive; font-size:14px; letter-spacing:1px; color:#cfe3b8;
 background:rgba(20,30,14,.85); border:1px solid rgba(169,196,138,.4); border-radius:9px; padding:7px 14px; cursor:pointer; }
@@ -505,7 +516,7 @@ let goblinsAwakened = false;
 const autoCollect = () => prestige > 0;
 const prestigeMult = () => 1 + prestige;
 const GDLG = [
-"(waves, adjusts his hat) Well well! Fresh boots in the meadow! Come closer, come closer — mind the hole, she's moody today.",
+"Well well! Fresh boots in the meadow! Come closer, come closer — mind the hole, she's moody today.",
 "Aye, that pit. Tore itself open seven winters back. And when it goes hungry…",
 "Well let's not fret o' that, lad.",
 "The meadow picked you, asked or not. A keeper! The hole lets certain folk feed it.",
@@ -777,18 +788,51 @@ groundTex.wrapS = groundTex.wrapT = THREE.RepeatWrapping;
 groundTex.repeat.set(0.25, 0.25);
 groundTex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
 /* Hole wall: midway between original and dark version */
-const wallTex = canvasTex(128,512,(x,w,h)=>{
+const wallTex = canvasTex(256,512,(x,w,h)=>{
 const g=x.createLinearGradient(0,0,0,h);
-g.addColorStop(0,'#634a2e'); g.addColorStop(0.35,'#352414'); g.addColorStop(0.75,'#130c06'); g.addColorStop(1,'#040202');
+g.addColorStop(0,'#6a4f30'); g.addColorStop(0.3,'#402a17'); g.addColorStop(0.7,'#1a1008'); g.addColorStop(1,'#050302');
 x.fillStyle=g; x.fillRect(0,0,w,h);
-for(let i=0;i<70;i++){
-const y=Math.random()*h;
-x.fillStyle=`rgba(${Math.random()<0.5?'0,0,0':'110,85,55'},${0.06+Math.random()*0.12})`;
-x.fillRect(0, y, w, 1+Math.random()*4);
-}
+/* soil strata */
 for(let i=0;i<26;i++){
-x.fillStyle=`rgba(0,0,0,${0.13+Math.random()*0.16})`;
-x.fillRect(Math.random()*w, Math.random()*h*0.8, 1+Math.random()*2, 20+Math.random()*70);
+const y=Math.random()*h;
+x.fillStyle=`rgba(${Math.random()<0.5?'0,0,0':'125,95,60'},${0.05+Math.random()*0.10})`;
+x.fillRect(0,y,w,1+Math.random()*3);
+}
+/* embedded stones with highlights */
+for(let i=0;i<60;i++){
+const sx=Math.random()*w, sy=Math.random()*h*0.85, r=1.5+Math.random()*5;
+const dark=Math.random()<0.5;
+x.fillStyle=dark?`rgba(0,0,0,${0.25+Math.random()*0.3})`:`rgba(140,110,75,${0.15+Math.random()*0.2})`;
+x.beginPath(); x.ellipse(sx,sy,r,r*0.7,Math.random()*3,0,7); x.fill();
+if(!dark){ x.fillStyle='rgba(255,235,200,0.10)'; x.beginPath(); x.ellipse(sx-r*0.25,sy-r*0.3,r*0.45,r*0.3,0,0,7); x.fill(); }
+}
+/* vertical cracks */
+for(let i=0;i<14;i++){
+let cx=Math.random()*w, cy=0;
+x.strokeStyle=`rgba(0,0,0,${0.2+Math.random()*0.25})`;
+x.lineWidth=1+Math.random()*1.5;
+x.beginPath(); x.moveTo(cx,cy);
+while(cy<h){ cy+=8+Math.random()*18; cx+=(Math.random()-0.5)*10; x.lineTo(cx,cy); }
+x.stroke();
+}
+/* roots dangling near the rim */
+for(let i=0;i<10;i++){
+let rx=Math.random()*w, ry=Math.random()*h*0.22;
+x.strokeStyle=`rgba(90,60,30,${0.35+Math.random()*0.25})`;
+x.lineWidth=1+Math.random()*2;
+x.beginPath(); x.moveTo(rx,ry);
+for(let s=0;s<5;s++){ rx+=(Math.random()-0.5)*14; ry+=4+Math.random()*10; x.lineTo(rx,ry); }
+x.stroke();
+}
+/* fine grain */
+for(let i=0;i<900;i++){
+x.fillStyle=`rgba(${Math.random()<0.5?'0,0,0':'150,115,75'},${0.04+Math.random()*0.09})`;
+x.fillRect(Math.random()*w, Math.random()*h, 1+Math.random()*2, 1+Math.random()*2);
+}
+/* depth blotches */
+for(let i=0;i<20;i++){
+x.fillStyle=`rgba(0,0,0,${0.10+Math.random()*0.15})`;
+x.beginPath(); x.ellipse(Math.random()*w, h*0.35+Math.random()*h*0.6, 8+Math.random()*26, 4+Math.random()*14, 0, 0, 7); x.fill();
 }
 });
 const rimTex = canvasTex(256,256,(x)=>{
@@ -946,7 +990,7 @@ holeRim = rim;
 }
 /* ---------- hole dust ---------- */
 {
-const N = 140;
+const N = 90;
 const pos = new Float32Array(N*3), aPh = new Float32Array(N);
 for(let i=0;i<N;i++){
 const r = Math.sqrt(Math.random())*HOLE_R*0.85, a = Math.random()*Math.PI*2;
@@ -1242,7 +1286,7 @@ scene.add(grass);
 /* grass covering the hole plug — falls away with the hole in the intro */
 {
 const R = HOLE_R + 0.25;
-const N = isMobile() ? 29 : 80;
+const N = isMobile() ? 15 : 40;
 const pPos = new Float32Array(N*3), pInfo = new Float32Array(N*4);
 for(let i=0;i<N;i++){
 const r = Math.sqrt(Math.random())*R, a = Math.random()*Math.PI*2;
@@ -2125,25 +2169,15 @@ foot.scale.set(1.2,0.5,1.6); foot.position.set(s*0.34, 0.1, 0.52); inner.add(foo
 const armR = new THREE.Mesh(new THREE.SphereGeometry(0.16,10,8), green);
 armR.scale.set(1.3,0.7,0.9); armR.position.set(0.62,0.5,0.15); armR.rotation.z = 0.5; inner.add(armR);
 const armL = new THREE.Mesh(new THREE.SphereGeometry(0.16,10,8), green);
-armL.scale.set(1.3,0.7,0.9); armL.position.set(-0.66,0.95,0.1); armL.rotation.z = 0.9; inner.add(armL);
-let eyeL, eyeR;
+armL.scale.set(1.3,0.7,0.9); armL.position.set(-0.62,0.5,0.15); armL.rotation.z = -0.5; inner.add(armL);
+let eyeL, eyeR, pupL, pupR;
 for(const s of [-1,1]){
 const eye = new THREE.Mesh(new THREE.SphereGeometry(0.26,12,10), white);
 eye.position.set(s*0.24, 0.86, 0.42); eye.scale.set(1,1.15,0.6); inner.add(eye);
 if (s<0) eyeL = eye; else eyeR = eye;
 const pup = new THREE.Mesh(new THREE.SphereGeometry(0.09,8,8), black);
 pup.position.set(s*0.20, 0.86, 0.63); inner.add(pup);
-}
-for(const tx of [-0.28,-0.09,0.1,0.29]){
-const tooth = new THREE.Mesh(new THREE.ConeGeometry(0.065,0.13,4), white);
-tooth.position.set(tx, 0.47, 0.56 - Math.abs(tx)*0.1);
-inner.add(tooth);
-}
-for(const s of [-1,1]){
-const fang = new THREE.Mesh(new THREE.ConeGeometry(0.06,0.12,4), white);
-fang.rotation.x = Math.PI;
-fang.position.set(s*0.44, 0.62, 0.44);
-inner.add(fang);
+if (s<0) pupL = pup; else pupR = pup;
 }
 const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.05,0.34,6), greenD);
 stalk.position.set(0.1,1.28,0); stalk.rotation.z = -0.5; inner.add(stalk);
@@ -2157,8 +2191,8 @@ addOutlineShells(g, 1.06);
 g.position.set(x, 0, z);
 g.rotation.y = Math.atan2(-x, -z);
 scene.add(g);
-stranger = { inner, eyeL, eyeR, armL, nextBlink:2+Math.random()*3, blinkT:0 };
 STALL_COLL.push({ x, z, r:0.8 });
+stranger = { root:g, inner, eyeL, eyeR, pupL, pupR, shadow, nextBlink:2+Math.random()*3, blinkT:0 };
 return stranger;
 }
 function updateStranger(dt, time){
@@ -2166,7 +2200,11 @@ if (!stranger) return;
 const b = Math.sin(time*1.7);
 stranger.inner.scale.set(1, 1 + b*0.025, 1);
 stranger.inner.position.y = b*0.015;
-stranger.armL.rotation.z = 0.9 + Math.sin(time*2.2)*0.15;
+stranger.inner.worldToLocal(_v1.set(player.pos.x, player.pos.y - 0.3, player.pos.z)).normalize();
+const ex = THREE.MathUtils.clamp(_v1.x, -1, 1) * 0.07;
+const ey = THREE.MathUtils.clamp(_v1.y, -0.8, 1) * 0.06;
+stranger.pupL.position.set(-0.20 + ex, 0.86 + ey, 0.63);
+stranger.pupR.position.set( 0.20 + ex, 0.86 + ey, 0.63);
 if (time >= stranger.nextBlink){
 stranger.blinkT += dt;
 const bp = stranger.blinkT/0.22;
@@ -2174,6 +2212,48 @@ if (bp >= 1){ stranger.blinkT = 0; stranger.nextBlink = time + 2 + Math.random()
 else { const s = 1.15*(1 - Math.sin(bp*Math.PI)*0.9); stranger.eyeL.scale.y = s; stranger.eyeR.scale.y = s; }
 } else { stranger.eyeL.scale.y = 1.15; stranger.eyeR.scale.y = 1.15; }
 }
+const FIZZ_LINES = [
+"oh! oh gosh— hi. hello. i'm Fizz. sorry. am i standing in a weird spot? i always stand in weird spots.",
+"i, um… heard about this place from far away. the coins, the hole, the whole… goblin energy. everyone talks about it. i wanted to be part of the action too.",
+"i flew a very long way. my ship is parked behind that fence. please don't look at it, it's embarrassing.",
+"i've been watching your goblins. they're fascinating. messy, but fascinating. i have some ideas about, um… combining them? someday. if that's okay. no pressure. sorry.",
+];
+const FIZZ_CFG = { name:'FIZZ', lines:FIZZ_LINES };
+let strangerTalked = false;
+function startStrangerCine(){
+mouseHeld = false;
+camMode = 'strangerCine';
+letterbox(true);
+document.body.classList.add('cineMode');
+const ufo = new THREE.Group();
+const hull = new THREE.Mesh(new THREE.SphereGeometry(1.4,20,12), toon(0x8a9aa8));
+hull.scale.set(1,0.32,1);
+ufo.add(hull);
+const dome = new THREE.Mesh(new THREE.SphereGeometry(0.7,16,10), new THREE.MeshBasicMaterial({ color:0xbfe8ff, transparent:true, opacity:0.5 }));
+dome.position.y = 0.35; ufo.add(dome);
+const lights = [];
+for(let i=0;i<6;i++){
+const a=i/6*Math.PI*2;
+const l = new THREE.Mesh(new THREE.SphereGeometry(0.09,6,6), new THREE.MeshBasicMaterial({ color:0x9fffcf }));
+l.position.set(Math.cos(a)*1.15, -0.1, Math.sin(a)*1.15);
+ufo.add(l); lights.push(l);
+}
+const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map:violetGlowTex, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, opacity:0.7 }));
+glow.scale.setScalar(6); ufo.add(glow);
+scene.add(ufo);
+const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.9,1.3,12,20,1,true),
+new THREE.MeshBasicMaterial({ color:0x9fffcf, transparent:true, opacity:0, side:THREE.DoubleSide, depthWrite:false, blending:THREE.AdditiveBlending }));
+beam.position.set(17,6,14);
+beam.visible = false;
+scene.add(beam);
+if (!stranger) makeStranger(17,14);
+stranger.root.position.set(17,11,14);
+stranger.shadow.visible = false;
+cine = { type:'stranger', t:0, fromPos:camera.position.clone(), ufo, beam, lights, zapped:false, done:false };
+tone(60,1.6,'sine',0.3,0,-20);
+tone(880,0.5,'sine',0.05,0.2,220);
+}
+let strangerCinePending = false;
 /* ============================== VENDOR + STALL (with cat) ============================== */
 const vendor = { nextBlink:2.2, blinkT:0, waveAmt:0, nextEarT:3, earTwitch:0, earSide:1 };
 let lampLight;
@@ -2628,15 +2708,8 @@ const ex = THREE.MathUtils.clamp(_look.x,-1,1)*0.02*w;
 const ey = THREE.MathUtils.clamp(_look.y,-0.8,1)*0.018*w;
 vendor.pupL.position.set(-0.088+ex, 0.06+ey, 0.215);
 vendor.pupR.position.set( 0.088+ex, 0.06+ey, 0.215);
-const waveTarget = distP < 5 ? 1 : 0;
-vendor.waveAmt += (waveTarget - vendor.waveAmt)*Math.min(1,4*dt);
-vendor.armR.rotation.x = -2.5*vendor.waveAmt;
-vendor.armR.rotation.z = Math.sin(time*7)*0.4*vendor.waveAmt;
-if (vendor.browL){
-const lift = vendor.waveAmt*0.03;
-vendor.browL.position.y = 0.12 + lift;
-vendor.browR.position.y = 0.12 + lift;
-}
+vendor.armR.rotation.x = Math.sin(time*1.6+0.7)*0.08;
+vendor.armR.rotation.z = 0;
 vendor.armL.rotation.x = Math.sin(time*1.6)*0.08;
 let blinkScale = 1;
 if (time >= vendor.nextBlink){
@@ -3656,13 +3729,14 @@ const SHOVEL_CFG = { name:'GRIMBLE', lines:[
 let shovelDlgDone = false, shovelDlgPending = false;
 function spawnTutArrow(){
 removeTutArrow();
-const mat = new THREE.MeshBasicMaterial({ color:0xffe58a });
+const mat = toon(0xffe58a); addBoil(mat);
 const grp = new THREE.Group();
 const cone = new THREE.Mesh(new THREE.ConeGeometry(0.16,0.32,12), mat);
 cone.rotation.x = Math.PI; // points down at the coin
 const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.34,10), mat);
 shaft.position.y = 0.33;
 grp.add(cone); grp.add(shaft);
+addOutlineShells(grp, 1.08);
 scene.add(grp);
 tutArrow = grp;
 }
@@ -3920,7 +3994,6 @@ camera.lookAt(P[i3], P[i3+1]+0.1, P[i3+2]);
 if (ST[c.coinIdx] === 2 && !c.clink){
 c.clink = true; c.clinkT = t2;
 toneAt(1244,0.07,'triangle',0.12,0,0,P[i3],P[i3+2],24);
-burstSparks(P[i3], P[i3+1]+0.1, P[i3+2]);
 }
 if ((c.clink && t2 > c.clinkT + 0.9) || t2 > 6){
 /* the goblins are part of the world now */
@@ -3981,6 +4054,48 @@ c.ring.m.scale.setScalar(1+k*9);
 c.ring.m.material.opacity = Math.max(0, 0.8*(1-k));
 if (k >= 1){ scene.remove(c.ring.m); c.ring = null; }
 }
+}
+else if (c.type === 'stranger'){
+const t = c.t, u = c.ufo;
+if (t < 2.6){
+const e = sm(t/2.6);
+u.position.set(THREE.MathUtils.lerp(-34,17,e), 13+Math.sin(t*2)*0.3, THREE.MathUtils.lerp(-26,14,e));
+u.rotation.z = Math.sin(t*3)*0.08;
+for(let i=0;i<c.lights.length;i++) c.lights[i].material.color.setHSL((t*0.7+i/6)%1, 0.8, 0.6);
+camera.position.set(THREE.MathUtils.lerp(-20,8,e), 7.5, THREE.MathUtils.lerp(-14,26,e));
+camera.lookAt(u.position);
+} else if (t < 3.6){
+const e = sm((t-2.6)/1.0);
+u.position.set(17,12,14);
+c.beam.visible = true;
+c.beam.material.opacity = 0.22*e;
+camera.position.lerpVectors(_cB.set(8,7.5,26), _tmp.set(13.5,2.2,19.5), e);
+camera.lookAt(17, THREE.MathUtils.lerp(6,2,e), 14);
+} else if (t < 5.6){
+const e = sm((t-3.6)/2.0);
+stranger.root.position.set(17, THREE.MathUtils.lerp(11,0,e), 14);
+u.position.y = 12+Math.sin(t*2)*0.2;
+camera.position.set(13.5,2.2,19.5);
+camera.lookAt(17, THREE.MathUtils.lerp(3,1,e), 14);
+} else if (t < 6.8){
+const e = sm((t-5.6)/1.2);
+c.beam.material.opacity = 0.22*(1-e);
+u.position.y = 12+e*30;
+stranger.root.position.y = 0;
+stranger.shadow.visible = true;
+camera.position.lerpVectors(_tmp.set(13.5,2.2,19.5), _cB.set(15,1.7,17.5), e);
+camera.lookAt(17,1,14);
+if (e >= 1 && !c.zapped){ c.zapped = true; scene.remove(u); c.beam.visible = false;
+violetBurst.burst(17,13,14,2,3); tone(700,0.4,'sine',0.1,0,500); }
+} else if (!c.done){
+c.done = true;
+document.body.classList.remove('cineMode');
+letterbox(false);
+cine = null;
+startCineHandoff();
+toast('The stranger looks… nervous.');
+}
+return;
 }
 else {
 if (c.t < 1.6){
@@ -4134,14 +4249,17 @@ function dlgTick(){
 if (!AC || !settings.sfx) return;
 if (dlgVoice === 'maud'){
 tone(620 + Math.random()*160, 0.03, 'square', 0.014);
+} else if (dlgVoice === 'fizz'){
+tone(760 + Math.random()*240, 0.035, 'sine', 0.02, 0, 300);
 } else {
 tone(140 + Math.random()*40, 0.04, 'square', 0.0245);
 }
 }
 function openDlg(cfg){
 dlgCfg = cfg;
-dlgVoice = (cfg.name === 'MAUD') ? 'maud' : 'grim';
+dlgVoice = (cfg.name === 'MAUD') ? 'maud' : (cfg.name === 'FIZZ') ? 'fizz' : 'grim';
 dialogEl.classList.toggle('grimVoice', dlgVoice === 'grim');
+dialogEl.classList.toggle('fizz', dlgVoice === 'fizz');
 dlgOpen = true; dlgLine = 0;
 dlgNameEl.textContent = cfg.name;
 dialogEl.classList.remove('hidden');
@@ -4276,7 +4394,7 @@ prevYaw = yaw;
 /* ---------- targeting ---------- */
 const raycaster = new THREE.Raycaster();
 const SCREEN_C = new THREE.Vector2(0,0);
-let nearVendor = false, nearWitch = false, nearGoblin = null, nearTelescope = false, nearCat = false, nearShovel = false;
+let nearVendor = false, nearWitch = false, nearGoblin = null, nearTelescope = false, nearCat = false, nearShovel = false, nearStranger = false;
 let vendorGreeted = false;
 let coinPickupPromptCount = 0;
 function updatePrompt(){
@@ -4287,6 +4405,7 @@ nearGoblin = null;
 nearTelescope = false;
 nearCat = false;
 nearShovel = false;
+nearStranger = false;
 if (held < 0 && !heldGoblin && catProxy){
 raycaster.setFromCamera(SCREEN_C, camera);
 if (raycaster.intersectObject(catProxy, false).length){
@@ -4296,6 +4415,9 @@ if (d < 4.5) nearCat = true;
 }
 if (!shovelOwned && shovelWorld){
 nearShovel = Math.hypot(player.pos.x-SHOVEL_SPOT.x, player.pos.z-SHOVEL_SPOT.z) < 2.4;
+}
+if (stranger){
+nearStranger = Math.hypot(player.pos.x-17, player.pos.z-14) < 2.6;
 }
 if (held < 0 && !heldGoblin && live.length){
 const pc = pickCoin();
@@ -4334,24 +4456,14 @@ break;
 }
 }
 if (held >= 0){
-if (pickupCount <= 5){
-prompt.innerHTML = '<kbd>CLICK</kbd> drop coin';
-prompt.classList.add('show');
-} else {
 prompt.classList.remove('show');
-}
 crosshair.classList.remove('active');
 } else if (heldGoblin) {
 prompt.innerHTML = '<kbd>CLICK</kbd> throw goblin';
 prompt.classList.add('show');
 crosshair.classList.remove('active');
 } else if (nearCoin >= 0){
-if (coinPickupPromptCount < 3) {
-prompt.innerHTML = '<kbd>CLICK</kbd> pick up coin';
-prompt.classList.add('show');
-} else {
 prompt.classList.remove('show');
-}
 crosshair.classList.add('active');
 } else if (nearCat){
 prompt.innerHTML = '<kbd>CLICK</kbd> pet the cat';
@@ -4359,6 +4471,10 @@ prompt.classList.add('show');
 crosshair.classList.add('active');
 } else if (nearShovel){
 prompt.innerHTML = '<kbd>E</kbd> take the snow shovel';
+prompt.classList.add('show');
+crosshair.classList.add('active');
+} else if (nearStranger){
+prompt.innerHTML = '<kbd>E</kbd> talk to the stranger';
 prompt.classList.add('show');
 crosshair.classList.add('active');
 } else if (nearGoblin){
@@ -4373,7 +4489,7 @@ crosshair.classList.add('active');
 prompt.innerHTML = '<kbd>E</kbd> talk to the witch';
 prompt.classList.add('show');
 crosshair.classList.add('active');
-} else if (nearVendor){
+} else if (nearVendor && pickupCount > 0){
 prompt.innerHTML = '<kbd>E</kbd> browse the skill tree';
 prompt.classList.add('show');
 crosshair.classList.add('active');
@@ -4453,6 +4569,11 @@ if (shopPhase === 'iso'){ closeShopToPlay(); return; }
 if (camMode !== 'play') return;
 if (nearTelescope){ openShop(false, true); return; }
 if (nearShovel){ pickupShovel(); return; }   // telescope = high meadow view, no hole button
+if (nearStranger){
+if (!strangerTalked){ strangerTalked = true; openDlg(FIZZ_CFG); }
+else toast(['Fizz smiles tiny.','Fizz fidgets with his antenna.','Fizz whispers: "the goblins… someday."'][Math.floor(Math.random()*3)]);
+return;
+}
 if (nearWitch){ openDlg(WITCH_CFG); return; }
 if (nearVendor){
 if (!goblinsAwakened){
@@ -4807,8 +4928,9 @@ toast('The blade broadens…');
 }
 if (key === 'holejob') toast('Hole-Job ready — press 2');
 if (key === 'stranger'){
-if (!stranger) makeStranger(17, 14);
-toast('A stranger wanders into the meadow…');
+strangerCinePending = true;
+if (!stranger) startStrangerCine();
+else toast('Fizz waves shyly.');
 }
 if (key === 'help'){
 let need = 2 - goblins.length; // top up to exactly 2, never more
@@ -5107,6 +5229,46 @@ aFilter.frequency.setTargetAtTime(900 + Math.random()*800, t, 2.0);
 aGain.gain.setTargetAtTime(0.0054 + Math.random()*0.0063, t, 2.0);
 setTimeout(windWander, dur*800);
 }
+/* ---------- bird ambience: 8 call types, random pitch/pan/timing ---------- */
+let birdNext = 3;
+function bTone(f,dur,vol,delay,slide,pan,type='sine',vib=0){
+if(!AC || !settings.ambience) return;
+const t=AC.currentTime+delay, o=AC.createOscillator(), g=AC.createGain(), p=AC.createStereoPanner();
+o.type=type; o.frequency.setValueAtTime(f,t);
+if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(300,f+slide),t+dur);
+if(vib){ const l=AC.createOscillator(); l.frequency.value=vib; const lg=AC.createGain(); lg.gain.value=f*0.06; l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(t+dur+0.05); }
+g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(vol,t+0.01);
+g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+p.pan.value=pan;
+o.connect(g); g.connect(p); p.connect(master);
+o.start(t); o.stop(t+dur+0.05);
+}
+function birdChirp(pan,vol){ const n=1+Math.floor(Math.random()*3), f=1800+Math.random()*2200;
+for(let i=0;i<n;i++) bTone(f*(0.9+Math.random()*0.2), 0.07+Math.random()*0.05, vol, i*(0.11+Math.random()*0.05), f*0.5*(Math.random()<0.8?1:-1), pan); }
+function birdDescend(pan,vol){ bTone(2600+Math.random()*900, 0.35+Math.random()*0.2, vol, 0, -(1200+Math.random()*600), pan); }
+function birdTrill(pan,vol){ bTone(2200+Math.random()*1600, 0.25+Math.random()*0.3, vol, 0, (Math.random()-0.5)*800, pan, 'sine', 28+Math.random()*14); }
+function birdTwoTone(pan,vol){ const f=2000+Math.random()*1200; bTone(f,0.09,vol,0,0,pan); bTone(f*0.78,0.11,vol,0.12,0,pan); }
+function birdChatter(pan,vol){ const n=3+Math.floor(Math.random()*4);
+for(let i=0;i<n;i++) bTone(1400+Math.random()*1800, 0.045, vol*0.8, i*0.07+Math.random()*0.02, (Math.random()-0.5)*900, pan, 'triangle'); }
+function birdCuckoo(pan,vol){ const f=700+Math.random()*120; bTone(f,0.16,vol*0.7,0,0,pan); bTone(f*0.75,0.2,vol*0.7,0.22,0,pan); }
+function birdHoot(pan,vol){ bTone(480+Math.random()*80, 0.4, vol*0.5, 0, -40, pan, 'sine', 6); bTone(480+Math.random()*80, 0.5, vol*0.45, 0.5, -60, pan, 'sine', 6); }
+function birdSong(pan,vol){ let t=0; const n=3+Math.floor(Math.random()*4);
+for(let i=0;i<n;i++){ const f=1600+Math.random()*2600, d=0.06+Math.random()*0.09;
+bTone(f, d, vol, t, (Math.random()-0.3)*f*0.6, pan, 'sine', Math.random()<0.4?20:0);
+t += d + 0.03+Math.random()*0.08; } }
+const BIRD_CALLS = [birdChirp,birdChirp,birdChirp,birdDescend,birdTrill,birdTwoTone,birdChatter,birdSong,birdSong,birdCuckoo,birdHoot];
+function updateBirds(dt, time){
+if (!AC || !settings.ambience) return;
+const clear = 1 - rainFactor;
+if (clear < 0.35) return; // birds shelter when it rains
+if (time >= birdNext){
+birdNext = time + (3 + Math.random()*13) * (1.6 - clear);
+const pan = (Math.random()*2-1)*0.8;
+const vol = 0.028 + Math.random()*0.05;
+BIRD_CALLS[Math.floor(Math.random()*BIRD_CALLS.length)](pan, vol);
+if (Math.random() < 0.3) BIRD_CALLS[Math.floor(Math.random()*BIRD_CALLS.length)]((Math.random()*2-1)*0.8, vol*0.7); // answer from elsewhere
+}
+}
 let musicOn = false, musicGain = null, musicDelay = null;
 const DORIAN = [293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25, 587.33];
 let melodyIdx = 3, mBeat = 0;
@@ -5204,28 +5366,63 @@ const PHRASE = [
 [6,0,3,1],[6,1,4,1],[6,2,5,2],
 [7,0,6,1],[7,1,4,1],[7,2,2,2],
 ];
+const PHRASE_B = [
+[0,0,2,1],[0,2,4,2],[1,0,3,1],[1,2,5,1],
+[2,0,4,1],[2,2,3,1],[3,0,2,2],
+[4,0,0,1],[4,1,2,1],[4,2,4,1],[4,3,5,1],
+[5,0,6,1],[5,2,5,1],[5,3,3,2],
+[6,0,4,1],[6,1,5,1],[6,2,6,2],
+[7,0,7,1],[7,1,5,1],[7,2,4,2],
+];
 let songBar = 0, songNext = 0;
 function scheduleSong(){
 if (!AC || !musicOn){ setTimeout(scheduleSong, 500); return; }
 if (shopOpen){ songNext = 0; setTimeout(scheduleSong, 1000); return; }
 const now = AC.currentTime;
 if (songNext < now + 0.02) songNext = now + 0.06;
+const loop = Math.floor(songBar/8);
 const bar = songBar % 8, t0 = songNext;
-const hum = 0.98 + Math.random()*0.04; // humanize
+const hum = 0.97 + Math.random()*0.06; // humanize
+const PH = (loop % 2 === 1) ? PHRASE_B : PHRASE;   // alternate A/B melody each loop
+/* bass: rotate a feel every loop */
+const feel = loop % 4;
 bassNote(BASSROOTS[bar], t0, 0.055);
+if (feel === 0){
 bassNote(BASSROOTS[bar]*1.5, t0 + BEAT*2*hum, 0.04);
 bassNote(BASSROOTS[bar]*2, t0 + BEAT*3, 0.03);
+} else if (feel === 1){
+bassNote(BASSROOTS[bar], t0 + BEAT*1.5, 0.035);
+bassNote(BASSROOTS[bar]*1.5, t0 + BEAT*2.5, 0.04);
+bassNote(BASSROOTS[bar]*2, t0 + BEAT*3.5, 0.03);
+} else if (feel === 2){
+bassNote(BASSROOTS[bar]*1.5, t0 + BEAT*2, 0.045);
+} else {
+bassNote(BASSROOTS[bar]*2, t0 + BEAT*2, 0.03);
+bassNote(BASSROOTS[bar]*1.26, t0 + BEAT*3, 0.035);
+bassNote(BASSROOTS[bar]*1.5, t0 + BEAT*3.5, 0.04);
+}
 drumHit(t0, 0.085);
-drumHit(t0 + BEAT*2, 0.06);
-for (const n of PHRASE){
+drumHit(t0 + BEAT*2, feel === 2 ? 0 : 0.06);
+/* shaker groove + end-of-loop fill */
+if (Math.random() < 0.7){ shaker(t0 + BEAT*1.5, 0.018); shaker(t0 + BEAT*3.5, 0.014); }
+if (bar === 7){ shaker(t0 + BEAT*3.0, 0.02); shaker(t0 + BEAT*3.25, 0.02); shaker(t0 + BEAT*3.5, 0.022); }
+for (const n of PH){
 if (n[0] !== bar) continue;
 const f = DORIAN[n[2]];
 const at = t0 + n[1]*BEAT*(n[1] ? hum : 1);
-if (n[3] >= 2) fluteNote(f, at, n[3]*BEAT*0.9, 0.05);
-else lutePluck(f, at, 0.062);
+const swap = Math.random() < 0.3;
+if (n[3] >= 2){
+if (swap){ lutePluck(f, at, 0.06); fluteNote(f*2, at, n[3]*BEAT*0.7, 0.02); }
+else fluteNote(f, at, n[3]*BEAT*0.9, 0.05);
+} else {
+lutePluck(f, at, 0.062);
+if (Math.random() < 0.2 && at > now + 0.2) lutePluck(f*1.122, at - BEAT*0.25, 0.028); // grace note
+if (Math.random() < 0.25) lutePluck(f*1.5, at + BEAT*0.5, 0.02);                  // echo fifth
+}
 if (n[1] === 0) lutePluck(f*0.5, at, 0.028);
 }
 if (bar === 3 || bar === 7) fluteNote(DORIAN[7], t0 + BEAT*3.5, BEAT*0.8, 0.035);
+if (bar === 7 && loop % 2 === 1) fluteNote(DORIAN[5], t0 + BEAT*2.5, BEAT*0.6, 0.03);
 songBar++;
 songNext = t0 + BEAT*4;
 setTimeout(scheduleSong, Math.max(50, (songNext - AC.currentTime)*1000 - 150));
@@ -5516,13 +5713,16 @@ menuGroup.add(menuTitle);
   label.position.z = 0.21;
   menuBtn.add(label);
   // hold-progress bar (fills left -> right)
-  const barBack = new THREE.Mesh(new THREE.PlaneGeometry(3.9, 0.14),
-    menuMat(new THREE.MeshBasicMaterial({ color: 0x140d05 })));
-  barBack.position.set(0, -0.32, 0.16);
-  menuBtn.add(barBack);
-  const barGeo = new THREE.PlaneGeometry(3.9, 0.14);
-  barGeo.translate(3.9 / 2, 0, 0); // origin at left edge so scale.x fills it
-  menuBar = new THREE.Mesh(barGeo, menuMat(new THREE.MeshBasicMaterial({ color: 0xf5cf5f })));
+const barBackMat = new THREE.MeshBasicMaterial({ color: 0x140d05, transparent:true });
+menuMats.push(barBackMat);
+const barBack = new THREE.Mesh(new THREE.PlaneGeometry(3.9, 0.14), barBackMat);
+barBack.position.set(0, -0.32, 0.16);
+menuBtn.add(barBack);
+const barGeo = new THREE.PlaneGeometry(3.9, 0.14);
+barGeo.translate(3.9 / 2, 0, 0); // origin at left edge so scale.x fills it
+const barFillMat = new THREE.MeshBasicMaterial({ color: 0xf5cf5f, transparent:true });
+menuMats.push(barFillMat);
+menuBar = new THREE.Mesh(barGeo, barFillMat);
   menuBar.position.set(-3.9 / 2, -0.32, 0.17);
   menuBar.scale.x = 0.001;
   menuBtn.add(menuBar);
@@ -5765,6 +5965,7 @@ if (inHole && elapsed > eerieNext){ eerieTone(); eerieNext = elapsed + 4 + Math.
 }
 if (!paused){
 updateRain(dt, elapsed);
+updateBirds(dt, elapsed);
 for (const g of goblins){ updateGoblin(g, dt, elapsed); updateGoblinSmear(g, dt); }
 let ng = goblins[0], bd = Infinity;
 for (const g of goblins){
@@ -5831,6 +6032,10 @@ toast('The witch awaits at the far end…');
 if (shovelDlgPending && started && locked && !cine && !dlgOpen && !shopOpen && camMode === 'play'){
 shovelDlgPending = false; shovelDlgDone = true;
 openDlg(SHOVEL_CFG);
+}
+if (strangerCinePending && started && !cine && !dlgOpen && !shopOpen && camMode === 'play'){
+strangerCinePending = false;
+startStrangerCine();
 }
 grassMat.uniforms.uTime.value = elapsed;
 holeDustMat.uniforms.uTime.value = elapsed;
