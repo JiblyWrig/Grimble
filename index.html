@@ -403,8 +403,6 @@ background:#2b3f18; border:1px solid #6d8f3f; border-bottom:3px solid #465f26; c
 <div id="dlgHint"></div>
 </div>
 <div id="holeBtns" class="hidden">
-<button id="leaveBtn">LEAVE</button>
-<button id="holeBtn">ENTER THE HOLE</button>
 </div>
 <div id="shopOverlay" class="hidden">
 <div id="treeDust"></div>
@@ -3495,11 +3493,7 @@ camera.updateProjectionMatrix();
 if (camT >= 1){
 camMode = (camMode === 'toIso') ? 'iso' : 'play';
 if (camMode === 'iso' && shopPhase === 'iso'){
-if (straightToHole){ straightToHole = false; enterTree(); }
-else {
-holeBtn.style.display = teleView ? 'none' : '';
 holeBtns.classList.remove('hidden');
-}
 }
 }
 } else if (camMode === 'iso'){
@@ -3617,8 +3611,20 @@ x.closePath(); x.fill(); x.stroke();
 const letterboxEl = document.getElementById('letterbox');
 const letterbox = on => letterboxEl.classList.toggle('on', on);
 const cineCapEl = document.getElementById('cineCap');
-const setCap = txt => { cineCapEl.textContent = txt; cineCapEl.classList.add('show'); };
-const hideCap = () => cineCapEl.classList.remove('show', 'noE');
+let capTimer = null;
+const setCap = txt => {
+if (capTimer){ clearInterval(capTimer); capTimer = null; }
+cineCapEl.textContent = '';
+cineCapEl.classList.add('show');
+let i = 0;
+capTimer = setInterval(()=>{
+i++;
+cineCapEl.textContent = txt.slice(0,i);
+if (i % 2 === 0) tone(620 + Math.random()*160, 0.03, 'square', 0.014); // same tick as the witch
+if (i >= txt.length){ clearInterval(capTimer); capTimer = null; }
+}, 34);
+};
+const hideCap = () => { if (capTimer){ clearInterval(capTimer); capTimer = null; } cineCapEl.classList.remove('show', 'noE'); };
 function startIntroCine(){
 overlay.classList.add('hidden');
 document.body.classList.add('cineMode');
@@ -3720,7 +3726,7 @@ let tutArrow = null;
 const GDLG2 = [
 "Mmmm, the hole eatin' good tonight. Say, lad... why don't we get ourselves another one of them 'helpers'.",
 ];
-const GRIM2_CFG = { name:'GRIMBLE', lines:GDLG2, onDone:()=>{ tutDone = true; tutPhase = 0; openShop(); } };
+const GRIM2_CFG = { name:'GRIMBLE', lines:GDLG2, onDone:()=>{ tutDone = true; tutPhase = 0; openTreeDirect(); } };
 const SHOVEL_CFG = { name:'GRIMBLE', lines:[
 "Ye got yourself quite the logistics runnin'.",
 "I'm sure ye arms must be gettin' tired by now. Say... i should have an ol' snow shovel out back.",
@@ -4594,10 +4600,33 @@ hideCap();
 openDlg(GRIM2_CFG);   // onDone opens the skill tree
 return;
 }
-openShop(true);   // vendor now goes straight to the skill tree
+openTreeDirect();
 }
 }
 let straightToHole = false;
+function openTreeDirect(){
+shopOpen = true; shopPhase = 'hole'; nearVendor = false;
+mouseHeld = false;
+document.body.classList.add('shop');
+document.body.classList.remove('locked');
+prompt.classList.remove('show');
+crosshair.classList.remove('active');
+fadeMusic(0.0001);
+if (document.pointerLockElement) document.exitPointerLock();
+if (!treeIntroZoomDone){
+treeIntroZoomDone = true;
+treeZoom = treeZoomT = 1.6;
+treePanX = treePanXT = 0;
+treePanY = treePanYT = -336;
+} else {
+treeZoom = 1; treePanX = 0; treePanY = 0;
+treeZoomT = 1; treePanXT = 0; treePanYT = 0;
+}
+applyTreeTransform();
+refreshTree();
+shopOverlay.classList.remove('hidden');
+tone(660,0.09,'triangle',0.16); tone(880,0.12,'triangle',0.14,0.07);
+}
 let teleView = false;
 function openShop(straight=false, tele=false){
 shopOpen = true; shopPhase = 'iso'; nearVendor = false;
@@ -4617,7 +4646,6 @@ tone(660,0.09,'triangle',0.16); tone(880,0.12,'triangle',0.14,0.07);
 function closeShopToPlay(){
 shopOpen = false; shopPhase = 'none'; hideTip();
 teleView = false;
-holeBtn.style.display = '';
 holeBtns.classList.add('hidden');
 shopOverlay.classList.add('hidden');
 document.body.classList.remove('shop');
@@ -4646,7 +4674,6 @@ refreshTree();
 shopOverlay.classList.remove('hidden');
 }
 function ascend(){
-if (camMode === 'hole' || camMode === 'toHole'){
 shopOverlay.classList.add('hidden');
 shopOpen = false;
 shopPhase = 'none';
@@ -4654,15 +4681,8 @@ hideTip();
 holeBtns.classList.add('hidden');
 document.body.classList.remove('shop');
 fadeMusic(0.55);
-camMode = 'outHole';
-camT = 0;
-camToPos.copy(player.pos);
-_v1.set(-Math.sin(yaw)*Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw)*Math.cos(pitch));
-camToLook.copy(player.pos).addScaledVector(_v1, 12);
 tone(330,0.3,'sine',0.15,0,140);
-} else {
-closeShopToPlay();
-}
+try { renderer.domElement.requestPointerLock(); } catch(e){}
 }
 /* ============================== SKILL TREE UI ============================== */
 const shopOverlayEl = document.getElementById('shopOverlay');
@@ -4671,7 +4691,6 @@ const treeProg = document.getElementById('treeProg');
 const treeBox = document.getElementById('treeBox');
 const treeSvg = document.getElementById('treeLines');
 const holeBtns = document.getElementById('holeBtns');
-const holeBtn = document.getElementById('holeBtn');
 const nodeEls = {}, lineEls = {};
 for (const n of TREE){
 if (n.from){
@@ -4973,8 +4992,6 @@ refreshTree();
 tone(980,0.1,'triangle',0.18); tone(1310,0.14,'triangle',0.15,0.08);
 }
 document.getElementById('ascendBtn').addEventListener('click', e=>{ e.stopPropagation(); ascend(); });
-document.getElementById('holeBtn').addEventListener('click', e=>{ e.stopPropagation(); enterHole(); });
-document.getElementById('leaveBtn').addEventListener('click', e=>{ e.stopPropagation(); closeShopToPlay(); });
 let treeZoom = 1, treePanX = 0, treePanY = 0, treeDrag = false, tdx = 0, tdy = 0;
 let treeZoomT = 1, treePanXT = 0, treePanYT = 0;
 let treeIntroZoomDone = false;
