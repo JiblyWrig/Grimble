@@ -1060,20 +1060,24 @@ const r = WORLD_R+9+Math.random()*38;
 addTree(Math.cos(a)*r, Math.sin(a)*r, 0.8+Math.random()*1.1);
 }
 const trees = new THREE.InstancedMesh(treeGeo, treeMat, mats.length);
+trees.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 for(let i=0;i<mats.length;i++) trees.setMatrixAt(i, mats[i]);
 trees.frustumCulled = false;
 scene.add(trees);
 window.treesMesh = trees;
 }
 const _swayObj = new THREE.Object3D();
+const _swayEuler = new THREE.Euler();
+let swayFrame = 0;
 function updateTreeSway(time) {
 const mesh = window.treesMesh;
 if (!mesh || !treeSwayData.length) return;
+if (swayFrame ^= 1) return; // half rate — sway is slow, 30hz is indistinguishable
 for (let i = 0; i < treeSwayData.length; i++) {
 const sd = treeSwayData[i];
 mesh.getMatrixAt(i, _swayObj.matrix);
 _swayObj.matrix.decompose(_swayObj.position, _swayObj.quaternion, _swayObj.scale);
-const euler = new THREE.Euler().setFromQuaternion(_swayObj.quaternion, 'YXZ');
+const euler = _swayEuler.setFromQuaternion(_swayObj.quaternion, 'YXZ');
 // DOUBLED sway strength
 const swayX = Math.sin(time * sd.speed + sd.phase) * 0.03;
 const swayZ = Math.cos(time * sd.speed * 0.7 + sd.phase * 1.3) * 0.024;
@@ -1662,7 +1666,7 @@ g.throwT = 0;
 g.throwVel.set(0, 0, 0);
 g.throwAV.set(0, 0, 0);
 setGoblinOpacity(g, 1, true);
-tone(520, 0.6, 'sine', 0.12, 0, -380);
+toneAt(520, 0.6, 'sine', 0.12, 0, -380, g.root.position.x, g.root.position.z, 20);
 }
 } else if (g.root.position.y <= groundY && g.throwVel.y < 0){
 if (cine && cine.type === 'intro' && cine.gob === g && !cine.landed){
@@ -1729,9 +1733,7 @@ return;
 }
 if (g.state === 'recovering'){
 g.throwT += dt;
-const targetQuat = new THREE.Quaternion();
-targetQuat.setFromEuler(new THREE.Euler(0, g.yaw, 0));
-g.root.quaternion.slerp(targetQuat, Math.min(1, 5*dt));
+g.root.quaternion.slerp(_qT2.setFromEuler(_euler.set(0, g.yaw, 0)), Math.min(1, 5*dt));
 g.root.position.y = THREE.MathUtils.lerp(g.root.position.y, 0, Math.min(1, 3*dt));
 /* ease limbs back from the starfish splay so he doesn't walk sideways */
 const ez = Math.min(1, 5*dt);
@@ -1799,6 +1801,8 @@ g.armR.rotation.x = t < 0.2 ? 0.7 - t*5 : -2.75 + Math.min(1,(t-0.2)/0.12)*1.4;
 g.armL.rotation.x = -0.4;
 if (t >= 0.2 && !g.thrown){
 g.thrown = true;
+toneAt(300+Math.random()*80, 0.09, 'sine', 0.045, 0, 140, p.x, p.z, 16);
+noiseAt(0.14, 0.04, 1200, 400, 0, p.x, p.z, 16);
 const fx = Math.sin(g.yaw), fz = Math.cos(g.yaw);
 for(let k=0;k<upgrades.stack;k++){
 const a = Math.random()*Math.PI*2, m = 0.8+Math.random()*1.7;
@@ -1834,7 +1838,7 @@ delay: 0
 });
 burstSparks(p.x, 0.25, p.z);
 starFlash(sx, 0.8, sz, 1.5);
-if (Math.hypot(player.pos.x-p.x, player.pos.z-p.z) < 12) thumpS();
+toneAt(95,0.12,'sine',0.3,0,-40,p.x,p.z,20);
 }
 if (t >= 0.7){ g.state='idle'; g.t = 1+Math.random(); }
 }
@@ -2030,7 +2034,7 @@ witch.pupL.position.set(-0.07 + ex, 0.04 + ey, 0.185);
 witch.pupR.position.set( 0.07 + ex, 0.04 + ey, 0.185);
 if (time > witch.nextCackle){
 witch.nextCackle = time + 4 + Math.random()*5;
-for(let i=0;i<3;i++) tone(700-i*120+Math.random()*80, 0.09, 'square', 0.05, i*0.11, -200);
+for(let i=0;i<3;i++) toneAt(700-i*120+Math.random()*80, 0.09, 'square', 0.05, i*0.11, -200, WITCH_POS.x, WITCH_POS.z, 22);
 }
 } else {
 witch.head.rotation.y = 0;
@@ -3006,23 +3010,41 @@ const cx = STALL_POS.x + 1.9, cz = STALL_POS.z + 0.4;
 for(let i=0;i<3;i++){
 spawnCatHeart(cx+(Math.random()-0.5)*0.35, 1.05+Math.random()*0.2, cz+(Math.random()-0.5)*0.35);
 }
-tone(90+Math.random()*20, 0.25, 'sine', 0.08, 0, 30);      // purr
-tone(520+Math.random()*140, 0.12, 'triangle', 0.04, 0.06, 120); // mrrp
+toneAt(90+Math.random()*20, 0.25, 'sine', 0.08, 0, 30, STALL_POS.x+1.9, STALL_POS.z+0.4, 8);      // purr
+toneAt(520+Math.random()*140, 0.12, 'triangle', 0.04, 0.06, 120, STALL_POS.x+1.9, STALL_POS.z+0.4, 8); // mrrp
 }
 /* ============================== SNOW SHOVEL ============================== */
-let shovelOwned = false, shovelUsing = false, shovelPush = 0, rmbHeld = false;
+let shovelOwned = false, shovelUsing = false, shovelPush = 0, rmbHeld = false, shovelTutDone = false, scrapeT = 0;
 let shovelWorld = null, shovelView = null;
 const SHOVEL_SPOT = new THREE.Vector3(0.9, 0.0, -26.55);
 const shovelBlade = new THREE.Vector3(), shovelBladePrev = new THREE.Vector3(), shovelBladeVel = new THREE.Vector3();
+const shovelBladeTex = canvasTex(128,128,(x,w,h)=>{
+x.fillStyle='#8a5a33'; x.fillRect(0,0,w,h);
+for(let i=1;i<4;i++){ x.fillStyle='rgba(52,30,12,0.55)'; x.fillRect(i*32-1,0,2,h); }
+for(let i=0;i<150;i++){
+x.fillStyle=`rgba(${Math.random()<0.5?'50,30,12':'160,120,75'},${0.05+Math.random()*0.1})`;
+x.fillRect(Math.random()*w, Math.random()*h, 1+Math.random()*2, 4+Math.random()*14);
+}
+const g=x.createLinearGradient(0,h,0,h-42);
+g.addColorStop(0,'rgba(228,234,240,0.4)'); g.addColorStop(1,'rgba(228,234,240,0)');
+x.fillStyle=g; x.fillRect(0,h-42,w,42);
+});
+const shovelHandleTex = canvasTex(64,128,(x,w,h)=>{
+x.fillStyle='#7a5230'; x.fillRect(0,0,w,h);
+for(let i=0;i<70;i++){
+x.fillStyle=`rgba(${Math.random()<0.5?'40,24,10':'150,110,70'},${0.08+Math.random()*0.12})`;
+x.fillRect(Math.random()*w, Math.random()*h, 1+Math.random()*2, 6+Math.random()*22);
+}
+});
 function buildShovelModel(){
 const g = new THREE.Group();
-const wood  = toon(0x8a5a33); addBoil(wood);
-const woodL = toon(0xb08050); addBoil(woodL);
+const wood  = toonMap(shovelHandleTex); addBoil(wood);
+const woodL = toonMap(shovelBladeTex); addBoil(woodL);
 const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.024,0.03,1.62,8), wood);
 handle.position.y = 0.86; g.add(handle);
-const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,0.3,6), wood);
+const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,0.34,6), wood);
 grip.rotation.z = Math.PI/2; grip.position.y = 1.68; g.add(grip);
-const blade = new THREE.Mesh(new THREE.BoxGeometry(0.4,0.5,0.035), woodL);
+const blade = new THREE.Mesh(new THREE.BoxGeometry(0.8,0.5,0.035), woodL);
 blade.position.set(0, 0.22, 0.045); blade.rotation.x = 0.12; g.add(blade);
 g.userData.blade = blade;
 addOutlineShells(g, 1.06, true);
@@ -3041,35 +3063,44 @@ scene.remove(shovelWorld);
 shovelWorld = null;
 shovelOwned = true;
 shovelView = buildShovelModel();
-shovelView.position.set(0.44, -0.46, -0.74);
-shovelView.rotation.set(1.12, 0, -0.5);
+shovelView.position.set(0, -0.81, -1.42);
+shovelView.rotation.set(2.05, 0, 0);
 if (!camera.parent) scene.add(camera);
 camera.add(shovelView);
 camera.updateMatrixWorld(true);
 shovelView.userData.blade.getWorldPosition(shovelBlade);
+shovelBlade.y = Math.min(shovelBlade.y, 0.5);
 shovelBladePrev.copy(shovelBlade);
 tone(320,0.12,'sine',0.12,0,60); tone(520,0.14,'triangle',0.1,0.06);
-toast('Snow shovel equipped — hold RIGHT CLICK to push');
+showTutCap('Hold RIGHT CLICK to push coins into the hole');
 }
 function updateShovel(dt){
 const want = rmbHeld && shovelOwned && locked && camMode==='play' && !shopOpen && !dlgOpen && !cine;
 if (want && !shovelUsing) noiseS(0.22,0.07,800,260);
+if (want && !shovelTutDone){ shovelTutDone = true; hideCap(); }
 shovelUsing = want;
 shovelPush += ((want?1:0)-shovelPush)*Math.min(1,10*dt);
 if (!shovelView) return;
 const spd = Math.hypot(player.vel.x, player.vel.z);
 const bob = Math.sin(bobPhase*2)*0.014*Math.min(1,spd/4);
-shovelView.position.set(0.44, -0.46+bob-0.10*shovelPush, -0.74-0.55*shovelPush);
-shovelView.rotation.set(1.12+0.22*shovelPush, 0, -0.5+0.12*shovelPush);
+shovelView.position.set(0, -0.81+bob*0.5-0.06*shovelPush, -1.42-0.55*shovelPush);
+shovelView.rotation.set(2.05+0.12*shovelPush, 0, 0);
 camera.updateMatrixWorld(true);
 shovelBladePrev.copy(shovelBlade);
 shovelView.userData.blade.getWorldPosition(shovelBlade);
+shovelBlade.y = Math.min(shovelBlade.y, 0.5);
 shovelBladeVel.copy(shovelBlade).sub(shovelBladePrev).divideScalar(Math.max(dt,0.0001));
 if (shovelBladeVel.lengthSq() > 144) shovelBladeVel.setLength(12);
+scrapeT += dt;
+if (shovelUsing && scrapeT > 0.12){
+scrapeT = 0;
+dirtBurst.burst(shovelBlade.x, 0.06, shovelBlade.z, 0.7, 0.9);
+noiseS(0.09, 0.03, 700, 250);
+}
 }
 function shovelPushCoins(dt){
 if (!shovelView || shovelPush < 0.25) return;
-const R = 0.62, R2 = R*R;
+const R = 0.75, R2 = R*R;
 for(let li=0; li<live.length; li++){
 const i = live[li], s = ST[i];
 if (s!==1 && s!==2) continue;
@@ -3156,7 +3187,7 @@ camera.updateProjectionMatrix();
 if (camT >= 1){
 camMode = (camMode === 'toIso') ? 'iso' : 'play';
 if (camMode === 'iso' && shopPhase === 'iso'){
-if (straightToHole){ straightToHole = false; startToHole(); }
+if (straightToHole){ straightToHole = false; enterTree(); }
 else {
 holeBtn.style.display = teleView ? 'none' : '';
 holeBtns.classList.remove('hidden');
@@ -3189,19 +3220,7 @@ camera.up.copy(_up);
 camera.lookAt(_targ);
 if (camT >= 1){
 camMode = 'hole';
-shopPhase = 'hole';
-if (!treeIntroZoomDone){
-treeIntroZoomDone = true;
-treeZoom = treeZoomT = 1.6;
-treePanX = treePanXT = 0;
-treePanY = treePanYT = -336;
-} else {
-treeZoom = 1; treePanX = 0; treePanY = 0;
-treeZoomT = 1; treePanXT = 0; treePanYT = 0;
-}
-applyTreeTransform();
-refreshTree();
-shopOverlay.classList.remove('hidden');
+enterTree();
 }
 } else if (camMode === 'hole'){
 camera.up.set(0,0,-1);
@@ -3665,7 +3684,7 @@ camera.position.lerpVectors(_cA.set(6.0,1.8,4.9), _cB.set(5.1,1.4,4.0), sm(Math.
 camera.lookAt(P[i3], P[i3+1]+0.1, P[i3+2]);
 if (ST[c.coinIdx] === 2 && !c.clink){
 c.clink = true; c.clinkT = t2;
-tone(1244,0.07,'triangle',0.12);
+toneAt(1244,0.07,'triangle',0.12,0,0,P[i3],P[i3+2],24);
 burstSparks(P[i3], P[i3+1]+0.1, P[i3+2]);
 }
 if ((c.clink && t2 > c.clinkT + 0.9) || t2 > 6){
@@ -4070,8 +4089,8 @@ for (const g of goblins) {
 if (g.state === 'held' || g.state === 'thrown' || g.state === 'recovering' || !g.root.visible) continue;
 const d = Math.hypot(g.root.position.x - player.pos.x, g.root.position.z - player.pos.z);
 if (d < 3.5) {
-const toGob = new THREE.Vector3(g.root.position.x - player.pos.x, 0, g.root.position.z - player.pos.z).normalize();
-const lookDir = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+const toGob = _v1.set(g.root.position.x - player.pos.x, 0, g.root.position.z - player.pos.z).normalize();
+const lookDir = _dir.set(-Math.sin(yaw), 0, -Math.cos(yaw));
 if (toGob.dot(lookDir) > 0.55) {
 nearGoblin = g;
 break;
@@ -4182,7 +4201,7 @@ function updateHeldGoblin() {
 if (!heldGoblin) return;
 camera.getWorldDirection(_camD);
 _camR.crossVectors(_camD, UP).normalize();
-const holdPos = new THREE.Vector3()
+const holdPos = _holdT
 .copy(camera.position)
 .addScaledVector(_camD, 1.4)
 .addScaledVector(_camR, 0.0);
@@ -4255,7 +4274,23 @@ function enterHole(){
 tone(220,0.4,'sine',0.2,0,-120);
 startToHole();
 }
+function enterTree(){
+shopPhase = 'hole';
+if (!treeIntroZoomDone){
+treeIntroZoomDone = true;
+treeZoom = treeZoomT = 1.6;
+treePanX = treePanXT = 0;
+treePanY = treePanYT = -336;
+} else {
+treeZoom = 1; treePanX = 0; treePanY = 0;
+treeZoomT = 1; treePanXT = 0; treePanYT = 0;
+}
+applyTreeTransform();
+refreshTree();
+shopOverlay.classList.remove('hidden');
+}
 function ascend(){
+if (camMode === 'hole' || camMode === 'toHole'){
 shopOverlay.classList.add('hidden');
 shopOpen = false;
 shopPhase = 'none';
@@ -4269,6 +4304,9 @@ camToPos.copy(player.pos);
 _v1.set(-Math.sin(yaw)*Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw)*Math.cos(pitch));
 camToLook.copy(player.pos).addScaledVector(_v1, 12);
 tone(330,0.3,'sine',0.15,0,140);
+} else {
+closeShopToPlay();
+}
 }
 /* ============================== SKILL TREE UI ============================== */
 const shopOverlayEl = document.getElementById('shopOverlay');
@@ -4310,6 +4348,7 @@ el.addEventListener('click', ev=>{ ev.stopPropagation(); buy(n.key); });
 el.addEventListener('mouseenter', ()=>{
 if (lineEls[n.key]) lineEls[n.key].classList.add('hov');
 showTip(n.key, el.getBoundingClientRect());
+if (shopPhase === 'hole') tone(1400+Math.random()*400, 0.035, 'triangle', 0.035);
 });
 el.addEventListener('mouseleave', ()=>{
 if (lineEls[n.key]) lineEls[n.key].classList.remove('hov');
@@ -4681,7 +4720,11 @@ function initAudio(){
 if (AC) return;
 try {
 AC = new (window.AudioContext||window.webkitAudioContext)();
-master = AC.createGain(); master.gain.value = 1.0; master.connect(AC.destination);
+master = AC.createGain(); master.gain.value = 1.0;
+const comp = AC.createDynamicsCompressor();
+comp.threshold.value = -14; comp.knee.value = 18; comp.ratio.value = 5;
+comp.attack.value = 0.004; comp.release.value = 0.24;
+master.connect(comp); comp.connect(AC.destination);
 noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate);
 const d = noiseBuf.getChannelData(0);
 for(let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
@@ -4737,6 +4780,38 @@ const f=AC.createBiquadFilter(); f.type='bandpass'; f.Q.value=1;
 f.frequency.setValueAtTime(f0,t); f.frequency.exponentialRampToValueAtTime(f1,t+dur);
 const g=AC.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
 n.connect(f).connect(g).connect(master); n.start(t); n.stop(t+dur);
+}
+function panInfo(x,z,maxR){
+camera.getWorldDirection(_camD);
+const dx=x-camera.position.x, dz=z-camera.position.z;
+const dist=Math.hypot(dx,dz);
+_camR.crossVectors(_camD,UP).normalize();
+const pan=dist>0.001?THREE.MathUtils.clamp((dx*_camR.x+dz*_camR.z)/dist,-1,1):0;
+const fall=Math.max(0,1-dist/maxR);
+return {pan, k:fall*fall};
+}
+function toneAt(f,dur,type='sine',vol=0.2,delay=0,slide=0,x=0,z=0,maxR=18){
+if(!AC||!settings.sfx) return;
+const pg=panInfo(x,z,maxR); if(pg.k<=0.01) return;
+const t=AC.currentTime+delay, o=AC.createOscillator(), g=AC.createGain(), p=AC.createStereoPanner();
+o.type=type; o.frequency.setValueAtTime(f,t);
+if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(40,f+slide),t+dur);
+g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(vol*pg.k,t+0.012);
+g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+p.pan.value=pg.pan;
+o.connect(g); g.connect(p); p.connect(master);
+o.start(t); o.stop(t+dur+0.05);
+}
+function noiseAt(dur,vol,f0,f1,delay=0,x=0,z=0,maxR=18){
+if(!AC||!settings.sfx) return;
+const pg=panInfo(x,z,maxR); if(pg.k<=0.01) return;
+const t=AC.currentTime+delay, n=AC.createBufferSource(); n.buffer=noiseBuf;
+const f=AC.createBiquadFilter(); f.type='bandpass'; f.Q.value=1;
+f.frequency.setValueAtTime(f0,t); f.frequency.exponentialRampToValueAtTime(f1,t+dur);
+const g=AC.createGain(); g.gain.setValueAtTime(vol*pg.k,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+const p=AC.createStereoPanner(); p.pan.value=pg.pan;
+n.connect(f); f.connect(g); g.connect(p); p.connect(master);
+n.start(t); n.stop(t+dur);
 }
 const ching  = () => { tone(1244,0.09,'triangle',0.12); tone(1864,0.22,'sine',0.1,0.05); };
 const earnSound = () => { [880,1174,1568,2093].forEach((f,i)=>tone(f,0.18,'triangle',0.1,i*0.07)); noiseS(0.5,0.035,4000,8000,0.12); };
@@ -5570,7 +5645,6 @@ addBoil(m);
 }
 }
 });
-addBoil(outlineMat, 0.013);
 updateRainDisplay();
 animate();
 </script>
