@@ -2879,7 +2879,7 @@ AV[i3]=0; AV[i3+1]=0; AV[i3+2]=0;
 }
 }
 function updateCoins(dt, time){
-const frozen = shopOpen || (camMode !== 'play' && camMode !== 'throwCine');
+const frozen = shopOpen || camMode !== 'play';   // now only freezes the HELD-coin spring
 /* held coin spring */
 if (held >= 0 && !frozen){
 camera.getWorldDirection(_camD);
@@ -2914,13 +2914,11 @@ _qTmp.setFromEuler(_euler.set(SPINT[i]*0.8, SPINT[i]*1.3, 0));
 Q[i].slerp(_qTmp, Math.min(1,6*dt));
 }
 }
-/* fixed-step rigid body simulation */
-if (!frozen){
+/* fixed-step rigid body simulation — runs in telescope/iso view too */
 physAccum += dt;
 let n=0;
 while (physAccum >= PHYS_DT && n<3){ physAccum -= PHYS_DT; stepCoins(PHYS_DT); n++; }
 if (n===3) physAccum = 0;
-} else physAccum = 0;
 /* sleeping coins settle flat — centre follows the shrinking support height */
 for(let li=0; li<live.length; li++){
   const i=live[li];
