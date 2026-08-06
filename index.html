@@ -647,8 +647,57 @@ scene.add(rain);
 const gradTex = new THREE.DataTexture(new Uint8Array([70, 160, 255]), 3, 1, THREE.RedFormat);
 gradTex.minFilter = gradTex.magFilter = THREE.NearestFilter;
 gradTex.needsUpdate = true;
+/* ---------- hand-drawn "boil": everything subtly wiggles like cranked animation ---------- */
+const boilUniforms = { uBoil:{ value:0 } };
+function addBoil(mat, amp=0.0026){
+mat.onBeforeCompile = (shader)=>{
+shader.uniforms.uBoil = boilUniforms.uBoil;
+shader.uniforms.uBoilAmp = { value: amp };
+shader.vertexShader = 'uniform float uBoil; uniform float uBoilAmp;\n' + shader.vertexShader.replace(
+'#include <begin_vertex>',
+`#include <begin_vertex>
+{
+vec3 bSeed = position * 2.3;
+#ifdef USE_INSTANCING
+bSeed += instanceMatrix[3].xyz * 1.31;
+#endif
+float bt = uBoil;
+vec3 jig = vec3(
+sin(bSeed.y*5.1 + bt*17.0) + sin(bSeed.z*3.7 + bt*13.0),
+sin(bSeed.z*4.3 + bt*19.0) + sin(bSeed.x*3.1 + bt*11.0),
+sin(bSeed.x*4.9 + bt*15.0) + sin(bSeed.y*3.3 + bt*23.0));
+transformed += jig * uBoilAmp;
+}`
+);
+};
+mat.customProgramCacheKey = () => 'boil';
+}
 function toon(color, opts={}){ return new THREE.MeshToonMaterial(Object.assign({ color, gradientMap:gradTex }, opts)); }
 function toonMap(map, opts={}){ return new THREE.MeshToonMaterial(Object.assign({ map, gradientMap:gradTex }, opts)); }
+/* ---------- inverted-hull outlines (storybook ink, warm dark brown) ---------- */
+const outlineMat = new THREE.MeshBasicMaterial({ color:0x2a1a10, side:THREE.BackSide });
+function addOutlineShells(root, scale, ownMat){
+const mat = ownMat ? outlineMat.clone() : outlineMat;
+const targets = [];
+root.traverse(o=>{ if (o.isMesh && o.material && o.material.type !== 'MeshBasicMaterial') targets.push(o); });
+for (const o of targets){
+const shell = new THREE.Mesh(o.geometry, mat);
+shell.scale.setScalar(scale);
+shell.userData.isOutline = true;
+o.add(shell);
+}
+return mat;
+}
+function addMergedShell(mesh, thick){
+const g = mesh.geometry.clone();
+const p = g.attributes.position, n = g.attributes.normal;
+for(let i=0;i<p.count;i++){
+p.setXYZ(i, p.getX(i)+n.getX(i)*thick, p.getY(i)+n.getY(i)*thick, p.getZ(i)+n.getZ(i)*thick);
+}
+const shell = new THREE.Mesh(g, outlineMat);
+shell.userData.isOutline = true;
+mesh.add(shell);
+}
 /* ============================== TEXTURES ============================== */
 function canvasTex(w, h, draw, srgb=true){
 const c = document.createElement('canvas'); c.width=w; c.height=h;
@@ -817,7 +866,9 @@ holePath.absarc(0,0,HOLE_R,0,Math.PI*2,true);
 shape.holes.push(holePath);
 const gGeo = new THREE.ShapeGeometry(shape, 96);
 gGeo.rotateX(-Math.PI/2);
-scene.add(new THREE.Mesh(gGeo, new THREE.MeshLambertMaterial({ map:groundTex })));
+const groundMesh = new THREE.Mesh(gGeo, new THREE.MeshLambertMaterial({ map:groundTex }));
+groundMesh.userData.noBoil = true;
+scene.add(groundMesh);
 const wall = new THREE.Mesh(
 new THREE.CylinderGeometry(HOLE_R, HOLE_R*0.9, HOLE_D, 48, 4, true),
 new THREE.MeshBasicMaterial({ map:wallTex, side:THREE.BackSide })
@@ -1275,6 +1326,61 @@ const goldBurst = makeBurst(0xffd75e);
 const violetBurst = makeBurst(0xb470ef);
 const dirtBurst = makeBurst(0x8a6a44, false);
 function burstSparks(x,y,z){ goldBurst.burst(x,y,z); }
+/* ---------- cartoon star-flash billboards (2–3 frame impact stars) ---------- */
+const starFlashTex = [];
+for(let f=0; f<3; f++){
+starFlashTex.push(canvasTex(128,128,(x)=>{
+x.translate(64,64);
+x.rotate(f*0.4);
+const outer = 56 - f*10;
+const inner = 14 + f*7;
+x.fillStyle = f===0 ? '#ffffff' : '#fff2a8';
+x.strokeStyle = 'rgba(242,193,78,0.9)';
+x.lineWidth = 5;
+x.beginPath();
+for(let i=0;i<8;i++){
+const a = i/8*Math.PI*2;
+x.lineTo(Math.cos(a)*outer, Math.sin(a)*outer);
+x.lineTo(Math.cos(a+Math.PI/8)*inner, Math.sin(a+Math.PI/8)*inner);
+}
+x.closePath();
+x.fill();
+x.stroke();
+}, false));
+}
+const starFlashes = [];
+function starFlash(x,y,z,scale=1.4){
+let s = null;
+for (const f of starFlashes) if (!f.active){ s = f; break; }
+if (!s){
+const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map:starFlashTex[0], transparent:true, depthWrite:false }));
+sp.visible = false;
+scene.add(sp);
+s = { sp, active:false, frame:0, t:0, base:1 };
+starFlashes.push(s);
+}
+s.active = true; s.frame = 0; s.t = 0; s.base = scale;
+s.sp.material.rotation = Math.random()*Math.PI*2;
+s.sp.material.map = starFlashTex[0];
+s.sp.material.opacity = 1;
+s.sp.position.set(x,y,z);
+s.sp.scale.setScalar(scale);
+s.sp.visible = true;
+}
+function updateStarFlashes(dt){
+for (const s of starFlashes){
+if (!s.active) continue;
+s.t += dt;
+const f = Math.floor(s.t/0.05); // ~3 held frames per star shape
+if (f !== s.frame){
+s.frame = f;
+if (f < 3) s.sp.material.map = starFlashTex[f];
+}
+if (f >= 3){ s.active = false; s.sp.visible = false; continue; }
+s.sp.scale.setScalar(s.base*(1 + f*0.35));
+s.sp.material.opacity = 1 - f*0.22;
+}
+}
 /* ---------- smear trails: stretched billboards behind fast movers ---------- */
 const smearTex = canvasTex(64,64,(x)=>{
 const g = x.createRadialGradient(32,32,2,32,32,30);
@@ -1343,6 +1449,7 @@ new THREE.MeshLambertMaterial({ map:groundTex })
 );
 introPlug.rotation.x = -Math.PI/2;
 introPlug.position.y = 0.02;
+introPlug.userData.noBoil = true;
 scene.add(introPlug);
 /* ============================== GOBLINS + CHIEFTAINS ============================== */
 const goblins = [];
@@ -1417,6 +1524,7 @@ color: chief ? 0xff9a8a : bub ? 0xd7b6ff : 0xaef0dd,
 transparent:true, opacity:0, depthWrite:false, blending:THREE.AdditiveBlending }));
 g.smear.visible = false;
 scene.add(g.smear);
+addOutlineShells(g.root, 1.06, true);
 pickTargetFor(g);
 goblins.push(g);
 return g;
@@ -1685,13 +1793,15 @@ g.legL.rotation.x = 0; g.legR.rotation.x = 0;
 if (t >= 0.35 && !g.thrown){
 g.thrown = true;
 g.slamClock = 0;
+const sx = p.x+(Math.random()-0.5)*0.7, sz = p.z+(Math.random()-0.5)*0.7;
 g.coinQueue.push({
-pos: new THREE.Vector3(p.x+(Math.random()-0.5)*0.7, 0.6, p.z+(Math.random()-0.5)*0.7),
+pos: new THREE.Vector3(sx, 0.6, sz),
 vel: new THREE.Vector3((Math.random()-0.5)*2.5, 8+Math.random()*2, (Math.random()-0.5)*2.5),
 silver: true,
 delay: 0
 });
 burstSparks(p.x, 0.25, p.z);
+starFlash(sx, 0.8, sz, 1.5);
 if (Math.hypot(player.pos.x-p.x, player.pos.z-p.z) < 12) thumpS();
 }
 if (t >= 0.7){ g.state='idle'; g.t = 1+Math.random(); }
@@ -1851,6 +1961,7 @@ witch.shadow.position.set(WITCH_POS.x,0.02,WITCH_POS.z);
 witch.shadow.renderOrder = 2;
 witch.shadow.visible = false;
 scene.add(witch.shadow);
+addOutlineShells(witch.root, 1.05);
 }
 function updateWitch(dt, time){
 if (!witchVisible) return;
@@ -2135,6 +2246,7 @@ const wm = new THREE.Mesh(mergeGeometries(woodParts, false),
 new THREE.MeshLambertMaterial({ map: woodTex, side: THREE.DoubleSide }));
 wm.position.copy(STALL_POS);
 scene.add(wm);
+addMergedShell(wm, 0.02);
 }
 if (clothParts.length){
 const cm = new THREE.Mesh(mergeGeometries(clothParts, false),
@@ -2238,6 +2350,12 @@ vendor.shadow.rotation.x = -Math.PI/2;
 vendor.shadow.position.set(vendor.root.position.x, 0.02, vendor.root.position.z);
 vendor.shadow.renderOrder = 2;
 scene.add(vendor.shadow);
+/* inverted-hull outlines: Grimble, stall props (cat included), table, sign */
+addOutlineShells(vendor.root, 1.05);
+addMergedShell(stallMesh, 0.02);
+addMergedShell(tableWalls, 0.02);
+addMergedShell(tableTop, 0.02);
+addMergedShell(sign, 0.015);
 }
 /* ============================== CHALKBOARD (affordable upgrades) ============================== */
 const chalkCanvas = document.createElement('canvas');
@@ -2308,6 +2426,7 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ chal
 const chalkGroup = new THREE.Group();
 const chalkFrame = new THREE.Mesh(new THREE.BoxGeometry(1.06,1.3,0.06), new THREE.MeshLambertMaterial({ map:woodTex }));
 chalkFrame.position.set(0,0.8,-0.035);
+chalkFrame.userData.noBoil = true;
 chalkGroup.add(chalkFrame);
 const chalkFace = new THREE.Mesh(new THREE.PlaneGeometry(0.94,1.18), new THREE.MeshBasicMaterial({ map:chalkTex }));
 chalkFace.position.set(0,0.8,0);
@@ -2316,6 +2435,7 @@ for(const s of [-1,1]){
 const leg = new THREE.Mesh(new THREE.BoxGeometry(0.05,1.3,0.05), new THREE.MeshLambertMaterial({ map:woodTex }));
 leg.position.set(s*0.42,0.62,-0.24);
 leg.rotation.x = 0.38;
+leg.userData.noBoil = true;
 chalkGroup.add(leg);
 }
 chalkGroup.position.set(STALL_POS.x-2.45, 0, STALL_POS.z+1.6);
@@ -4768,7 +4888,7 @@ const menuMats = [];
 const menuNdc = new THREE.Vector2(0, 0);
 const _clickNdc = new THREE.Vector2();
 const menuRay = new THREE.Raycaster();
-function menuMat(m){ m.transparent = true; menuMats.push(m); return m; }
+function menuMat(m){ m.transparent = true; addBoil(m, 0.002); menuMats.push(m); return m; }
 
 function buildMenu(font){
 // ---- "GRIMBLE" as one mesh per letter so each letter can jiggle ----
@@ -5087,6 +5207,7 @@ updateButterflies(dt, elapsed);
 goldBurst.update(dt);
 violetBurst.update(dt);
 dirtBurst.update(dt);
+updateStarFlashes(dt);
 updateFloatTexts(dt);
 updateCatHearts(dt);
 updateTutorial();
@@ -5128,6 +5249,7 @@ toast('The witch awaits at the far end…');
 }
 grassMat.uniforms.uTime.value = elapsed;
 holeDustMat.uniforms.uTime.value = elapsed;
+boilUniforms.uBoil.value = Math.floor(elapsed * 8); // 8fps cranked boil
 updateListener();
 updateTreeCam(dt);
 updateTreeDust(dt);
@@ -5196,6 +5318,19 @@ if (menuReady) updateMenu(dt, elapsed);
 updateFlare();
 renderer.render(scene, camera);
 }
+/* boil every static toon/lambert surface that wasn't created through the factories */
+scene.traverse(o=>{
+if (o.userData && o.userData.noBoil) return;
+if (o.material){
+const mats = Array.isArray(o.material) ? o.material : [o.material];
+for (const m of mats){
+if ((m.isMeshToonMaterial || m.isMeshLambertMaterial) && !m.userData.boiled){
+m.userData.boiled = true;
+addBoil(m);
+}
+}
+}
+});
 updateRainDisplay();
 animate();
 </script>
