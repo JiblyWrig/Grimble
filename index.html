@@ -2791,6 +2791,17 @@ const vn=V[i3]*nx+V[i3+2]*nz;
 if (vn>0){ V[i3]-=vn*1.6; V[i3+2]-=vn*1.6; }
 }
 CONTACT[i]=0;
+/* ---- over the pit? no floor — fall in and be earned ---- */
+const dH=Math.hypot(P[i3],P[i3+2]);
+if (dH < HOLE_R-0.02){
+  if (P[i3+1] < 0 && dH > HOLE_R-0.14){          // scrape down the inner wall
+    const s=(HOLE_R-0.14)/dH; P[i3]*=s; P[i3+2]*=s;
+    const nx=P[i3]/dH, nz=P[i3+2]/dH;
+    const vn=V[i3]*nx+V[i3+2]*nz;
+    if (vn>0){ V[i3]-=vn*1.3*nx; V[i3+2]-=vn*1.3*nz; }
+  }
+  if (P[i3+1] < EARN_Y){ removeCoin(i,true); continue; }
+} else {
 /* ---- ground contact at the true lowest point (no more clipping) ---- */
 const q=Q[i], qx=q.x, qy=q.y, qz=q.z, qw=q.w;
 const ax=2*(qx*qy-qz*qw), ay=1-2*(qx*qx+qz*qz), az=2*(qx*qw+qy*qz);
@@ -2837,6 +2848,7 @@ if (P[i3+1] < sup+0.001){
   }
 }
 }
+}
 /* coin–coin contacts, 2 solver iterations for stable piles */
 buildCoinHash();
 for(let iter=0; iter<2; iter++){
@@ -2867,7 +2879,7 @@ AV[i3]=0; AV[i3+1]=0; AV[i3+2]=0;
 }
 }
 function updateCoins(dt, time){
-const frozen = shopOpen || camMode !== 'play';
+const frozen = shopOpen || (camMode !== 'play' && camMode !== 'throwCine');
 /* held coin spring */
 if (held >= 0 && !frozen){
 camera.getWorldDirection(_camD);
