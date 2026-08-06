@@ -5287,13 +5287,6 @@ const f = 260 + Math.random()*180;
 noiseS(0.07, 0.07, f, f*2.1);
 tone(85+Math.random()*25, 0.05, 'sine', 0.035);
 };
-function loadAudio(name, url){
-return fetch(url)
-.then(r=>{ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
-.then(b=>new Promise((res,rej)=>AC.decodeAudioData(b,res,rej)))
-.then(buf=>{ customBuf[name]=buf; })
-.catch(e=>console.warn('custom audio not loaded:', url, e));
-}
 function startCustomAmbience(vol=0.8){
 const buf = customBuf.ambience;
 if (!buf || customAmb || !AC) return;
