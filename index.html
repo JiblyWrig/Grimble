@@ -66,7 +66,7 @@ font-family:'MedievalSharp',cursive; font-size:15px; color:#ffe58a; text-shadow:
 .abil.ready svg { color:#f5cf5f; }
 @keyframes abilPulse { 50% { box-shadow:0 0 18px rgba(245,207,95,.55); } }
 /* Rain countdown UI */
-#rainCard { position:absolute; top:18px; left:18px; padding:8px 16px; display:flex; align-items:center; gap:10px;
+#rainCard { position:absolute; top:18px; left:18px; padding:8px 16px; display:none; align-items:center; gap:10px;
 background:linear-gradient(160deg, rgba(30,30,30,.92), rgba(18,18,18,.95));
 border:1px solid rgba(140,140,140,.4); }
 #rainIcon { width:20px; height:20px; }
@@ -765,6 +765,7 @@ let grassMat = null;
 let grassGeoRef = null, grassInfo0 = null, flowerGeoRef = null;
 let holeRim = null;
 let plugGrass = null;
+let holeEdge = null;
 /* Rain every 5 minutes: 300s clear, 10s fade in, 120s rain, 10s fade out */
 const RAIN_CYCLE = 390;
 const RAIN_START = 300;
@@ -1113,21 +1114,21 @@ groundTex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
 /* Hole wall: midway between original and dark version */
 const wallTex = canvasTex(256,512,(x,w,h)=>{
 const g=x.createLinearGradient(0,0,0,h);
-g.addColorStop(0,'#6a4f30'); g.addColorStop(0.3,'#402a17'); g.addColorStop(0.7,'#1a1008'); g.addColorStop(1,'#050302');
+g.addColorStop(0,'#5a4329'); g.addColorStop(0.3,'#362414'); g.addColorStop(0.7,'#160e07'); g.addColorStop(1,'#040302');
 x.fillStyle=g; x.fillRect(0,0,w,h);
 /* soil strata */
 for(let i=0;i<26;i++){
 const y=Math.random()*h;
-x.fillStyle=`rgba(${Math.random()<0.5?'0,0,0':'125,95,60'},${0.05+Math.random()*0.10})`;
+x.fillStyle=`rgba(${Math.random()<0.5?'0,0,0':'106,81,51'},${0.05+Math.random()*0.10})`;
 x.fillRect(0,y,w,1+Math.random()*3);
 }
 /* embedded stones with highlights */
 for(let i=0;i<60;i++){
 const sx=Math.random()*w, sy=Math.random()*h*0.85, r=1.5+Math.random()*5;
 const dark=Math.random()<0.5;
-x.fillStyle=dark?`rgba(0,0,0,${0.25+Math.random()*0.3})`:`rgba(140,110,75,${0.15+Math.random()*0.2})`;
+x.fillStyle=dark?`rgba(0,0,0,${0.25+Math.random()*0.3})`:`rgba(119,94,64,${0.15+Math.random()*0.2})`;
 x.beginPath(); x.ellipse(sx,sy,r,r*0.7,Math.random()*3,0,7); x.fill();
-if(!dark){ x.fillStyle='rgba(255,235,200,0.10)'; x.beginPath(); x.ellipse(sx-r*0.25,sy-r*0.3,r*0.45,r*0.3,0,0,7); x.fill(); }
+if(!dark){ x.fillStyle='rgba(255,235,200,0.07)'; x.beginPath(); x.ellipse(sx-r*0.25,sy-r*0.3,r*0.45,r*0.3,0,0,7); x.fill(); }
 }
 /* vertical cracks */
 for(let i=0;i<14;i++){
@@ -1141,7 +1142,7 @@ x.stroke();
 /* roots dangling near the rim */
 for(let i=0;i<10;i++){
 let rx=Math.random()*w, ry=Math.random()*h*0.22;
-x.strokeStyle=`rgba(90,60,30,${0.35+Math.random()*0.25})`;
+x.strokeStyle=`rgba(76,51,26,${0.35+Math.random()*0.25})`;
 x.lineWidth=1+Math.random()*2;
 x.beginPath(); x.moveTo(rx,ry);
 for(let s=0;s<5;s++){ rx+=(Math.random()-0.5)*14; ry+=4+Math.random()*10; x.lineTo(rx,ry); }
@@ -1149,7 +1150,7 @@ x.stroke();
 }
 /* fine grain */
 for(let i=0;i<900;i++){
-x.fillStyle=`rgba(${Math.random()<0.5?'0,0,0':'150,115,75'},${0.04+Math.random()*0.09})`;
+x.fillStyle=`rgba(${Math.random()<0.5?'0,0,0':'128,98,64'},${0.04+Math.random()*0.09})`;
 x.fillRect(Math.random()*w, Math.random()*h, 1+Math.random()*2, 1+Math.random()*2);
 }
 /* depth blotches */
@@ -1330,6 +1331,12 @@ holeRim = new THREE.Mesh(new THREE.RingGeometry(R-0.02, R+0.9, 64),
 new THREE.MeshBasicMaterial({ map:rimTex, transparent:true, depthWrite:false, opacity:0 }));
 holeRim.rotation.x = -Math.PI/2; holeRim.position.y = 0.015; holeRim.renderOrder = 1;
 scene.add(holeRim);
+/* black ink line ringing the hole edge */
+if (holeEdge){ scene.remove(holeEdge); holeEdge.geometry.dispose(); holeEdge.material.dispose(); }
+holeEdge = new THREE.Mesh(new THREE.TorusGeometry(R+0.02, 0.0175, 6, 72),
+new THREE.MeshBasicMaterial({ color:0x000000 }));
+holeEdge.rotation.x = Math.PI/2; holeEdge.position.y = 0.02; holeEdge.renderOrder = 1;
+scene.add(holeEdge);
 /* collapse grass/flowers that would float over the widened maw (restore if it shrinks) */
 const RR = holeRS() + 0.25, RR2 = RR*RR;
 if (grassGeoRef && grassInfo0){
@@ -1994,7 +2001,7 @@ function buildGoblinModel(opts={}){
   body.scale.set(1,1.15,0.9); body.position.y=0.56; inner.add(body);
 const tier=opts.tier||1;
 const head=new THREE.Group(); head.position.y=0.97; inner.add(head);
-head.scale.setScalar(tier>=4 ? 2.4 : (bub ? 1.44 : 1.2)); // Aphrodite's head is double the others (eyes + ears scale with it)
+head.scale.setScalar(tier>=4 ? 1.68 : (bub ? 1.44 : 1.2)); // Aphrodite's head, reduced by 30%
 head.add(new THREE.Mesh(new THREE.SphereGeometry(0.21,12,10), skin));
 const nose=new THREE.Mesh(new THREE.SphereGeometry(0.05,8,6), skin);
 nose.position.set(0,-0.03,0.2); nose.visible=!bub; head.add(nose);
@@ -2346,6 +2353,21 @@ if (Math.hypot(g.target.x-p.x, g.target.z-p.z) < 0.6){ g.state='idle'; g.t = 0.6
 else if (g.state === 'throw'){
 g.throwT += dt;
 const t = g.throwT;
+/* keep strolling while flinging — no more stopping mid-walk to throw */
+_dir.subVectors(g.target, p); _dir.y=0;
+const dl=_dir.length();
+if (dl>0.001){
+_dir.divideScalar(dl);
+_want.copy(_dir).multiplyScalar((g.tier>=4 ? GOB_SPEED*0.35 : (g.tier===3 ? GOB_SPEED*0.5 : (g.chief ? GOB_SPEED*0.55 : GOB_SPEED)))*0.6);
+g.vel.lerp(_want, 1-Math.exp(-6*dt));
+p.addScaledVector(g.vel, dt);
+if (g.vel.lengthSq() > 0.1) g.yaw = lerpAngle(g.yaw, Math.atan2(g.vel.x, g.vel.z), Math.min(1,10*dt));
+g.gait += g.vel.length()*dt*3.0;
+const st=Math.sin(g.gait);
+g.legL.rotation.x = st*0.9; g.legR.rotation.x = -st*0.9;
+g.inner.position.y = Math.abs(Math.cos(g.gait))*0.05;
+if (Math.hypot(g.target.x-p.x, g.target.z-p.z) < 0.6) pickTargetFor(g);
+}
 g.armR.rotation.x = t < 0.2 ? 0.7 - t*5 : -2.75 + Math.min(1,(t-0.2)/0.12)*1.4;
 g.armL.rotation.x = -0.4;
 if (t >= 0.2 && !g.thrown){
@@ -3812,7 +3834,6 @@ coinCard.classList.add('reveal');
 }
 setCoinDisplay(earned);
 coinNum.classList.remove('bump'); void coinNum.offsetWidth; coinNum.classList.add('bump');
-if (!suckOn) holePopup('+' + gain);
 if (Math.hypot(player.pos.x, player.pos.z) < EARN_SOUND_R) earnSound();
 if (shopOpen) refreshTree();
 }
@@ -4855,6 +4876,15 @@ document.body.classList.remove('cineMode');
 letterbox(false);
 startCineHandoff();
 toast('The Aphrodite has risen…');
+/* 10-second farewell card */
+const thanks=document.createElement('div');
+thanks.textContent='Thanks for playing Shanky! Mwah';
+thanks.style.cssText='position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:30;'+
+'font-family:"MedievalSharp",cursive;font-size:clamp(28px,6vw,54px);letter-spacing:3px;color:#ff9ad5;text-align:center;'+
+'text-shadow:0 0 26px rgba(255,80,170,.85),0 2px 0 #40062a;pointer-events:none;opacity:1;transition:opacity 1s;';
+document.body.appendChild(thanks);
+setTimeout(()=>{ thanks.style.opacity='0'; },9000);
+setTimeout(()=>thanks.remove(),10000);
 }
 }
 return;
@@ -6999,15 +7029,15 @@ menuGroup.add(menuTitle);
 const barBackMat = new THREE.MeshBasicMaterial({ color: 0x140d05, transparent:true });
 menuMats.push(barBackMat);
 const barBack = new THREE.Mesh(new THREE.PlaneGeometry(3.9, 0.14), barBackMat);
-barBack.position.set(0, -0.32, 0.16);
+barBack.position.set(0, -0.32, 0.21);   // clear of the boiled button face (max boil poke ≈ 0.19)
 menuBtn.add(barBack);
 const barGeo = new THREE.PlaneGeometry(3.9, 0.14);
 barGeo.translate(3.9 / 2, 0, 0); // origin at left edge so scale.x fills it
 const barFillMat = new THREE.MeshBasicMaterial({ color: 0xf5cf5f, transparent:true });
 menuMats.push(barFillMat);
 menuBar = new THREE.Mesh(barGeo, barFillMat);
-  menuBar.position.set(-3.9 / 2, -0.32, 0.17);
-  menuBar.scale.x = 0.001;
+menuBar.position.set(-3.9 / 2, -0.32, 0.22);   // sits just above the black backing — no boil z-fight
+menuBar.scale.x = 0.001;
   menuBtn.add(menuBar);
  menuBtn.position.set(0, -1.4, 0); // buried in the grass until the reveal rise
 menuGroup.add(menuBtn);
