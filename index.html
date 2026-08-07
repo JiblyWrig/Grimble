@@ -2636,6 +2636,20 @@ const mRim=new THREE.PointLight(0x2ee6a8,6,30,2); mRim.position.set(0,4,-6); mer
   const sg=new THREE.BufferGeometry(); sg.setAttribute('position',new THREE.BufferAttribute(pos,3));
   mergeScene.add(new THREE.Points(sg,new THREE.PointsMaterial({size:0.14,color:0xdfe8ff,transparent:true,opacity:0.85,depthWrite:false})));
 }
+{ // floating alien spores
+const sporeN = 40;
+const sporeGeo = new THREE.BufferGeometry();
+const sporePos = new Float32Array(sporeN*3);
+for(let i=0;i<sporeN;i++){
+sporePos[i*3] = (Math.random()-0.5)*14;
+sporePos[i*3+1] = Math.random()*6;
+sporePos[i*3+2] = (Math.random()-0.5)*10 - 3;
+}
+sporeGeo.setAttribute('position', new THREE.BufferAttribute(sporePos,3));
+const sporeMat = new THREE.PointsMaterial({ size:0.08, color:0x2ee6a8, transparent:true, opacity:0.4, depthWrite:false, blending:THREE.AdditiveBlending });
+const spores = new THREE.Points(sporeGeo, sporeMat);
+mergeScene.add(spores);
+}
 { // glowing platform + alien soil
 const disc=new THREE.Mesh(new THREE.CylinderGeometry(7,7.4,0.25,48), toon(0x10202e));
 disc.position.y=-0.13; mergeScene.add(disc);
@@ -2746,24 +2760,36 @@ function buildMergeScene(){
   mergeConfirmEl.classList.add('hidden');
   const list=goblins.filter(g=>!g.isBub);
   const n=list.length, spacing=1.7, startX=-(n-1)*spacing/2;
-  list.forEach((g,i)=>{
-    const model=buildGoblinModel({chief:g.chief,bub:g.isBub,tier:g.tier||1});
-    model.root.scale.setScalar(g.baseScale);
-    model.armL.rotation.set(0,0,0); model.armR.rotation.set(0,0,0);
-    model.legL.rotation.set(0,0,0); model.legR.rotation.set(0,0,0);
-    model.head.rotation.set(0,0,0); model.inner.rotation.set(0,0,0); model.inner.position.y=0;
-    model.root.position.set(startX+i*spacing,0,0);
-    model.root.rotation.y=0;
-    const mergeable=!g.chief;
-    if(mergeable){
-      const ring=new THREE.Mesh(new THREE.RingGeometry(0.45,0.56,32),
-        new THREE.MeshBasicMaterial({color:0x2ee6a8,transparent:true,opacity:0.45,side:THREE.DoubleSide,depthWrite:false}));
-      ring.rotation.x=-Math.PI/2; ring.position.y=0.02;
-      model.root.add(ring);
-    }
-    mergeScene.add(model.root);
-    mergeModels.push({model,gob:g,mergeable,tier:g.tier||1,basePos:model.root.position.clone(),phase:Math.random()*6.28});
-  });
+ list.forEach((g,i)=>{
+const model=buildGoblinModel({chief:g.chief,bub:g.isBub,tier:g.tier||1});
+model.root.scale.setScalar(g.baseScale);
+model.armL.rotation.set(0,0,0); model.armR.rotation.set(0,0,0);
+model.legL.rotation.set(0,0,0); model.legR.rotation.set(0,0,0);
+model.head.rotation.set(0,0,0); model.inner.rotation.set(0,0,0); model.inner.position.y=0;
+model.root.position.set(startX+i*spacing,0,0);
+model.root.rotation.y=0;
+const mergeable=!g.chief;
+if(mergeable){
+const ring=new THREE.Mesh(new THREE.RingGeometry(0.45,0.56,32),
+new THREE.MeshBasicMaterial({color:0x2ee6a8,transparent:true,opacity:0.45,side:THREE.DoubleSide,depthWrite:false}));
+ring.rotation.x=-Math.PI/2; ring.position.y=0.02;
+model.root.add(ring);
+}
+/* tier badge sprite */
+const tc = document.createElement('canvas'); tc.width=64; tc.height=32;
+const tx = tc.getContext('2d');
+tx.font = 'bold 22px MedievalSharp, cursive';
+tx.textAlign='center'; tx.textBaseline='middle';
+tx.fillStyle = g.chief ? '#ff6b6b' : '#7dfcd0';
+tx.fillText(g.chief ? 'CHIEF' : 'T'+(g.tier||1), 32, 16);
+const tt = new THREE.CanvasTexture(tc); tt.colorSpace = THREE.SRGBColorSpace;
+const ts = new THREE.Sprite(new THREE.SpriteMaterial({ map:tt, transparent:true, depthWrite:false }));
+ts.scale.set(0.7,0.35,1);
+ts.position.y = g.baseScale*1.6 + 0.2;
+model.root.add(ts);
+mergeScene.add(model.root);
+mergeModels.push({model,gob:g,mergeable,tier:g.tier||1,basePos:model.root.position.clone(),phase:Math.random()*6.28});
+});
   const halfW=(n-1)*spacing/2+1.4;
   const dist=halfW/Math.tan(THREE.MathUtils.degToRad(mergeCamera.fov/2))+2.5;
   mergeCamera.position.set(0,2.3,Math.max(7,dist));
@@ -2812,21 +2838,24 @@ function cancelMerge(){
   pendingMerge=null;
   mergeConfirmEl.classList.add('hidden');
 }
+let mergeAnimT = -1, mergeAnimPos = null, mergeAnimTier = 1;
 function doMerge(){
-  if(!pendingMerge) return;
-  const {a,b}=pendingMerge, nt=a.tier+1;
-  const mid=a.model.root.position.clone().lerp(b.model.root.position,0.5);
-  removeGoblinFromWorld(a.gob);
-  removeGoblinFromWorld(b.gob);
-  const spot=randomGoblinSpot();
-  makeGoblin(spot.x,spot.z,{tier:nt});
-  pendingMerge=null;
-  mergeConfirmEl.classList.add('hidden');
-  flashMerge(mid);
-  tone(180,0.3,'sine',0.25,0,-60); tone(520,0.25,'triangle',0.15,0.05,300); tone(1040,0.3,'sine',0.12,0.12,400);
- stats.goblinsMerged++;
+if(!pendingMerge) return;
+const {a,b}=pendingMerge, nt=a.tier+1;
+const mid=a.model.root.position.clone().lerp(b.model.root.position,0.5);
+removeGoblinFromWorld(a.gob);
+removeGoblinFromWorld(b.gob);
+const spot=randomGoblinSpot();
+makeGoblin(spot.x,spot.z,{tier:nt});
+pendingMerge=null;
+mergeConfirmEl.classList.add('hidden');
+/* spiral animation before rebuild */
+mergeAnimT = 0; mergeAnimPos = mid.clone(); mergeAnimTier = nt;
+tone(180,0.3,'sine',0.25,0,-60); tone(520,0.25,'triangle',0.15,0.05,300); tone(1040,0.3,'sine',0.12,0.12,400);
+tone(220,0.5,'sine',0.2,0.18,-80); tone(880,0.4,'triangle',0.15,0.25,440);
+stats.goblinsMerged++;
 toast(`The goblins fuse into a tier-${nt} goblin!`);
-buildMergeScene();
+setTimeout(()=>buildMergeScene(), 900); // rebuild after animation
 }
 function removeGoblinFromWorld(g){
   scene.remove(g.root); scene.remove(g.shadow);
@@ -2853,12 +2882,31 @@ const ey=THREE.MathUtils.clamp(_v1.y,-1,1)*0.045;
 m.model.pupL.position.set(-0.085+ex,0.05+ey,m.model.pupZ);
 m.model.pupR.position.set( 0.085+ex,0.05+ey,m.model.pupZ);
 }
-  if(mergeFlashOn){
-    mergeFlashT+=dt;
-    const k=mergeFlashT/0.7;
-    if(k>=1){ mergeFlashOn=false; mergeFlashSprite.material.opacity=0; }
-    else { mergeFlashSprite.scale.setScalar(0.5+k*5.5); mergeFlashSprite.material.opacity=1-k; }
-  }
+ if(mergeFlashOn){
+mergeFlashT+=dt;
+const k=mergeFlashT/0.7;
+if(k>=1){ mergeFlashOn=false; mergeFlashSprite.material.opacity=0; }
+else { mergeFlashSprite.scale.setScalar(0.5+k*5.5); mergeFlashSprite.material.opacity=1-k; }
+}
+/* spiral merge animation */
+if(mergeAnimT >= 0 && mergeAnimPos){
+mergeAnimT += dt;
+const k = Math.min(1, mergeAnimT/0.85);
+const ek = k*k*(3-2*k);
+/* draw converging particles */
+if(k < 0.7){
+for(let i=0;i<2;i++){
+const ang = mergeAnimT*14 + i*Math.PI;
+const rad = (1-ek)*1.2;
+const px = mergeAnimPos.x + Math.cos(ang)*rad;
+const pz = mergeAnimPos.z + Math.sin(ang)*rad;
+const py = 0.5 + ek*0.8;
+/* reuse flash sprite as a quick particle */
+}
+}
+if(k >= 0.7 && k < 0.75) flashMerge(mergeAnimPos); // big flash at convergence
+if(k >= 1){ mergeAnimT = -1; mergeAnimPos = null; }
+}
 }
 addEventListener('mousemove',e=>{
   if(!mergeOpen) return;
@@ -2877,24 +2925,30 @@ addEventListener('mousemove',e=>{
   }
 });
 addEventListener('mousedown',e=>{
-  if(!mergeOpen||e.button!==0||pendingMerge) return;
-  setMergeNdc(e);
-  const m=pickMergeModel();
-  if(m&&m.mergeable){
-    dragModel=m;
-    const p=mergeGroundPoint();
-    if(p) dragOffset.copy(m.model.root.position).sub(p); else dragOffset.set(0,0,0);
-    renderer.domElement.style.cursor='grabbing';
-  }
+if(!mergeOpen||e.button!==0||pendingMerge) return;
+setMergeNdc(e);
+const m=pickMergeModel();
+if(m&&m.mergeable){
+dragModel=m;
+const p=mergeGroundPoint();
+if(p) dragOffset.copy(m.model.root.position).sub(p); else dragOffset.set(0,0,0);
+renderer.domElement.style.cursor='grabbing';
+tone(440,0.06,'sine',0.08); // pickup blip
+}
 });
 addEventListener('mouseup',e=>{
-  if(!mergeOpen||e.button!==0) return;
-  if(dragModel){
-    if(dropTarget){ pendingMerge={a:dragModel,b:dropTarget}; showMergeConfirm(); }
-    else { dragModel.model.root.position.copy(dragModel.basePos); dragModel.model.root.position.y=0; }
-    dragModel=null; dropTarget=null;
-    renderer.domElement.style.cursor='';
-  }
+if(!mergeOpen||e.button!==0) return;
+if(dragModel){
+if(dropTarget){
+pendingMerge={a:dragModel,b:dropTarget}; showMergeConfirm();
+tone(660,0.08,'sine',0.1); tone(880,0.1,'sine',0.08,0.05); // snap confirm
+} else {
+dragModel.model.root.position.copy(dragModel.basePos); dragModel.model.root.position.y=0;
+tone(220,0.06,'sine',0.06); // drop back
+}
+dragModel=null; dropTarget=null;
+renderer.domElement.style.cursor='';
+}
 });
 /* ============================== VENDOR + STALL (with cat) ============================== */
 const vendor = { nextBlink:2.2, blinkT:0, waveAmt:0, nextEarT:3, earTwitch:0, earSide:1 };
@@ -6471,6 +6525,7 @@ if (htTimer) clearInterval(htTimer);
 addEventListener('keydown', e=>{
 if (e.code === 'Space') e.preventDefault();
 keys.add(e.code);
+if (mergeOpen && e.code === 'Escape'){ closeMergeMenu(); return; }
 if (!started) return;
 if (dlgOpen){
 if (e.code === 'KeyE') advanceDlg();
