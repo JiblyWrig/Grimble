@@ -45,7 +45,10 @@ display:flex; line-height:1em; }
 #prestigeBadge { display:none; align-items:center; gap:6px; margin-left:6px; padding:5px 10px;
 border-left:1px solid rgba(212,175,55,.35); color:#c9a6ef; font-family:'MedievalSharp',cursive; font-size:15px; }
 #prestigeBadge.on { display:flex; }
-#worldCoins { position:absolute; top:18px; right:18px; padding:7px 14px; display:none; align-items:center; gap:9px; }
+#worldCoins { position:absolute; top:56px; right:18px; padding:7px 14px; display:none; align-items:center; gap:9px; }
+#fpsBox { position:absolute; top:18px; right:18px; padding:4px 10px; line-height:1;
+font-size:11px; font-weight:800; letter-spacing:1px; color:#cfe3b8;
+background:rgba(11,20,8,.72); border:1px solid rgba(169,196,138,.35); border-radius:8px; }
 #wcNum { font-family:'MedievalSharp',cursive; font-size:18px; color:#cfe3b8; line-height:1; }
 #abilBar { position:absolute; right:18px; bottom:18px; display:flex; gap:10px; }
 body.menu #abilBar, body.shop #abilBar, body.talking #abilBar, body.cineMode #abilBar { display:none; }
@@ -250,6 +253,23 @@ pointer-events:none; opacity:0; }
 100% { transform:scaleX(1); opacity:1; }
 }
 .tnode.max:hover { transform:translate(-50%,-50%) scale(1.12); }
+/* ---------- affordability + feedback states ---------- */
+.tnode { transition:transform .12s ease, filter .25s ease; }
+.tnode:hover { transform:translate(-50%,-50%) scale(1.06); z-index:5; }
+.tnode.cant { filter:saturate(.35) brightness(.62); }
+.tnode.cant .tcost { background:linear-gradient(180deg,#8a8a8a,#5a5a5a); color:#2e2e2e; }
+.tnode.cant .ico { color:#7a7a6a; }
+.tnode.afford .tcost { animation:costGlow 1.6s ease-in-out infinite; }
+@keyframes costGlow { 50% { box-shadow:0 0 16px rgba(245,207,95,.85); filter:brightness(1.3); } }
+.tnode.deny { animation:denyShake .38s ease; }
+@keyframes denyShake {
+20% { transform:translate(calc(-50% - 6px),-50%); }
+40% { transform:translate(calc(-50% + 6px),-50%); }
+60% { transform:translate(calc(-50% - 4px),-50%); }
+80% { transform:translate(calc(-50% + 3px),-50%); }
+}
+.tnode.bought { animation:boughtPop .5s cubic-bezier(.2,1.6,.4,1); }
+@keyframes boughtPop { 35% { transform:translate(-50%,-50%) scale(1.16); filter:brightness(1.6); } }
 .tnode .ico { display:flex; justify-content:center; color:#c9c0a6; margin-top:10px; }
 .tnode .ico svg { width:26px; height:26px; }
 .tname { font-family:'MedievalSharp',cursive; font-size:13px; color:#f0d68a; margin-top:2px; text-shadow:0 1px 0 #000; }
@@ -264,6 +284,47 @@ background:linear-gradient(180deg,#f9dd82,#cf9d2c); border-radius:6px; padding:2
 .tnode.green .ico { color:#9fd478; }
 .tnode.green .maxBanner { background:linear-gradient(180deg,#3f8a34,#1e5c18 55%,#144210);
 border-top:1px solid rgba(220,255,180,.5); border-bottom:2px solid #0a2e06; }
+/* ---------- wooden plaque nodes ---------- */
+.tnode {
+background:
+radial-gradient(circle at 32% 24%, rgba(255,220,150,.14), rgba(0,0,0,0) 58%),
+repeating-linear-gradient(0deg, rgba(0,0,0,.13) 0 2px, rgba(0,0,0,0) 2px 7px),
+radial-gradient(circle at 50% 45%, #7a5230 0%, #6b4526 52%, #55341d 78%, #3d2712 100%);
+border:2px solid #8a6a30;
+border-radius:16px;
+box-shadow:
+inset 0 0 0 2px rgba(212,175,55,.5),
+inset 0 2px 0 rgba(255,220,150,.16),
+inset 0 -8px 16px rgba(0,0,0,.45),
+0 8px 22px rgba(0,0,0,.6);
+padding:2px 4px 8px;
+transition:border-color .15s, box-shadow .15s;
+}
+.tnode:hover { border-color:#c8901a; }
+.tnode.green { border-color:#5f9f3c;
+box-shadow:inset 0 0 0 2px rgba(184,230,148,.45), inset 0 2px 0 rgba(220,255,180,.14), inset 0 -8px 16px rgba(0,0,0,.45), 0 8px 22px rgba(0,0,0,.6); }
+.tnode.max { filter:saturate(.85) brightness(.92); }
+.tnode .nails { position:absolute; inset:0; pointer-events:none; background:
+radial-gradient(circle at 8px 9px, #f0dfae 0 1px, #8a6a30 2px, #241408 3px, transparent 4px),
+radial-gradient(circle at calc(100% - 8px) 9px, #f0dfae 0 1px, #8a6a30 2px, #241408 3px, transparent 4px),
+radial-gradient(circle at 8px calc(100% - 9px), #f0dfae 0 1px, #8a6a30 2px, #241408 3px, transparent 4px),
+radial-gradient(circle at calc(100% - 8px) calc(100% - 9px), #f0dfae 0 1px, #8a6a30 2px, #241408 3px, transparent 4px);
+}
+/* ---------- level pips ---------- */
+.tlvl { display:flex; gap:4px; justify-content:center; align-items:center; margin-top:3px; min-height:6px; }
+.pip { width:6px; height:6px; border-radius:50%; background:rgba(0,0,0,.45);
+box-shadow:inset 0 1px 1px rgba(0,0,0,.65), 0 1px 0 rgba(255,220,150,.14); transition:background .25s, box-shadow .25s; }
+.pip.on { background:radial-gradient(circle at 35% 30%, #fff3b0, #f7c948 55%, #c8901a);
+box-shadow:0 0 6px rgba(245,207,95,.7); }
+/* ---------- idle icon breathing ---------- */
+.tnode .ico { animation:icoBreathe 3.2s ease-in-out infinite; }
+@keyframes icoBreathe { 0%,100% { transform:scale(1); } 50% { transform:scale(1.02); } }
+/* ---------- ember glints on maxed nodes ---------- */
+.ember { position:absolute; width:3px; height:3px; border-radius:50%; pointer-events:none;
+background:#ffb35e; box-shadow:0 0 6px 2px rgba(255,140,60,.55);
+animation:emberUp var(--et) ease-out forwards; }
+@keyframes emberUp { 0% { transform:translate(0,0) scale(1); opacity:0; } 12% { opacity:.9; }
+100% { transform:translate(var(--ex),-26px) scale(.2); opacity:0; } }
 .udigit { height:1em; overflow:hidden; display:inline-block; vertical-align:bottom; }
 .ureel { display:block; transition:transform .5s cubic-bezier(.25,.9,.3,1); }
 .ureel span { display:block; height:1em; line-height:1em; }
@@ -291,6 +352,60 @@ background:linear-gradient(180deg,#f9dd82,#cf9d2c); border:none; border-radius:1
 box-shadow:0 6px 0 #7a5a14, 0 12px 24px rgba(0,0,0,.5); transition:all .12s; pointer-events:auto; }
 #ovBtn:hover { transform:translateY(-2px); box-shadow:0 8px 0 #7a5a14, 0 16px 30px rgba(0,0,0,.55); background:linear-gradient(180deg,#ffe89a,#dda832); }
 #ovBtn:active { transform:translateY(3px); box-shadow:0 2px 0 #7a5a14; }
+/* ---------- statistics, goblin names, rain droplets ---------- */
+#ovStatsBtn { font-family:'MedievalSharp',cursive; font-size:16px; letter-spacing:1.5px; color:#cfe3b8;
+background:rgba(255,255,255,.08); border:1px solid rgba(169,196,138,.4); border-radius:10px; padding:9px 28px; cursor:pointer;
+margin-top:12px; transition:all .12s; }
+#ovStatsBtn:hover { background:rgba(255,255,255,.16); color:#fff; }
+#ovResetBtn { font-family:'MedievalSharp',cursive; font-size:13px; letter-spacing:1.5px; color:#d8a8a8;
+background:rgba(90,26,26,.35); border:1px solid rgba(200,90,90,.45); border-radius:9px;
+padding:7px 20px; cursor:pointer; margin:14px auto 0; display:block; transition:all .12s; }
+#ovResetBtn:hover { background:rgba(140,40,40,.5); color:#fff; }
+#ovResetBtn.arm { background:linear-gradient(180deg,#c04434,#7a1d14); color:#fff; border-color:#ff9080;
+animation:resetPulse .8s ease-in-out infinite; }
+@keyframes resetPulse { 50% { box-shadow:0 0 16px rgba(255,90,60,.65); } }
+
+#statsOverlay { position:fixed; inset:0; z-index:36; display:flex; align-items:center; justify-content:center;
+background:rgba(0,0,0,.58); transition:opacity .22s, visibility 0s; }
+#statsOverlay.hidden { opacity:0; visibility:hidden; pointer-events:none; transition:opacity .22s, visibility 0s linear .22s; }
+
+.statsPanel { width:680px; max-width:92vw; max-height:82vh; overflow:auto; padding:24px 28px 20px; text-align:center; }
+.statsTitle { font-family:'MedievalSharp',cursive; font-size:34px; letter-spacing:4px; color:#f5cf5f; margin-bottom:16px;
+text-shadow:0 2px 0 #6b4a10, 0 3px 10px #000; }
+
+#statsGrid { display:grid; grid-template-columns:1fr 1fr; gap:8px 16px; text-align:left; }
+.statRow { display:flex; justify-content:space-between; gap:14px; padding:7px 10px; font-size:13px; color:#a9c48a;
+background:rgba(255,255,255,.045); border:1px solid rgba(169,196,138,.22); border-radius:8px; }
+.statRow b { color:#eef6d8; font-weight:800; }
+
+#statsClose { margin-top:18px; font-family:'MedievalSharp',cursive; font-size:18px; letter-spacing:1.5px; color:#3a2a08;
+background:linear-gradient(180deg,#f9dd82,#cf9d2c); border:none; border-radius:9px; padding:9px 30px; cursor:pointer;
+box-shadow:0 4px 0 #7a5a14; transition:all .12s; }
+#statsClose:hover { transform:translateY(-1px); }
+#statsClose:active { transform:translateY(2px); box-shadow:0 1px 0 #7a5a14; }
+
+@media (max-width:700px){
+  #statsGrid { grid-template-columns:1fr; }
+}
+
+#goblinName { position:fixed; left:0; top:0; z-index:12; transform:translate(-50%,-135%);
+font-family:'MedievalSharp',cursive; font-size:18px; letter-spacing:1px; color:#eaffcf;
+text-shadow:0 2px 0 #000, 0 0 10px rgba(0,0,0,.85); padding:3px 10px;
+background:linear-gradient(160deg, rgba(24,40,16,.82), rgba(11,20,8,.88));
+border:1px solid rgba(212,175,55,.45); border-radius:8px;
+opacity:0; pointer-events:none; transition:opacity .12s; white-space:nowrap; }
+#goblinName.show { opacity:1; }
+
+body.menu #goblinName, body.shop #goblinName, body.talking #goblinName, body.cineMode #goblinName,
+body.merge #goblinName, body.ritual #goblinName { display:none; }
+
+#rainDroplets { position:absolute; inset:0; z-index:0; pointer-events:none; opacity:0;
+background-repeat:repeat; background-size:512px 512px; mix-blend-mode:screen;
+-webkit-mask-image:radial-gradient(circle at 50% 50%, transparent 50%, rgba(0,0,0,.52) 72%, #000 90%);
+mask-image:radial-gradient(circle at 50% 50%, transparent 50%, rgba(0,0,0,.52) 72%, #000 90%); }
+
+body.menu #rainDroplets, body.shop #rainDroplets, body.merge #rainDroplets, body.ritual #rainDroplets { display:none; }
+
 /* ---------- production intro ---------- */
 #prodIntro { position:fixed; inset:0; background:#000; z-index:40; display:flex; align-items:center; justify-content:center;
 cursor:pointer; transition:opacity 1.3s ease; }
@@ -359,7 +474,7 @@ font-size:11px; font-weight:800; color:#a9c48a; letter-spacing:1.5px; }
 background:#2b3f18; border:1px solid #6d8f3f; border-bottom:3px solid #465f26; color:#eef6d8; }
 .setTgl.off { background:#3a2424; border-color:#8f5b3f; border-bottom-color:#5f3626; color:#d8b8a8; }
 /* ---------- merge menu ---------- */
-body.merge #crosshair, body.merge #prompt, body.merge #coinCard,
+body.merge #flare, body.merge #crosshair, body.merge #prompt, body.merge #coinCard,
 body.merge #abilBar, body.merge #rainCard, body.merge #worldCoins,
 body.merge #settingsUI { display:none; }
 #mergeOverlay { position:fixed; inset:0; z-index:14; pointer-events:none; }
@@ -396,12 +511,60 @@ body.merge #settingsUI { display:none; }
 #mcNo:hover { background:rgba(10,60,48,.8); }
 /* ---------- fizz yes/no buttons inside the dialog ---------- */
 .dlgBtns { display:flex; gap:14px; justify-content:center; margin-top:6px; }
-.dlgBtns button { font-family:'Comfortaa',cursive; font-size:15px; letter-spacing:2px; padding:9px 28px;
-  border-radius:12px; cursor:pointer; transition:all .12s; }
+.dlgBtns button { font-family:'Comfortaa',cursive; font-size:15px; letter-spacing:2px; padding:12px 40px;
+min-width:120px; border-radius:12px; cursor:pointer; transition:all .12s; position:relative; }
+.dlgBtns button::after { content:''; position:absolute; inset:-6px; } /* extra invisible hit area around the whole button */
 #dialog.fizz .dlgBtns button.yes { color:#03110d; background:linear-gradient(180deg,#7dfcd0,#2ee6a8);
   border:none; box-shadow:0 4px 0 #1a7a5a; }
 #dialog.fizz .dlgBtns button.no { color:#c9ffe9; background:rgba(6,40,32,.5); border:2px solid #2ee6a8; }
 #dialog.fizz .dlgBtns button:hover { transform:translateY(-2px); filter:brightness(1.12); }
+/* ---------- ritual ascend screen ---------- */
+body.ritual #crosshair, body.ritual #prompt, body.ritual #coinCard,
+body.ritual #abilBar, body.ritual #rainCard, body.ritual #worldCoins,
+body.ritual #settingsUI, body.ritual #fpsBox { display:none; }
+#ritualOverlay { position:fixed; inset:0; z-index:19; display:flex; align-items:center; justify-content:center;
+background:
+radial-gradient(ellipse at 50% 30%, rgba(88,32,140,.55), rgba(0,0,0,0) 60%),
+linear-gradient(180deg, rgba(24,6,40,.94), rgba(8,2,16,.97) 55%, rgba(20,4,34,.95)); }
+#ritualOverlay.hidden { display:none; }
+.ritualGlow { position:absolute; left:50%; top:42%; width:74vmin; height:74vmin; transform:translate(-50%,-50%);
+background:radial-gradient(circle, rgba(180,112,239,.28), rgba(120,40,200,.12) 45%, transparent 70%);
+animation:ritualPulse 3.2s ease-in-out infinite; pointer-events:none; }
+@keyframes ritualPulse { 0%,100% { opacity:.55; transform:translate(-50%,-50%) scale(1); }
+50% { opacity:1; transform:translate(-50%,-50%) scale(1.12); } }
+.ritualPanel { position:relative; text-align:center; max-width:560px; width:92vw; padding:34px 40px 30px;
+background:linear-gradient(165deg, rgba(46,16,74,.9), rgba(16,4,30,.95) 60%, rgba(30,8,52,.92));
+border:2px solid rgba(180,112,239,.55); border-radius:18px;
+box-shadow:0 0 44px rgba(150,80,255,.28), 0 24px 70px rgba(0,0,0,.8), inset 0 0 34px rgba(120,40,200,.14); }
+#ritualSkull { font-size:64px; line-height:1; color:#c9a6ef;
+text-shadow:0 0 22px rgba(180,112,239,.85), 0 0 60px rgba(150,80,255,.5), 0 3px 0 #1a0a24;
+animation:skullPulse 3.2s ease-in-out infinite; }
+@keyframes skullPulse { 0%,100% { transform:scale(1); filter:brightness(1); }
+50% { transform:scale(1.06); filter:brightness(1.35); } }
+.ritualTitle { font-family:'MedievalSharp',cursive; font-size:30px; letter-spacing:5px; color:#e6d4ff; margin-top:8px;
+text-shadow:0 0 14px rgba(180,112,239,.6), 0 2px 0 #1a0a24; }
+.ritualSub { font-size:12.5px; color:#b9a3d6; margin-top:8px; line-height:1.55; }
+.ritualBig { display:flex; justify-content:center; gap:34px; margin:18px 0 14px; }
+.rbRow { display:flex; align-items:center; gap:10px; font-family:'MedievalSharp',cursive; font-size:26px; }
+.rbOld { color:#8f7aa8; }
+.rbArr { color:#6d4a94; font-size:20px; }
+.rbNew { color:#e0b3ff; text-shadow:0 0 12px rgba(180,112,239,.7); }
+.ritualStats { display:flex; flex-direction:column; gap:6px; margin:0 auto 20px; max-width:420px; }
+.rsRow { display:flex; justify-content:space-between; gap:16px; font-size:12px; font-weight:800; letter-spacing:1px;
+color:#a98fc6; background:rgba(20,6,36,.55); border:1px solid rgba(120,60,180,.3); border-radius:8px; padding:6px 12px; }
+.rsRow b { color:#d9b8ff; font-weight:800; }
+.rsRow .rsArr { color:#6d4a94; }
+.ritualBtns { display:flex; flex-direction:column; align-items:center; gap:10px; }
+#ritualReady { font-family:'MedievalSharp',cursive; font-size:22px; letter-spacing:4px; color:#f4e8ff;
+background:linear-gradient(180deg,#8a4fd0,#5a2a9a 55%,#3c1670); border:2px solid #b470ef; border-radius:14px;
+padding:12px 54px; cursor:pointer; transition:all .12s;
+animation:readyPulse 2.6s ease-in-out infinite; }
+@keyframes readyPulse { 0%,100% { box-shadow:0 6px 0 #2a0d52, 0 0 18px rgba(150,80,255,.35), 0 14px 34px rgba(0,0,0,.6); }
+50% { box-shadow:0 6px 0 #2a0d52, 0 0 40px rgba(180,112,239,.75), 0 14px 34px rgba(0,0,0,.6); } }
+#ritualReady:hover { transform:translateY(-2px); filter:brightness(1.15); }
+#ritualReady:active { transform:translateY(2px); box-shadow:0 2px 0 #2a0d52; }
+#ritualBack { background:none; border:none; color:#7d639c; font-size:12px; font-style:italic; cursor:pointer; letter-spacing:1px; }
+#ritualBack:hover { color:#b9a3d6; }
 </style>
 </head>
 <body>
@@ -416,6 +579,7 @@ body.merge #settingsUI { display:none; }
 <div id="prestigeBadge">☠ <span id="prestigeN">0</span>&nbsp;·&nbsp;×<span id="prestigeM">1</span></div>
 </div>
 <div id="worldCoins" class="panel"><span id="wcNum">0</span><span class="cardLabel">IN WORLD</span></div>
+<div id="fpsBox">-- FPS</div>
 <div id="abilBar">
 <div class="abil" id="abilWhistle" style="display:none">
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M13 8h8v5l-5.5 1.8A5.5 5.5 0 1 1 8 8h5z"/><circle cx="9.5" cy="14.5" r="2"/></svg>
@@ -438,7 +602,9 @@ body.merge #settingsUI { display:none; }
 </div>
 </div>
 <div id="prompt"></div>
+<div id="goblinName"></div>
 <div id="toast" class="panel"></div>
+<div id="rainDroplets"></div>
 <div id="vignette"></div>
 <div id="grain"></div>
 </div>
@@ -482,7 +648,24 @@ body.merge #settingsUI { display:none; }
       <button id="mcYes">MERGE</button>
       <button id="mcNo">CANCEL</button>
     </div>
-  </div>
+ </div>
+</div>
+<div id="ritualOverlay" class="hidden">
+<div class="ritualGlow"></div>
+<div class="ritualPanel">
+<div id="ritualSkull">☠</div>
+<div class="ritualTitle">ASCENSION RITUAL</div>
+<div class="ritualSub">Maud's eyes glint. The hole yawns wide. All you have built returns to the dark — and the dark pays interest.</div>
+<div class="ritualBig">
+<div class="rbRow"><span class="rbOld" id="rbSkullOld">☠ 0</span><span class="rbArr">→</span><span class="rbNew" id="rbSkullNew">☠ 1</span></div>
+<div class="rbRow"><span class="rbOld" id="rbMultOld">×1</span><span class="rbArr">→</span><span class="rbNew" id="rbMultNew">×2</span></div>
+</div>
+<div class="ritualStats" id="ritualStats"></div>
+<div class="ritualBtns">
+<button id="ritualReady">READY</button>
+<button id="ritualBack">hesitate…</button>
+</div>
+</div>
 </div>
 <div id="overlay" class="hidden">
 <div class="ovPanel">
@@ -490,8 +673,18 @@ body.merge #settingsUI { display:none; }
 <p class="sub" id="ovSub">A meadow, a goblin, and a very deep hole.</p>
 <p class="goal" id="ovGoal">Feed the hole. Then descend into it, and spend your earnings in the skill tree.</p>
 <button id="ovBtn">ENTER THE MEADOW</button>
+<button id="ovStatsBtn" style="display:none">STATISTICS</button>
+<button id="ovResetBtn" style="display:none">RESET SAVE</button>
 </div>
 </div>
+<div id="statsOverlay" class="hidden">
+<div class="statsPanel panel">
+<div class="statsTitle">STATISTICS</div>
+<div id="statsGrid"></div>
+<button id="statsClose">CLOSE</button>
+</div>
+</div>
+
 <div id="prodIntro">
 <div id="piClick">click</div>
 <div id="piBurst"></div>
@@ -576,7 +769,6 @@ let cine = null;
 let reMaxToastDone = false;
 let introDone = false;
 let goblinsAwakened = false;
-const autoCollect = () => prestige > 0;
 const prestigeMult = () => 1 + prestige;
 const GDLG = [
 "Well well! Fresh boots in the meadow! Come closer, come closer — mind the hole, she's moody today.",
@@ -593,40 +785,45 @@ const GDLG = [
 const DLG = [
 "Ah… the little coin-keeper. Yes. I smell the hole's favor on you.",
 "It ate your effort. Your stacks. Your red kings. Your clinking magnets. And still… it yawns.",
-"I can bind it to you, keeper. Let it pull gold from the air itself — no more carrying, no more throwing. It feeds itself.",
+"I can bind it to you, keeper. The hole will claim what falls near it — and with every sacrifice, its reach grows wider.",
 "The price is everything you have built. Every upgrade, every coin. A sacrifice… of progress. Choose.",
 ];
 const WITCH_CFG = { name:'MAUD', lines:DLG, bail:true,
-finalHint:'<kbd>E</kbd> — SACRIFICE EVERYTHING &nbsp;·&nbsp; <kbd>Q</kbd> — NOT YET', onDone:()=>startSacrifice() };
+finalHint:'<kbd>E</kbd> — SACRIFICE EVERYTHING &nbsp;·&nbsp; <kbd>Q</kbd> — NOT YET', onDone:()=>openRitual() };
 const GRIM_CFG = { name:'GRIMBLE', lines:GDLG, onDone:()=>startThrowCine() };
 /* ============================== UPGRADES ============================== */
-const upgrades = { value:1, rate:1, stack:1, goblins:0, chieftains:0, help:0, shiny:0, whistle:0, ledger:0, width:0, holejob:0, stranger:0 };
+const upgrades = { value:1, rate:1, stack:1, goblins:0, goblins2:0, maw:0, tempo:0, chieftains:0, help:0, shiny:0, whistle:0, ledger:0, width:0, holejob:0, stranger:0 };
 const UPG = {
 help:   { base:1,  max:1 },
 value:  { base:5,  max:10 },
-rate:   { base:100, max:7 },
+rate:   { base:30,  max:7 },
 stack:  { base:10, max:8 },
 goblins:{ base:15, max:1 },
-chieftains:{ base:50, max:MAX_CHIEFS },
+goblins2:{ base:250, max:1 },
 shiny:{ base:50, max:1 },
 whistle:{ base:100, max:1 },
 ledger:{ base:300, max:3 },
 width:{ base:150, max:10 },
 holejob:{ base:500, max:1 },
 stranger:{ base:1000, max:1 },
+maw:{ base:300, max:10 },
+tempo:{ base:500, max:8 },
 };
 
 const costOf = k => {
 let c;
 if (k === 'help') c = 1;
 else if (k === 'goblins') c = 15;
+else if (k === 'goblins2') c = 250;
 else if (k === 'shiny') c = 50;
 else if (k === 'whistle') c = 100;
 else if (k === 'width') c = 150 * Math.pow(2, upgrades.width);
 else if (k === 'holejob') c = 500;
 else if (k === 'stranger') c = 1000;
+else if (k === 'tempo') c = Math.floor(500 * Math.pow(2, upgrades.tempo));
+else if (k === 'maw') c = Math.floor(300 * Math.pow(2, upgrades.maw));
 else if (k === 'ledger') c = 300 * Math.pow(2, upgrades.ledger);
-else if (k === 'stack') c = upgrades.stack === 1 ? 10 : Math.floor(100 * Math.pow(2, upgrades.stack - 2));
+else if (k === 'stack') c = upgrades.stack === 1 ? 10 : Math.floor(70 * Math.pow(2, upgrades.stack - 2));
 else if (k === 'value') c = upgrades.value === 1 ? 5 : Math.floor(200 * Math.pow(2, upgrades.value - 2));
 else c = Math.floor(UPG[k].base * Math.pow(2, upgrades[k]-1));
 if (k !== 'ledger' && upgrades.ledger > 0) c = Math.floor(c * (1 - 0.05*upgrades.ledger));
@@ -660,13 +857,15 @@ const TREE = [
 { key:'rate',      x:570, y:360, ico:ICO.rate,   name:'Prod. Rate',  from:'stack',  need:()=>upgrades.stack>1 },
 { key:'value',     x:130, y:360, ico:ICO.value,  name:'Coin Value',  from:'stack',  need:()=>upgrades.stack>1 },
 { key:'goblins',   x:70,  y:220, ico:ICO.goblins,name:'+ Goblin',    from:'value',  need:()=>upgrades.value>1 },
-{ key:'chieftains',x:90,  y:60,  ico:ICO.chief,  name:'Chieftains',  from:'goblins',need:()=>upgrades.goblins>0 },
-{ key:'shiny',     x:-40, y:220, ico:ICO.shiny,  name:'Shiny Odds',  from:'goblins',need:()=>upgrades.goblins>0 },
+{ key:'goblins2', x:70,  y:60,  ico:ICO.goblins, name:'+ Goblin',    from:'goblins',need:()=>upgrades.goblins>0 },
+{ key:'shiny',     x:-70, y:220, ico:ICO.shiny,  name:'Shiny Odds',  from:'goblins',need:()=>upgrades.goblins>0 },
 { key:'whistle',   x:-150,y:110, ico:ICO.whistle,name:'Goblin Whistle', from:'shiny', need:()=>upgrades.shiny>0 },
 { key:'ledger',    x:-150,y:330, ico:ICO.ledger, name:"Grimble's Ledger", from:'shiny', need:()=>upgrades.shiny>0 },
 { key:'width',     x:630, y:220, ico:ICO.width,  name:'Wide Blade',  from:'rate',  need:()=>upgrades.rate>1 },
 { key:'holejob',   x:690, y:80,  ico:ICO.holejob,name:'Hole-Job',    from:'width', need:()=>upgrades.width>0 },
 { key:'stranger',  x:770, y:220, ico:ICO.stranger,name:'Stranger',    from:'width', need:()=>upgrades.width>=2, green:true },
+{ key:'maw',       x:-150,y:-40, ico:ICO.holejob,name:'Wider Maw',   from:'goblins2',need:()=>upgrades.goblins2>0 },
+{ key:'tempo',     x:350, y:560, ico:ICO.whistle,name:'Second Wind', from:'help',   need:()=>upgrades.whistle>0 && upgrades.holejob>0 },
 ];
 let cheat = false, cheatT = 0;
 let shake = 0;
@@ -1007,6 +1206,22 @@ x.textAlign='center'; x.textBaseline='middle';
 x.fillText("GRIMBLE'S", w/2, h/2+2);
 });
 signTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+
+const spcaTex = canvasTex(128, 64, (x, w, h) => {
+  x.fillStyle = '#5c3c20';
+  x.fillRect(0, 0, w, h);
+  x.strokeStyle = '#3d2712';
+  x.lineWidth = 6;
+  x.strokeRect(3, 3, w-6, h-6);
+  x.fillStyle = '#f2d894';
+  x.font = 'bold 20px Georgia, serif';
+  x.textAlign = 'center';
+  x.textBaseline = 'middle';
+  x.fillText('SPCA', w/2, h/2 - 9);
+  x.font = 'bold 13px Georgia, serif';
+  x.fillText('Approved', w/2, h/2 + 13);
+});
+spcaTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 const mapTex = canvasTex(256,128,(x,w,h)=>{
 x.fillStyle='#d4b87a'; x.fillRect(0,0,w,h);
 for(let i=0;i<200;i++){
@@ -1025,37 +1240,45 @@ x.beginPath(); x.moveTo(120, 62); x.lineTo(120, 78); x.moveTo(112, 70); x.lineTo
 }, true);
 mapTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 /* ============================== GROUND + HOLE ============================== */
-{
+let groundMesh = null, wallMesh = null, bottomMesh = null;
+const holeRS = () => HOLE_R * (1 + 0.2*(upgrades.maw||0));
+function buildHole(){
+const R = holeRS();
+if (groundMesh){ scene.remove(groundMesh); groundMesh.geometry.dispose(); groundMesh.material.dispose(); }
+if (wallMesh){ scene.remove(wallMesh); wallMesh.geometry.dispose(); wallMesh.material.dispose(); }
+if (bottomMesh){ scene.remove(bottomMesh); bottomMesh.geometry.dispose(); bottomMesh.material.dispose(); }
+if (holeRim){ scene.remove(holeRim); holeRim.geometry.dispose(); holeRim.material.dispose(); }
 const shape = new THREE.Shape();
 shape.absarc(0,0,GROUND_R,0,Math.PI*2,false);
 const holePath = new THREE.Path();
-holePath.absarc(0,0,HOLE_R,0,Math.PI*2,true);
+holePath.absarc(0,0,R,0,Math.PI*2,true);
 shape.holes.push(holePath);
 const gGeo = new THREE.ShapeGeometry(shape, 96);
 gGeo.rotateX(-Math.PI/2);
-const groundMesh = new THREE.Mesh(gGeo, new THREE.MeshLambertMaterial({ map:groundTex }));
+groundMesh = new THREE.Mesh(gGeo, new THREE.MeshLambertMaterial({ map:groundTex }));
 groundMesh.userData.noBoil = true;
+addBoil(groundMesh.material);
 scene.add(groundMesh);
-const wall = new THREE.Mesh(
-new THREE.CylinderGeometry(HOLE_R, HOLE_R*0.9, HOLE_D, 48, 4, true),
+wallMesh = new THREE.Mesh(
+new THREE.CylinderGeometry(R, R*0.9, HOLE_D, 48, 4, true),
 new THREE.MeshBasicMaterial({ map:wallTex, side:THREE.BackSide })
 );
-wall.position.y = -HOLE_D/2;
-scene.add(wall);
+wallMesh.position.y = -HOLE_D/2;
+scene.add(wallMesh);
+bottomMesh = new THREE.Mesh(new THREE.CircleGeometry(R*0.9+0.08, 48), new THREE.MeshBasicMaterial({ color:0x030202 }));
+bottomMesh.rotation.x = -Math.PI/2; bottomMesh.position.y = -HOLE_D+0.02;
+scene.add(bottomMesh);
+holeRim = new THREE.Mesh(new THREE.RingGeometry(R-0.02, R+0.9, 64),
+new THREE.MeshBasicMaterial({ map:rimTex, transparent:true, depthWrite:false, opacity:0 }));
+holeRim.rotation.x = -Math.PI/2; holeRim.position.y = 0.015; holeRim.renderOrder = 1;
+scene.add(holeRim);
+}
+buildHole();
 // Violet glow at hole center (appears after prestige)
 holeGlowSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map:violetGlowTex, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, opacity:0 }));
 holeGlowSprite.scale.setScalar(2.5);
 holeGlowSprite.position.y = 0.3;
 scene.add(holeGlowSprite);
-const bottom = new THREE.Mesh(new THREE.CircleGeometry(HOLE_R*0.9+0.08, 48), new THREE.MeshBasicMaterial({ color:0x030202 }));
-bottom.rotation.x = -Math.PI/2; bottom.position.y = -HOLE_D+0.02;
-scene.add(bottom);
-const rim = new THREE.Mesh(new THREE.RingGeometry(HOLE_R-0.02, HOLE_R+0.9, 64),
-new THREE.MeshBasicMaterial({ map:rimTex, transparent:true, depthWrite:false, opacity:0 }));
-rim.rotation.x = -Math.PI/2; rim.position.y = 0.015; rim.renderOrder = 1;
-scene.add(rim);
-holeRim = rim;
-}
 /* ---------- hole dust ---------- */
 {
 const N = 90;
@@ -1637,6 +1860,30 @@ introPlug.rotation.x = -Math.PI/2;
 introPlug.position.y = 0.02;
 introPlug.userData.noBoil = true;
 scene.add(introPlug);
+/* ============================== GOBLIN NAMES ============================== */
+const GOBLIN_NAMES = [
+"Borkle", "Marrow", "Tododon", "Sparkmack", "Svish", "Mogglewog", "Bendigo", "Jare", "Peacho",
+"Lock", "Shock", "Barrel", "Snik", "Snak", "Gordo", "Nipmonger", "Riddle", "Spip", "Kaa",
+"Bonegrundle", "Yaxmax", "Tamborine", "Riggity", "Fishspleen", "Bladder Dan", "Mumblemorg",
+"Piss Jar", "Kettle", "Gnogin", "Eee", "Rattrap", "Bigsmalls", "Pork", "Fwip", "Gong",
+"Zaza", "Meeg", "Meeg Two", "Meeg Three", "Spud", "Uvano", "Pingpang", "Bowel", "Ham",
+"Gritgrash", "Countbean", "Sap Sam", "Leek Leek", "Bwob", "Parsnip Jr.", "Parsnip Sr,",
+"Fat Cat", "Eyemasher", "Quiss", "Wawa", "Spork", "Turnaround", "Barfknees", "KnifeyMcFingers",
+"Cowshout", "Spank", "Stumpy", "Backwater", "Crowlaw", "Clockwind", "Burtlan", "Smee",
+"Macintosh", "Sexpants", "Ol' Crabapple", "Muckman", "Dirtwallow", "Crooknose", "Beetlepocket",
+"Sticky", "Vraaz", "Vick", "Brackish", "Pondjohn", "Waxmuncher", "Wicklicker", "Candleear",
+"Grimm", "Portho", "Odo", "Fleshgutter", "Slugsnatcher", "Milksalt", "Stewslosh", "Cast Iron",
+"Dutch", "Squirrelskinner", "Froggrope", "Topsyturvy", "Lardmouth", "Thighflayer", "Sinew",
+"Hypotenoose", "Gallow", "Boblin"
+];
+
+function pickGoblinName(){
+  const taken = new Set(goblins.map(g => g.name).filter(Boolean));
+  let avail = GOBLIN_NAMES.filter(n => !taken.has(n));
+  if (!avail.length) avail = GOBLIN_NAMES;
+  return avail[(Math.random()*avail.length)|0];
+}
+
 /* ============================== GOBLINS + CHIEFTAINS ============================== */
 const goblins = [];
 function goblinPalette(opts){
@@ -1701,7 +1948,7 @@ function buildGoblinModel(opts={}){
 function makeGoblin(x, z, opts={}){
   const chief=!!opts.chief, bub=!!opts.bub, tier=opts.tier||1;
   const model=buildGoblinModel(opts);
-  const g={ state:'idle', t:1+Math.random(), target:new THREE.Vector3(), vel:new THREE.Vector3(),
+  const g={ name:(bub ? 'Bub' : pickGoblinName()), state:'idle', t:1+Math.random(), target:new THREE.Vector3(), vel:new THREE.Vector3(),
     yaw:Math.random()*6.28, gait:0, throwT:0, thrown:false, clock:Math.random()*6,
     slamClock:Math.random()*5, chief, bub, tier, headYawDef:0, nextBlink:1+Math.random()*3, blinkT:0,
     nextEarT:1+Math.random()*5, earTwitch:0, earSide:1,
@@ -1724,9 +1971,10 @@ function makeGoblin(x, z, opts={}){
   g.shadow.rotation.x=-Math.PI/2; g.shadow.position.y=0.02; g.shadow.renderOrder=2;
   scene.add(g.shadow);
   g.smear=null;
-  pickTargetFor(g);
-  goblins.push(g);
-  return g;
+ pickTargetFor(g);
+goblins.push(g);
+stats.goblinsSpawned++;
+return g;
 }
 function pickTargetFor(g){
 for(let i=0;i<30;i++){
@@ -1747,6 +1995,10 @@ g.root.traverse(o=>{ if (o.material){ o.material.opacity = op; o.material.transp
 }
 function updateGoblin(g, dt, time){
 const p = g.root.position;
+/* safety net: gameplay goblins must never stay invisible (stale saves / old bugs).
+   Bub is exempt — he is intentionally hidden until the intro drop. */
+if (!g.isBub && !g.root.visible) g.root.visible = true;
+if (!g.isBub && !g.shadow.visible && g.state !== 'holefall') g.shadow.visible = true;
 let blinkScale = 1;
 if (time >= g.nextBlink){
 g.blinkT += dt;
@@ -1786,7 +2038,7 @@ g.legR.rotation.x = 0.3 + Math.sin(g.squirmT * 2.5 + Math.PI) * 0.25;
 g.inner.position.y = Math.sin(g.squirmT * 3) * 0.02;
 g.head.rotation.y = g.headYawDef;
 g.shadow.position.set(p.x, 0.02, p.z);
-g.shadow.visible = Math.hypot(p.x, p.z) > HOLE_R;
+g.shadow.visible = Math.hypot(p.x, p.z) > holeRS();
 return;
 }
 if (g.state === 'dizzy'){
@@ -1838,7 +2090,7 @@ g.armR.rotation.z = -0.5 - Math.sin(fl*0.86 + 1.0)*0.3;
 g.legL.rotation.x = Math.sin(fl*1.3)*1.2;
 g.legR.rotation.x = Math.sin(fl*1.3 + Math.PI)*1.2;
 const d = Math.hypot(g.root.position.x, g.root.position.z);
-const overHole = d < HOLE_R - 0.1;
+const overHole = d < holeRS() - 0.1;
 const groundY = g.baseScale * 0.5;
 if (overHole){
 // over the hole: no ground bounce — swallow them
@@ -1882,7 +2134,7 @@ g.throwVel.y = -Math.abs(g.throwVel.y) * 0.5;
 g.root.position.y = 15;
 }
 g.shadow.position.set(g.root.position.x, 0.02, g.root.position.z);
-g.shadow.visible = d > HOLE_R;
+g.shadow.visible = d > holeRS();
 return;
 }
 if (g.state === 'holefall'){
@@ -1892,7 +2144,7 @@ const k = Math.min(1, g.throwT / 1.0);
 g.root.position.y -= 4.5 * dt;
 g.root.rotation.y += dt * 2.5;
 g.root.scale.setScalar(Math.max(0.001, g.baseScale * (1 - 0.5*k)));
-g.root.traverse(o=>{ if (o.material) o.material.opacity = 1 - k; });
+g.root.traverse(o=>{ if (o.material){ o.material.transparent = true; o.material.opacity = 1 - k; } });
 g.shadow.visible = false;
 if (k >= 1){
 setGoblinOpacity(g, 1, false);
@@ -1930,7 +2182,7 @@ g.root.quaternion.setFromEuler(new THREE.Euler(0, g.yaw, 0));
 pickTargetFor(g);
 }
 g.shadow.position.set(g.root.position.x, 0.02, g.root.position.z);
-g.shadow.visible = Math.hypot(g.root.position.x, g.root.position.z) > HOLE_R;
+g.shadow.visible = Math.hypot(g.root.position.x, g.root.position.z) > holeRS();
 return;
 }
 g.headYawDef = 0;
@@ -2026,7 +2278,7 @@ if (t >= 0.7){ g.state='idle'; g.t = 1+Math.random(); }
 }
 g.root.position.y = whistleBuffT > 0 ? Math.abs(Math.sin(time*7 + g.squirmT))*0.25 : 0;
 const dC = Math.hypot(p.x,p.z);
-if (dC < HOLE_R+0.8){ const s=(HOLE_R+0.8)/dC; p.x*=s; p.z*=s; }
+if (dC < holeRS()+0.8){ const s=(holeRS()+0.8)/dC; p.x*=s; p.z*=s; }
 if (dC > WORLD_R-3){ const s=(WORLD_R-3)/dC; p.x*=s; p.z*=s; }
 g.root.rotation.y = g.yaw;
 g.root.updateMatrixWorld(true);
@@ -2294,12 +2546,14 @@ const b = Math.sin(time*1.7);
 stranger.inner.scale.set(1, 1 + b*0.025, 1);
 stranger.inner.position.y = b*0.015;
 const yawT = Math.atan2(player.pos.x - stranger.root.position.x, player.pos.z - stranger.root.position.z);
-stranger.root.rotation.y = lerpAngle(stranger.root.rotation.y, yawT, Math.min(1, 3*dt));
-stranger.inner.worldToLocal(_v1.set(player.pos.x, player.pos.y - 0.3, player.pos.z)).normalize();
-const ex = THREE.MathUtils.clamp(_v1.x, -1, 1) * 0.07;
-const ey = THREE.MathUtils.clamp(_v1.y, -0.8, 1) * 0.06;
-stranger.pupL.position.set(-0.20 + ex, 0.86 + ey, 0.63);
-stranger.pupR.position.set( 0.20 + ex, 0.86 + ey, 0.63);
+stranger.root.rotation.y = lerpAngle(stranger.root.rotation.y, yawT, Math.min(1, 1.8*dt)); // body turns a touch lazily…
+/* …so the pupils visibly lead the gaze toward the player */
+const rel = normAng(yawT - stranger.root.rotation.y);
+const ex = THREE.MathUtils.clamp(Math.sin(rel)*1.4, -1, 1) * 0.11;
+const dy = (player.pos.y - 0.3) - (stranger.root.position.y + 0.86);
+const ey = THREE.MathUtils.clamp(dy/1.6, -1, 1) * 0.08;
+stranger.pupL.position.set(-0.20 + ex, 0.86 + ey, 0.60);
+stranger.pupR.position.set( 0.20 + ex, 0.86 + ey, 0.60);
 if (time >= stranger.nextBlink){
 stranger.blinkT += dt;
 const bp = stranger.blinkT/0.22;
@@ -2361,12 +2615,54 @@ const mRim=new THREE.PointLight(0x2ee6a8,6,30,2); mRim.position.set(0,4,-6); mer
   const sg=new THREE.BufferGeometry(); sg.setAttribute('position',new THREE.BufferAttribute(pos,3));
   mergeScene.add(new THREE.Points(sg,new THREE.PointsMaterial({size:0.14,color:0xdfe8ff,transparent:true,opacity:0.85,depthWrite:false})));
 }
-{ // glowing platform
-  const disc=new THREE.Mesh(new THREE.CylinderGeometry(7,7.4,0.25,48), toon(0x10202e));
-  disc.position.y=-0.13; mergeScene.add(disc);
-  const ring=new THREE.Mesh(new THREE.TorusGeometry(7.1,0.06,8,64),
-    new THREE.MeshBasicMaterial({color:0x2ee6a8,transparent:true,opacity:0.7}));
-  ring.rotation.x=Math.PI/2; ring.position.y=0.02; mergeScene.add(ring);
+{ // glowing platform + alien soil
+const disc=new THREE.Mesh(new THREE.CylinderGeometry(7,7.4,0.25,48), toon(0x10202e));
+disc.position.y=-0.13; mergeScene.add(disc);
+/* ---- alien soil: dark indigo dirt, violet mottling, cracks, mineral specks ---- */
+const alienSoilTex = canvasTex(512,512,(x,w,h)=>{
+x.fillStyle='#141022'; x.fillRect(0,0,w,h);
+for(let i=0;i<260;i++){
+const r=6+Math.random()*30, cx=Math.random()*w, cy=Math.random()*h;
+const col=Math.random()<0.5?'26,20,48':'40,28,64';
+const g=x.createRadialGradient(cx,cy,0,cx,cy,r);
+g.addColorStop(0,`rgba(${col},${0.25+Math.random()*0.3})`); g.addColorStop(1,`rgba(${col},0)`);
+x.fillStyle=g; x.beginPath(); x.arc(cx,cy,r,0,7); x.fill();
+}
+for(let i=0;i<900;i++){
+x.fillStyle=Math.random()<0.6?`rgba(96,74,150,${0.08+Math.random()*0.15})`:`rgba(18,12,32,${0.1+Math.random()*0.2})`;
+x.fillRect(Math.random()*w, Math.random()*h, 1+Math.random()*3, 1+Math.random()*3);
+}
+for(let i=0;i<26;i++){
+let cx=Math.random()*w, cy=Math.random()*h;
+x.strokeStyle=`rgba(8,6,18,${0.5+Math.random()*0.3})`; x.lineWidth=1+Math.random()*2;
+x.beginPath(); x.moveTo(cx,cy);
+for(let s=0;s<6;s++){ cx+=(Math.random()-0.5)*40; cy+=(Math.random()-0.5)*40; x.lineTo(cx,cy); }
+x.stroke();
+}
+for(let i=0;i<140;i++){
+x.fillStyle=`rgba(160,140,220,${0.05+Math.random()*0.1})`;
+x.beginPath(); x.arc(Math.random()*w, Math.random()*h, 1+Math.random()*2.5, 0, 7); x.fill();
+}
+});
+const soil=new THREE.Mesh(new THREE.CircleGeometry(6.95,48), new THREE.MeshLambertMaterial({ map:alienSoilTex }));
+soil.rotation.x=-Math.PI/2; soil.position.y=0.002; mergeScene.add(soil);
+/* ---- bioluminescent spots (teal + violet) glowing out of the dirt ---- */
+const alienGlowTex = canvasTex(512,512,(x,w,h)=>{
+x.clearRect(0,0,w,h);
+for(let i=0;i<70;i++){
+const cx=Math.random()*w, cy=Math.random()*h, r=(2+Math.random()*7)*3;
+const teal=Math.random()<0.6;
+const g=x.createRadialGradient(cx,cy,0,cx,cy,r);
+g.addColorStop(0, teal?`rgba(46,230,168,${0.5+Math.random()*0.4})`:`rgba(180,112,239,${0.4+Math.random()*0.4})`);
+g.addColorStop(1,'rgba(0,0,0,0)');
+x.fillStyle=g; x.beginPath(); x.arc(cx,cy,r,0,7); x.fill();
+}
+});
+const glow=new THREE.Mesh(new THREE.CircleGeometry(6.95,48), new THREE.MeshBasicMaterial({ map:alienGlowTex, transparent:true, blending:THREE.AdditiveBlending, depthWrite:false }));
+glow.rotation.x=-Math.PI/2; glow.position.y=0.01; mergeScene.add(glow);
+const ring=new THREE.Mesh(new THREE.TorusGeometry(7.1,0.06,8,64),
+new THREE.MeshBasicMaterial({color:0x2ee6a8,transparent:true,opacity:0.7}));
+ring.rotation.x=Math.PI/2; ring.position.y=0.02; mergeScene.add(ring);
 }
 let mergeFlashSprite=null,mergeFlashT=0,mergeFlashOn=false;
 function flashMerge(pos){
@@ -2485,7 +2781,7 @@ function closeMergeMenu(){
 function showMergeConfirm(){
   const {a,b}=pendingMerge, t=a.tier, nt=t+1, mult=Math.pow(2,nt-1);
   mcTextEl.innerHTML=`Two <b>tier-${t}</b> goblins will fuse into one <b>tier-${nt}</b> goblin.<br><br>`+
-    `It will be <b>30% larger</b> and <b>dark green</b>.<br>`+
+    `It will be <b>30% larger</b>.<br>`+
     `Tier-${nt} goblins throw <b>silver coins</b>, but take <b>&times;${mult}</b> as long between throws.`;
   mergeConfirmEl.classList.remove('hidden');
 }
@@ -2507,8 +2803,9 @@ function doMerge(){
   mergeConfirmEl.classList.add('hidden');
   flashMerge(mid);
   tone(180,0.3,'sine',0.25,0,-60); tone(520,0.25,'triangle',0.15,0.05,300); tone(1040,0.3,'sine',0.12,0.12,400);
-  toast(`The goblins fuse into a tier-${nt} goblin!`);
-  buildMergeScene();
+ stats.goblinsMerged++;
+toast(`The goblins fuse into a tier-${nt} goblin!`);
+buildMergeScene();
 }
 function removeGoblinFromWorld(g){
   scene.remove(g.root); scene.remove(g.shadow);
@@ -2517,15 +2814,24 @@ function removeGoblinFromWorld(g){
   if(idx>=0) goblins.splice(idx,1);
 }
 function updateMerge(dt,time){
-  for(const m of mergeModels){
-    const root=m.model.root;
-    root.rotation.y = (m===dragModel) ? 0 : Math.sin(time*0.6+m.phase)*0.16;
-    m.model.inner.position.y=Math.sin(time*2.1+m.phase)*0.02;
-    m.model.armL.rotation.x=Math.sin(time*1.4+m.phase)*0.1;
-    m.model.armR.rotation.x=-Math.sin(time*1.4+m.phase)*0.1;
-    const isT=(m===dropTarget), isD=(m===dragModel);
-    root.scale.setScalar(m.gob.baseScale*(isT?1.12+Math.sin(time*9)*0.05:(isD?1.06:1)));
-  }
+mergeRay.setFromCamera(mergeMouse,mergeCamera);
+_look.copy(mergeRay.ray.origin).addScaledVector(mergeRay.ray.direction,7);
+for(const m of mergeModels){
+const root=m.model.root;
+root.rotation.y = (m===dragModel) ? 0 : Math.sin(time*0.6+m.phase)*0.16;
+m.model.inner.position.y=Math.sin(time*2.1+m.phase)*0.02;
+m.model.armL.rotation.x=Math.sin(time*1.4+m.phase)*0.1;
+m.model.armR.rotation.x=-Math.sin(time*1.4+m.phase)*0.1;
+const isT=(m===dropTarget), isD=(m===dragModel);
+root.scale.setScalar(m.gob.baseScale*(isT?1.12+Math.sin(time*9)*0.05:(isD?1.06:1)));
+/* pupils follow the cursor at all times */
+_v1.copy(_look);
+m.model.head.worldToLocal(_v1).normalize();
+const ex=THREE.MathUtils.clamp(_v1.x,-1,1)*0.045;
+const ey=THREE.MathUtils.clamp(_v1.y,-1,1)*0.045;
+m.model.pupL.position.set(-0.085+ex,0.05+ey,m.model.pupZ);
+m.model.pupR.position.set( 0.085+ex,0.05+ey,m.model.pupZ);
+}
   if(mergeFlashOn){
     mergeFlashT+=dt;
     const k=mergeFlashT/0.7;
@@ -2803,6 +3109,18 @@ sign.position.set(STALL_POS.x, 3.0, STALL_POS.z + 1.16);
 sign.rotation.x = -0.12;
 scene.add(sign);
 
+/* SPCA Approved sign on the barrel (near the cat) */
+{
+  const spcaMat = new THREE.MeshLambertMaterial({ map: spcaTex });
+  const spcaSide = new THREE.MeshLambertMaterial({ map: woodTex });
+  const spca = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.22, 0.03),
+    [spcaSide, spcaSide, spcaSide, spcaSide, spcaMat, spcaSide]);
+  spca.position.set(STALL_POS.x + 1.85, 0.52, STALL_POS.z + 0.63);
+  spca.rotation.x = -0.15;
+  scene.add(spca);
+  addMergedShell(spca, 0.02);
+}
+
 if (woodParts.length){
 const wm = new THREE.Mesh(mergeGeometries(woodParts, false),
 new THREE.MeshLambertMaterial({ map: woodTex, side: THREE.DoubleSide }));
@@ -2919,6 +3237,59 @@ addMergedShell(stallMesh, 0.014);
 addMergedShell(tableWalls, 0.02);
 addMergedShell(tableTop, 0.02);
 addMergedShell(sign, 0.015);
+}
+/* ============================== FIREPLACE (next to Grimble, silent) ============================== */
+const fireGlowTex = canvasTex(64,64,(x)=>{
+const g=x.createRadialGradient(32,32,2,32,32,32);
+g.addColorStop(0,'rgba(255,170,80,0.9)'); g.addColorStop(0.5,'rgba(255,120,40,0.35)'); g.addColorStop(1,'rgba(255,100,20,0)');
+x.fillStyle=g; x.fillRect(0,0,64,64);
+}, false);
+const FIRE_POS = new THREE.Vector3(STALL_POS.x - 2.2, 0, STALL_POS.z - 0.6);
+let fireLight = null;
+const fireFlames = [];
+{
+const fire = new THREE.Group();
+const stone = toon(0x6a6a70); addBoil(stone);
+const stoneD = toon(0x4a4a52); addBoil(stoneD);
+const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.56,0.12,10), stoneD);
+base.position.y = 0.06; fire.add(base);
+for(let i=0;i<9;i++){
+const a = i/9*Math.PI*2;
+const s = new THREE.Mesh(new THREE.SphereGeometry(0.11+Math.random()*0.04,6,5), stone);
+s.scale.set(1,0.8,1);
+s.position.set(Math.cos(a)*0.42, 0.14, Math.sin(a)*0.42);
+s.rotation.y = Math.random()*Math.PI;
+fire.add(s);
+}
+const log1 = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,0.5,6), toon(0x4a3520));
+log1.rotation.set(0,0.4,Math.PI/2); log1.position.y = 0.16; fire.add(log1);
+const log2 = new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.055,0.46,6), toon(0x5c4028));
+log2.rotation.set(0,-0.7,Math.PI/2); log2.position.y = 0.21; fire.add(log2);
+const flameMat = new THREE.MeshBasicMaterial({ color:0xff8c2e, transparent:true, opacity:0.8, blending:THREE.AdditiveBlending, depthWrite:false });
+const flameMat2 = new THREE.MeshBasicMaterial({ color:0xffd75e, transparent:true, opacity:0.9, blending:THREE.AdditiveBlending, depthWrite:false });
+for(let i=0;i<3;i++){
+const f = new THREE.Mesh(new THREE.ConeGeometry(0.14-i*0.03, 0.5-i*0.12, 7), i===1?flameMat2:flameMat);
+f.position.set((i-1)*0.08, 0.35+(i===1?0.1:0), 0);
+fire.add(f);
+fireFlames.push({ m:f, ph:Math.random()*6.28, baseY:f.position.y });
+}
+const fg = new THREE.Sprite(new THREE.SpriteMaterial({ map:fireGlowTex, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, opacity:0.55 }));
+fg.scale.setScalar(2.2); fg.position.y = 0.5; fire.add(fg);
+fireLight = new THREE.PointLight(0xff7a2a, 10, 8, 2);
+fireLight.position.y = 0.6; fire.add(fireLight);
+fire.position.copy(FIRE_POS);
+scene.add(fire);
+STALL_COLL.push({ x:FIRE_POS.x, z:FIRE_POS.z, r:0.6 });
+}
+function updateFireplace(time){
+if (!fireLight) return;
+fireLight.intensity = 9 + Math.sin(time*11)*1.5 + Math.sin(time*23+1.3) + Math.sin(time*47)*0.5;
+for (const f of fireFlames){
+const k = 1 + Math.sin(time*9+f.ph)*0.18 + Math.sin(time*17+f.ph*2)*0.08;
+f.m.scale.set(k, 1 + Math.sin(time*12+f.ph)*0.25, k);
+f.m.rotation.y = time*1.5 + f.ph;
+f.m.position.y = f.baseY + Math.sin(time*10+f.ph)*0.03;
+}
 }
 /* ============================== CHALKBOARD (affordable upgrades) ============================== */
 const chalkCanvas = document.createElement('canvas');
@@ -3168,7 +3539,8 @@ V[i3]=vel.x; V[i3+1]=vel.y; V[i3+2]=vel.z;
 AV[i3]=(Math.random()-0.5)*24; AV[i3+1]=(Math.random()-0.5)*24; AV[i3+2]=(Math.random()-0.5)*24;
 Q[i].set((Math.random()-0.5)*0.3,(Math.random()-0.5)*0.3,(Math.random()-0.5)*0.3,1).normalize();
 SIL[i]=silver?1:0; VMULT[i]=silver?10:1;
-ST[i]=autoCollect()?5:1;
+ST[i]=1;
+stats.coinsThrown++;
 SLEEPF[i]=0; RESTF[i]=0; SSCL[i]=1; GNDT[i]=0;
 SPINT[i]=Math.random()*10;
 return i;
@@ -3182,16 +3554,16 @@ if (last !== i){ live[lp]=last; livePos[last]=lp; }
 freeStack.push(i); ST[i]=0;
 if (countEarn){
 const gain = upgrades.value * (VMULT[i]||1) * prestigeMult();
+stats.coinsEarned += gain;
+stats.coinsFed += gain;
 earned += gain;
 if (coinCard.style.display === 'none'){
 coinCard.style.display = '';
 coinCard.classList.add('reveal');
 }
-if (!cheat){
 setCoinDisplay(earned);
 coinNum.classList.remove('bump'); void coinNum.offsetWidth; coinNum.classList.add('bump');
-}
-holePopup('+' + gain);
+if (!suckOn) holePopup('+' + gain);
 if (Math.hypot(player.pos.x, player.pos.z) < EARN_SOUND_R) earnSound();
 burstSparks(P[i*3], -2, P[i*3+2]);
 if (shopOpen) refreshTree();
@@ -3323,9 +3695,9 @@ if (vn>0){ V[i3]-=vn*1.6; V[i3+2]-=vn*1.6; }
 CONTACT[i]=0;
 /* ---- over the pit? no floor — fall in and be earned ---- */
 const dH=Math.hypot(P[i3],P[i3+2]);
-if (dH < HOLE_R-0.02){
-  if (P[i3+1] < 0 && dH > HOLE_R-0.14){          // scrape down the inner wall
-    const s=(HOLE_R-0.14)/dH; P[i3]*=s; P[i3+2]*=s;
+if (dH < holeRS()-0.02){
+if (P[i3+1] < 0 && dH > holeRS()-0.14){          // scrape down the inner wall
+const s=(holeRS()-0.14)/dH; P[i3]*=s; P[i3+2]*=s;
     const nx=P[i3]/dH, nz=P[i3+2]/dH;
     const vn=V[i3]*nx+V[i3+2]*nz;
     if (vn>0){ V[i3]-=vn*1.3*nx; V[i3+2]-=vn*1.3*nz; }
@@ -3428,21 +3800,49 @@ _qT2.setFromAxisAngle(_toCam, spinAng).multiply(_qTmp);
 Q[held].slerp(_qT2, 1-Math.exp(-9*dt));
 }
 
-/* auto-collect (post-prestige) coins home to the hole */
+/* prestige ring: coins inside the dotted radius get claimed */
+if (prestige>0){
+const mr=magnetR();
+for(let li=0; li<live.length; li++){
+const i=live[li], s=ST[i];
+if (s!==1 && s!==2) continue;
+const i3=i*3;
+if (Math.hypot(P[i3],P[i3+2]) < mr){ ST[i]=5; SLEEPF[i]=0; RESTF[i]=0; }
+}
+}
+/* suction: hole-job yanks fast, the prestige ring pulls slow */
 for(let li=live.length-1; li>=0; li--){
 const i=live[li]; if (ST[i]!==5) continue;
 const i3=i*3;
-const dx=-P[i3], dy=1.6-P[i3+1], dz=-P[i3+2];
-const dist=Math.hypot(dx,dy,dz);
-if (dist < 0.5){ ST[i]=1; V[i3]=0; V[i3+1]=-7; V[i3+2]=0; }
+const dx=-P[i3], dz=-P[i3+2];
+const hd=Math.hypot(dx,dz)||0.0001;
+const inRing = prestige>0 && hd < magnetR();
+if (!suckOn && !inRing){ ST[i]=1; SLEEPF[i]=0; RESTF[i]=0; continue; } // released
+if (hd < HOLE_R*0.55 && P[i3+1] < 0.5){
+/* over the maw: sink and be earned */
+V[i3+1] += ((suckOn?-7:-3.2) - V[i3+1])*Math.min(1,3*dt);
+V[i3]*=Math.exp(-4*dt); V[i3+2]*=Math.exp(-4*dt);
+P[i3]+=V[i3]*dt; P[i3+1]+=V[i3+1]*dt; P[i3+2]+=V[i3+2]*dt;
+if (P[i3+1] < EARN_Y) removeCoin(i,true);
+continue;
+}
+const ux=dx/hd, uz=dz/hd;
+let pull, sw, ty, k;
+if (suckOn){ pull=11; sw=0; ty=1.0; k=Math.min(1,3.5*dt); }
 else {
-const k=1-Math.exp(-3.5*dt), inv=11/dist;
-V[i3]+=(dx*inv-V[i3])*k; V[i3+1]+=(dy*inv+Math.min(2,dist*0.12)-V[i3+1])*k; V[i3+2]+=(dz*inv-V[i3+2])*k;
+const t01=Math.min(1, hd/magnetR());
+pull = 0.7 + 2.0*(1-t01)*(1-t01);   // lazy at the rim, eager near the pit
+sw = 0.5*t01;                       // gentle inward spiral
+ty = hd > HOLE_R ? 0.16 : 0.3;
+k = Math.min(1,4*dt);
+}
+V[i3]  += ((ux*pull - uz*sw) - V[i3])*k;
+V[i3+2]+= ((uz*pull + ux*sw) - V[i3+2])*k;
+V[i3+1]+= (ty-P[i3+1])*Math.min(1,6*dt);
 P[i3]+=V[i3]*dt; P[i3+1]+=V[i3+1]*dt; P[i3+2]+=V[i3+2]*dt;
 SPINT[i]+=dt;
-_qTmp.setFromEuler(_euler.set(SPINT[i]*0.8, SPINT[i]*1.3, 0));
-Q[i].slerp(_qTmp, Math.min(1,6*dt));
-}
+_qTmp.setFromEuler(_euler.set(SPINT[i]*1.2, SPINT[i]*0.9, 0));
+Q[i].slerp(_qTmp, Math.min(1,4*dt));
 }
 /* fixed-step rigid body simulation — runs in telescope/iso view too */
 physAccum += dt;
@@ -3525,6 +3925,7 @@ catHearts.splice(i,1);
 }
 }
 function petCat(){
+stats.catsPetted++;
 const cx = STALL_POS.x + 1.9, cz = STALL_POS.z + 0.4;
 for(let i=0;i<3;i++){
 spawnCatHeart(cx+(Math.random()-0.5)*0.35, 1.05+Math.random()*0.2, cz+(Math.random()-0.5)*0.35);
@@ -3543,8 +3944,9 @@ else { g.mats[0].color.setHex(g.cols[0]); g.mats[1].color.setHex(g.cols[1]); g.m
 }
 function tryWhistle(){
 if (upgrades.whistle < 1 || whistleCd > 0) return;
-whistleCd = 300;
+whistleCd = 300 - 30*upgrades.tempo;
 whistleBuffT = 5;
+stats.whistleUses++;
 setGoblinsGold(true);
 tone(1150,0.14,'sine',0.16,0,500); tone(1500,0.22,'sine',0.16,0.14,250);
 toast('The goblins frenzy!');
@@ -3570,8 +3972,8 @@ txt.textContent = s >= 60 ? Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'
 }
 }
 function updateAbilUI(){
-setAbil(abilWhistleEl, whistleFill, whistleTxt, upgrades.whistle, whistleCd, 300);
-setAbil(abilHoleEl, holeFill, holeTxt, upgrades.holejob, holeJobCd, 300);
+setAbil(abilWhistleEl, whistleFill, whistleTxt, upgrades.whistle, whistleCd, 300 - 30*upgrades.tempo);
+setAbil(abilHoleEl, holeFill, holeTxt, upgrades.holejob, holeJobCd, 300 - 30*upgrades.tempo);
 }
 /* ---- Hole-Job: the hole inhales everything ---- */
 let holeJobCd = 0, holeJobT = 0, suckOn = false;
@@ -3600,8 +4002,9 @@ hjGeo.attributes.position.needsUpdate = true;
 }
 function tryHoleJob(){
 if (upgrades.holejob < 1 || holeJobCd > 0) return;
-holeJobCd = 300;
+holeJobCd = 300 - 30*upgrades.tempo;
 holeJobT = 4;
+stats.holeJobUses++;
 for(let li=0; li<live.length; li++){
 const i = live[li], s = ST[i];
 if (s!==1 && s!==2) continue;
@@ -3646,11 +4049,12 @@ handle.position.y = 0.86; g.add(handle);
 const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,0.34,6), wood);
 grip.rotation.z = Math.PI/2; grip.position.y = 1.68; g.add(grip);
 const wm = 1 + 0.2*(upgrades.width||0);
+const halfW = 0.4*wm;
 const blade = new THREE.Mesh(new THREE.BoxGeometry(0.8*wm,0.5,0.035), woodL);
 blade.position.set(0, 0.22, 0.045); blade.rotation.x = 0.12; g.add(blade);
 for (const s of [-1,1]){
 const riv = new THREE.Mesh(new THREE.SphereGeometry(0.05,6,6), wood);
-riv.position.set(s*0.41*wm, 0.24, 0.07);
+riv.position.set(s*(halfW-0.03), 0.24, 0.07);   // rivets sit on the blade edge at every width
 riv.scale.set(1.1,1.1,1.7);
 g.add(riv);
 }
@@ -3685,6 +4089,7 @@ const want = rmbHeld && shovelOwned && locked && camMode==='play' && !shopOpen &
 if (want && !shovelTutDone){ shovelTutDone = true; hideCap(); }
 shovelUsing = want;
 shovelPush += ((want?1:0)-shovelPush)*Math.min(1,10*dt);
+if (shovelView) shovelView.visible = !cine;
 if (!shovelView) return;
 const spd = Math.hypot(player.vel.x, player.vel.z);
 const bob = Math.sin(bobPhase*2)*0.014*Math.min(1,spd/4);
@@ -3707,7 +4112,11 @@ function shovelPushCoins(dt){
 if (!shovelView || shovelPush < 0.25) return;
 camera.getWorldDirection(_camD);
 _camR.crossVectors(_camD, UP).normalize();
-const R = 0.75, R2 = R*R;
+const wmS = 1 + 0.2*(upgrades.width||0);
+const R = 0.4 + 0.35*wmS, R2 = R*R;   // reach scales with blade width (0.75 at base)
+const TIP = 0.4*wmS + COL_R;           // never grab past the blade tips
+const kPos = Math.min(1, 12*dt);       // soft positional push — no snapping, no stutter
+const kVel = Math.min(1, 9*dt);
 for(let li=0; li<live.length; li++){
 const i = live[li], s = ST[i];
 if (s!==1 && s!==2) continue;
@@ -3715,20 +4124,26 @@ const i3 = i*3;
 const dx=P[i3]-shovelBlade.x, dy=P[i3+1]-shovelBlade.y, dz=P[i3+2]-shovelBlade.z;
 const d2 = dx*dx+dy*dy+dz*dz;
 if (d2 > R2) continue;
+const lat0 = dx*_camR.x + dz*_camR.z;
+if (Math.abs(lat0) > TIP) continue;
 const d = Math.sqrt(d2)||0.001;
 const nx=dx/d, ny=dy/d, nz=dz/d;
 if (s===2){ ST[i]=1; SLEEPF[i]=0; RESTF[i]=0; }
-P[i3]=shovelBlade.x+nx*R; P[i3+1]=shovelBlade.y+ny*R; P[i3+2]=shovelBlade.z+nz*R;
-const k=Math.min(1,18*dt);
-V[i3]  += (shovelBladeVel.x*1.1+nx*1.2 - V[i3])*k;
-V[i3+1]+= (shovelBladeVel.y*1.1+ny*0.6+0.4 - V[i3+1])*k;
-V[i3+2]+= (shovelBladeVel.z*1.1+nz*1.2 - V[i3+2])*k;
-AV[i3] += (Math.random()-0.5)*4*k; AV[i3+2] += (Math.random()-0.5)*4*k;
+/* ease the coin out of the blade sphere instead of teleporting it */
+const pen = R - d;
+P[i3]   += nx*pen*kPos;
+P[i3+1] += ny*pen*kPos*0.5;
+P[i3+2] += nz*pen*kPos;
+/* glide velocity toward blade velocity + a gentle outward shove */
+V[i3]   += (shovelBladeVel.x*1.05 + nx*0.9 - V[i3])*kVel;
+V[i3+1] += (shovelBladeVel.y*0.5 + ny*0.25 + 0.3 - V[i3+1])*kVel;
+V[i3+2] += (shovelBladeVel.z*1.05 + nz*0.9 - V[i3+2])*kVel;
+AV[i3] += (Math.random()-0.5)*2*kVel; AV[i3+2] += (Math.random()-0.5)*2*kVel;
 const SIDE = 0.34*(1 + 0.2*upgrades.width);
 const lat = (P[i3]-shovelBlade.x)*_camR.x + (P[i3+2]-shovelBlade.z)*_camR.z;
 if (Math.abs(lat) > SIDE){
 const over = lat - Math.sign(lat)*SIDE;
-P[i3] -= _camR.x*over; P[i3+2] -= _camR.z*over;
+P[i3] -= _camR.x*over*kPos; P[i3+2] -= _camR.z*over*kPos;
 const vL = V[i3]*_camR.x + V[i3+2]*_camR.z;
 if (Math.sign(vL) === Math.sign(lat)){ V[i3] -= _camR.x*vL; V[i3+2] -= _camR.z*vL; }
 }
@@ -3951,7 +4366,6 @@ cine = { type:'intro', t:0, fromPos:camera.position.clone(),
 rumbled:false, plugged:false, dropped:false, landed:false, gob:null,
 stars, landT:0, zoomDone:false, eyesOpen:false,
 cap:0, capT:0, capClick:false, cap3Shown:false, turnT:-1, holdT:-1, fadeT:-1, done:false };
-try { renderer.domElement.requestPointerLock(); } catch(e){}
 tone(110, 2.0, 'sine', 0.12, 0, -40);
 toast('Hold 8 to skip');
 }
@@ -4020,6 +4434,10 @@ g.state = 'idle'; g.t = 1+Math.random();
 }
 goblinsAwakened = true; tutDone = true; tutPhase = 0; tutCoinIdx = -1;
 removeTutArrow();
+/* the fallen plug + its grass must never linger after a skip */
+scene.remove(introPlug);
+if (plugGrass){ scene.remove(plugGrass); plugGrass = null; }
+if (holeRim) holeRim.material.opacity = 1;
 cine = null;
 if (!started){ started = true; player.pos.set(0,EYE,6.8); yaw = 0; pitch = -0.08; }
 snapCameraToPlayer();
@@ -4499,7 +4917,8 @@ c.suck = c.suck.filter(it => it.ci === undefined);
 }
 function doPrestigeReset(){
 prestige++;
-for (const k in upgrades) upgrades[k] = (k==='chieftains'||k==='help'||k==='goblins'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob'||k==='stranger') ? 0 : 1;
+stats.prestiges++;
+for (const k in upgrades) upgrades[k] = (k==='help'||k==='goblins'||k==='goblins2'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob'||k==='stranger') ? 0 : 1;
 earned = 0;
 setCoinDisplay(0);
 while (live.length) removeCoin(live[0], false);
@@ -4512,6 +4931,7 @@ yaw = 0; pitch = -0.08; roll = 0;
 reMaxToastDone = false;
 updatePrestigeBadge();
 refreshTree();
+saveGame();
 }
 function updatePrestigeBadge(){
   const b = document.getElementById('prestigeBadge');
@@ -4524,12 +4944,82 @@ function updatePrestigeBadge(){
     if (holeGlowSprite) holeGlowSprite.material.opacity = 0.375;
     if (holeDustMat) holeDustMat.uniforms.uPrestige.value = 1;
   } else {
-    b.classList.remove('on');
-
-    if (holeGlowSprite) holeGlowSprite.material.opacity = 0;
-    if (holeDustMat) holeDustMat.uniforms.uPrestige.value = 0;
-  }
+b.classList.remove('on');
+if (holeGlowSprite) holeGlowSprite.material.opacity = 0;
+if (holeDustMat) holeDustMat.uniforms.uPrestige.value = 0;
 }
+buildPrestigeRing();
+}
+/* ---------- dotted prestige ring: the hole's claim radius ---------- */
+let prestigeRing = null;
+const magnetR = () => HOLE_R + 2*prestige;   // 2 m from the rim, +2 m per prestige
+function buildPrestigeRing(){
+if (prestigeRing){ scene.remove(prestigeRing); prestigeRing.geometry.dispose(); prestigeRing.material.dispose(); prestigeRing = null; }
+if (prestige < 1) return;
+const r = magnetR();
+const pts = [];
+for(let i=0;i<200;i++){ const a=i/200*Math.PI*2; pts.push(new THREE.Vector3(Math.cos(a)*r, 0, Math.sin(a)*r)); }
+const g = new THREE.BufferGeometry().setFromPoints(pts);
+const m = new THREE.LineDashedMaterial({ color:0xb470ef, transparent:true, opacity:0.8,
+dashSize:0.1, gapSize:0.35, depthWrite:false });
+prestigeRing = new THREE.Line(g, m);
+prestigeRing.computeLineDistances();
+prestigeRing.position.y = 0.035;
+prestigeRing.renderOrder = 1;
+scene.add(prestigeRing);
+}
+/* ---------- ritual ascend screen (shown after agreeing with Maud) ---------- */
+let ritualOpen = false;
+const ritualOverlayEl = document.getElementById('ritualOverlay');
+function openRitual(){
+ritualOpen = true;
+document.body.classList.add('ritual');
+document.body.classList.remove('locked');
+mouseHeld = false;
+if (document.pointerLockElement) document.exitPointerLock();
+document.getElementById('rbSkullOld').textContent = '☠ ' + prestige;
+document.getElementById('rbSkullNew').textContent = '☠ ' + (prestige+1);
+document.getElementById('rbMultOld').textContent = '×' + prestigeMult();
+document.getElementById('rbMultNew').textContent = '×' + (prestigeMult()+1);
+let bought = 0;
+for (const k in UPG){
+const start = (k==='chieftains'||k==='help'||k==='goblins'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob'||k==='stranger') ? 0 : 1;
+bought += upgrades[k]-start;
+}
+const merged = goblins.filter(g=>(g.tier||1) > 1).length;
+const rows = [
+['Earned coins', fmt(earned), '0'],
+['Goblins in the meadow', String(goblins.length), '1'],
+['Upgrades bought', String(bought), 'reset'],
+];
+if (merged > 0) rows.push(['Merged goblins', String(merged), 'lost']);
+rows.push(['Hole tribute', prestige > 0 ? 'claims all coins' : 'none', 'claims all coins']);
+const box = document.getElementById('ritualStats');
+box.innerHTML = '';
+for (const r of rows){
+const d = document.createElement('div');
+d.className = 'rsRow';
+d.innerHTML = `<span>${r[0]}</span><span><b>${r[1]}</b> <span class="rsArr">→</span> <b>${r[2]}</b></span>`;
+box.appendChild(d);
+}
+ritualOverlayEl.classList.remove('hidden');
+tone(60,1.2,'sine',0.25,0,-20); tone(220,0.6,'sine',0.08,0.2,-80);
+}
+function closeRitual(){
+ritualOpen = false;
+ritualOverlayEl.classList.add('hidden');
+document.body.classList.remove('ritual');
+}
+document.getElementById('ritualReady').addEventListener('click', ()=>{
+closeRitual();
+try { renderer.domElement.requestPointerLock(); } catch(e){}
+startSacrifice();
+});
+document.getElementById('ritualBack').addEventListener('click', ()=>{
+closeRitual();
+try { renderer.domElement.requestPointerLock(); } catch(e){}
+toast('Maud steps back into the dark. The offer stands.');
+});
 /* ---------- witch dialogue ---------- */
 const dialogEl = document.getElementById('dialog');
 const dlgTextEl = document.getElementById('dlgText');
@@ -4566,17 +5056,20 @@ function onLineTyped(){
   if (cfg.buttons && dlgLine === cfg.lines.length-1) showDlgButtons(cfg.buttons);
 }
 function showDlgButtons(buttons){
-  dlgHintEl.innerHTML = '';
-  const wrap = document.createElement('div');
-  wrap.className = 'dlgBtns';
-  for (const b of buttons){
-    const btn = document.createElement('button');
-    btn.className = b.cls || '';
-    btn.innerHTML = b.label;
-    btn.addEventListener('click', ()=> b.action());
-    wrap.appendChild(btn);
-  }
-  dlgHintEl.appendChild(wrap);
+dlgHintEl.innerHTML = '';
+const wrap = document.createElement('div');
+wrap.className = 'dlgBtns';
+for (const b of buttons){
+const btn = document.createElement('button');
+btn.className = b.cls || '';
+btn.innerHTML = b.label;
+/* swallow pointer events so global mousedown hooks (pointer-lock safety net, shovel, etc.) never fire "through" the button */
+btn.addEventListener('pointerdown', e=>e.stopPropagation());
+btn.addEventListener('mousedown',  e=>e.stopPropagation());
+btn.addEventListener('click', e=>{ e.stopPropagation(); b.action(); });
+wrap.appendChild(btn);
+}
+dlgHintEl.appendChild(wrap);
 }
 let dlgCfg = null;
 let dlgVoice = 'grim'; // 'grim' = low ticks · 'maud' = high ticks
@@ -4646,7 +5139,7 @@ let shopOpen = false;
 let shopPhase = 'none';
 const keys = new Set();
 function updatePlayer(dt){
-const frozen = shopOpen || camMode !== 'play' || dlgOpen || cine;
+const frozen = shopOpen || camMode !== 'play' || dlgOpen || cine || ritualOpen;
 let f = 0, r = 0;
 if (!frozen){
 f = (keys.has('KeyW')||keys.has('ArrowUp')?1:0) - (keys.has('KeyS')||keys.has('ArrowDown')?1:0);
@@ -4669,7 +5162,7 @@ const s = (WORLD_R-2)/dH;
 player.pos.x*=s; player.pos.z*=s;
 }
 /* invisible barrier around the hole */
-const BARR = HOLE_R + 0.35;
+const BARR = holeRS() + 0.35;
 const dHole = Math.hypot(player.pos.x, player.pos.z);
 if (dHole < BARR){
 const inv = 1/Math.max(dHole, 0.0001);
@@ -4704,6 +5197,7 @@ if (!player.grounded && player.vy < -3){ landDip = 0.13; thumpS(); }
 player.grounded = true; player.vy = 0; player.pos.y = EYE;
 } else player.grounded = false;
 const spXZ = Math.hypot(player.vel.x, player.vel.z);
+if (started) stats.distance += spXZ*dt;
 const prevBob = Math.floor(bobPhase/Math.PI);
 bobPhase += spXZ*dt*2.2;
 if (player.grounded && Math.floor(bobPhase/Math.PI) !== prevBob && spXZ > 1.2) stepS();
@@ -4827,19 +5321,21 @@ crosshair.classList.add('active');
 prompt.innerHTML = '<kbd>E</kbd> talk to the witch';
 prompt.classList.add('show');
 crosshair.classList.add('active');
-} else if (nearVendor && pickupCount > 0){
-prompt.innerHTML = '<kbd>E</kbd> browse the skill tree';
+} else if (nearVendor && (pickupCount > 0 || tutPhase === 3)){
+prompt.innerHTML = tutPhase === 3 ? '<kbd>E</kbd> Talk' : '<kbd>E</kbd> browse the skill tree';
 prompt.classList.add('show');
 crosshair.classList.add('active');
-} else {
+}else {
 prompt.classList.remove('show');
 crosshair.classList.remove('active');
 }
+updateGoblinNameTag();
 }
 function pickupIntoHand(i){
 held = i; ST[i] = 3; SLEEPF[i]=0; RESTF[i]=0;
 V[i*3]=player.vel.x; V[i*3+1]=player.vel.y; V[i*3+2]=player.vel.z;
 pickupCount++;
+stats.coinsPicked++;
 coinPickupPromptCount++;
 ching();
 }
@@ -4883,6 +5379,7 @@ heldGoblin.throwAV.set(
 );
 heldGoblin.throwQuat.setFromEuler(new THREE.Euler(0, yaw + Math.PI, 0));
 heldGoblin.root.quaternion.copy(heldGoblin.throwQuat);
+stats.goblinsThrown++;
 heldGoblin = null;
 tone(220, 0.12, 'sine', 0.15);
 }
@@ -4898,7 +5395,7 @@ holdPos.y -= 0.5;
 heldGoblin.root.position.copy(holdPos);
 heldGoblin.root.rotation.y = yaw + Math.PI;
 heldGoblin.shadow.position.set(holdPos.x, 0.02, holdPos.z);
-heldGoblin.shadow.visible = Math.hypot(holdPos.x, holdPos.z) > HOLE_R;
+heldGoblin.shadow.visible = Math.hypot(holdPos.x, holdPos.z) > holeRS();
 }
 function tryInteract(){
 if (cine) return;
@@ -4951,8 +5448,7 @@ treeZoom = treeZoomT = 1.6;
 treePanX = treePanXT = 0;
 treePanY = treePanYT = -336;
 } else {
-treeZoom = 1; treePanX = 0; treePanY = 0;
-treeZoomT = 1; treePanXT = 0; treePanYT = 0;
+treeZoom = treeZoomT; treePanX = treePanXT; treePanY = treePanYT;
 }
 applyTreeTransform();
 refreshTree();
@@ -4998,14 +5494,14 @@ treeZoom = treeZoomT = 1.6;
 treePanX = treePanXT = 0;
 treePanY = treePanYT = -336;
 } else {
-treeZoom = 1; treePanX = 0; treePanY = 0;
-treeZoomT = 1; treePanXT = 0; treePanYT = 0;
+treeZoom = treeZoomT; treePanX = treePanXT; treePanY = treePanYT;
 }
 applyTreeTransform();
 refreshTree();
 shopOverlay.classList.remove('hidden');
 }
 function ascend(){
+saveTreeCam();
 shopOverlay.classList.add('hidden');
 shopOpen = false;
 shopPhase = 'none';
@@ -5048,10 +5544,12 @@ const el = document.createElement('div');
 el.className = 'tnode';
 if (n.green) el.classList.add('green');
 el.style.left = n.x+'px'; el.style.top = n.y+'px';
-el.innerHTML = `<div class="ico">${n.ico}</div><div class="tname">${n.name}</div>
-<div class="tlvl"><span class="ulvl-max" style="display:none">OWNED</span><span class="ulvl-roll"></span><span class="ulvl-static"></span></div>
+el.innerHTML = `<div class="nails"></div><div class="ico">${n.ico}</div><div class="tname">${n.name}</div>
+<div class="tlvl"></div>
 <span class="tcost"><span class="ucost-max" style="display:none">MAX</span><span class="ucost-roll"></span><span class="ucost-star"> ★</span></span>
 <div class="maxBanner">Bought</div>`;
+for(let i=0;i<UPG[n.key].max;i++){ const p=document.createElement('span'); p.className='pip'; el.querySelector('.tlvl').appendChild(p); }
+el.querySelector('.ico').style.animationDelay = (-(Math.random()*3.2)).toFixed(2)+'s';
 el.addEventListener('click', ev=>{ ev.stopPropagation(); buy(n.key); });
 el.addEventListener('mouseenter', ()=>{
 if (lineEls[n.key]) lineEls[n.key].classList.add('hov');
@@ -5066,10 +5564,7 @@ treeBox.appendChild(el);
 nodeEls[n.key] = {
 wrap: el,
 lineWasVis: !n.need || n.need(),
-lvl: el.querySelector('.tlvl'),
-lvlMax: el.querySelector('.ulvl-max'),
-lvlRoll: el.querySelector('.ulvl-roll'),
-lvlStatic: el.querySelector('.ulvl-static'),
+pips: el.querySelectorAll('.pip'),
 cost: el.querySelector('.tcost'),
 costMax: el.querySelector('.ucost-max'),
 costRoll: el.querySelector('.ucost-roll'),
@@ -5155,6 +5650,9 @@ stack:'Deeper pockets on every throw.',
 rate:'The goblins fling faster.',
 value:'Shinier coins, heavier purses.',
 goblins:'More hands, more coins.',
+goblins2:'One more pair of thieving hands.',
+maw:'A hungrier mouth swallows more.',
+tempo:'Catch your breath — the tools recharge sooner.',
 chieftains:'Red kings slam silver into the dirt.',
 shiny:'A whisper of silver in every throw.',
 whistle:'One blast. Five seconds of glorious chaos.',
@@ -5171,6 +5669,7 @@ case 'value':      return `coin value ${L} <span class="arr">→</span> ${L+1}`;
 case 'rate':       return `throw interval ${throwInterval().toFixed(1)}s <span class="arr">→</span> ${Math.max(4, 10*Math.pow(0.85, L)).toFixed(1)}s`;
 case 'stack':      return `${L} <span class="arr">→</span> ${L+1} coins per throw`;
 case 'goblins':    return `${L} <span class="arr">→</span> ${L+1} goblins`;
+case 'goblins2':   return `${L} <span class="arr">→</span> ${L+1} goblins`;
 case 'chieftains': return `${L} <span class="arr">→</span> ${L+1} chieftains`;
 case 'shiny':      return `no silver chance <span class="arr">→</span> 1% silver throws`;
 case 'whistle':    return `press <kbd>1</kbd> — 5s frenzy, 5min cooldown`;
@@ -5178,6 +5677,8 @@ case 'ledger':     return `-${L*5}% costs <span class="arr">→</span> -${(L+1)*
 case 'width':      return `blade ×${(1+0.2*L).toFixed(2)} <span class="arr">→</span> ×${(1+0.2*(L+1)).toFixed(2)}`;
 case 'holejob':    return `press <kbd>2</kbd> — the hole inhales, 5min cooldown`;
 case 'stranger':   return `a green guest takes a seat in the meadow`;
+case 'maw':        return `hole ×${(1+0.2*L).toFixed(1)} <span class="arr">→</span> ×${(1+0.2*(L+1)).toFixed(1)}`;
+case 'tempo':      return `cooldowns ${300-30*L}s <span class="arr">→</span> ${300-30*(L+1)}s`;
 }
 return '';
 }
@@ -5205,10 +5706,10 @@ treeTip.classList.add('show');
 }
 function hideTip(){ tipKey = null; treeTip.classList.remove('show'); }
 function refreshTree(){
-shopCoinsEl.textContent = cheat ? '∞' : fmt(earned);
+shopCoinsEl.textContent = fmt(earned);
 let bought = 0, maxT = 0;
 for (const k in UPG){
-const start = (k==='chieftains'||k==='help'||k==='goblins'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob'||k==='stranger') ? 0 : 1;
+const start = (k==='chieftains'||k==='help'||k==='goblins'||k==='goblins2'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob'||k==='stranger'||k==='maw'||k==='tempo') ? 0 : 1;
 bought += upgrades[k]-start;
 maxT += UPG[k].max-start;
 }
@@ -5230,21 +5731,7 @@ if (!vis) continue;
 const lvl = upgrades[n.key];
 const maxed = lvl >= UPG[n.key].max;
 const c = costOf(n.key);
-if (n.key === 'help') {
-el.lvlMax.style.display = lvl > 0 ? '' : 'none';
-el.lvlRoll.style.display = lvl > 0 ? 'none' : '';
-el.lvlStatic.style.display = lvl > 0 ? 'none' : '';
-if (lvl === 0) {
-setRollingDigits(el.lvlRoll, 0);
-el.lvlStatic.textContent = '/' + UPG[n.key].max;
-}
-} else {
-el.lvlMax.style.display = 'none';
-el.lvlRoll.style.display = '';
-el.lvlStatic.style.display = '';
-setRollingDigits(el.lvlRoll, lvl);
-el.lvlStatic.textContent = '/' + UPG[n.key].max;
-}
+for(let i=0;i<el.pips.length;i++) el.pips[i].classList.toggle('on', i < lvl);
 el.costMax.style.display = maxed ? '' : 'none';
 el.costRoll.style.display = maxed ? 'none' : '';
 el.costStar.style.display = maxed ? 'none' : '';
@@ -5252,6 +5739,7 @@ if (!maxed) {
 setRollingDigits(el.costRoll, c);
 }
 el.wrap.classList.toggle('cant', !maxed && !(cheat || earned>=c));
+el.wrap.classList.toggle('afford', !maxed && (cheat || earned>=c));
 el.wrap.classList.toggle('max', maxed);
 }
 if (tipKey) renderTipContent(tipKey);
@@ -5265,6 +5753,8 @@ const c = costOf(key);
 if (!cheat && earned < c){
 tone(80,0.18,'sine',0.28,0,-40);
 tone(55,0.28,'sine',0.22,0.06,-25);
+const w = nodeEls[key] && nodeEls[key].wrap;
+if (w){ w.classList.remove('deny'); void w.offsetWidth; w.classList.add('deny'); setTimeout(()=>w.classList.remove('deny'), 420); }
 return;
 }
 if (!cheat){
@@ -5273,6 +5763,9 @@ setCoinDisplay(earned);
 coinNum.classList.remove('bump'); void coinNum.offsetWidth; coinNum.classList.add('bump');
 }
 upgrades[key]++;
+stats.upgradesBought++;
+{ const w = nodeEls[key] && nodeEls[key].wrap;
+if (w){ w.classList.remove('bought'); void w.offsetWidth; w.classList.add('bought'); setTimeout(()=>w.classList.remove('bought'), 520); } }
 if (key === 'value' && !shovelDlgDone) shovelDlgPending = true;
 if (key === 'whistle') toast('Whistle ready — press 1');
 if (key === 'shiny') toast('Silver luck hums in the air…');
@@ -5283,10 +5776,8 @@ toast('The blade broadens…');
 }
 if (key === 'holejob') toast('Hole-Job ready — press 2');
 if (key === 'stranger'){
-strangerCinePending = true;
+strangerCinePending = true;   // cutscene waits until you ASCEND out of the tree
 toast('A stranger wanders into the meadow…');
-if (!stranger) startStrangerCine();
-else toast('Fizz waves shyly.');
 }
 if (key === 'help'){
 let need = 2 - goblins.length; // top up to exactly 2, never more
@@ -5314,6 +5805,19 @@ break;
 }
 toast('Another goblin shuffles in…');
 }
+if (key === 'goblins2'){
+for(let i=0;i<20;i++){
+const r = 8 + Math.random()*12, a = Math.random()*Math.PI*2;
+const x = Math.cos(a)*r, z = Math.sin(a)*r;
+if (Math.hypot(x-STALL_POS.x, z-STALL_POS.z) < 4) continue;
+if (Math.hypot(x-WITCH_POS.x, z-WITCH_POS.z) < 3) continue;
+makeGoblin(x, z);
+break;
+}
+toast('Another goblin shuffles in…');
+}
+if (key === 'maw'){ buildHole(); toast('The hole widens…'); }
+if (key === 'tempo') toast('The tools recover faster.');
 if (key === 'chieftains'){
 for(let i=0;i<20;i++){
 const r = 8 + Math.random()*12, a = Math.random()*Math.PI*2;
@@ -5326,12 +5830,27 @@ break;
 toast('A chieftain answers the call…');
 }
 refreshTree();
+saveGame();
 tone(980,0.1,'triangle',0.18); tone(1310,0.14,'triangle',0.15,0.08);
 }
 document.getElementById('ascendBtn').addEventListener('click', e=>{ e.stopPropagation(); ascend(); });
 let treeZoom = 1, treePanX = 0, treePanY = 0, treeDrag = false, tdx = 0, tdy = 0;
 let treeZoomT = 1, treePanXT = 0, treePanYT = 0;
 let treeIntroZoomDone = false;
+/* ---------- persist tree pan/zoom ---------- */
+function saveTreeCam(){
+try{ localStorage.setItem('grimbleTreeCam', JSON.stringify({ z:treeZoomT, x:treePanXT, y:treePanYT })); }catch(e){}
+}
+let treeCamSaveT = 0;
+function queueSaveTreeCam(){ clearTimeout(treeCamSaveT); treeCamSaveT = setTimeout(saveTreeCam, 250); }
+try{
+const tc = JSON.parse(localStorage.getItem('grimbleTreeCam')||'null');
+if (tc && isFinite(tc.z)){
+treeZoomT = THREE.MathUtils.clamp(tc.z, 0.5, 2.2); treePanXT = tc.x||0; treePanYT = tc.y||0;
+treeZoom = treeZoomT; treePanX = treePanXT; treePanY = treePanYT;
+treeIntroZoomDone = true; // saved view exists: reopen where you left off, skip the intro swoop
+}
+}catch(e){}
 function applyTreeTransform(){ treeBox.style.transform = `translate(${treePanX}px,${treePanY}px) scale(${treeZoom})`; }
 function updateTreeCam(dt){
 if (shopPhase !== 'hole') return;
@@ -5345,6 +5864,7 @@ shopOverlayEl.addEventListener('wheel', e=>{
 if (shopPhase !== 'hole') return;
 e.preventDefault();
 treeZoomT = THREE.MathUtils.clamp(treeZoomT * (e.deltaY < 0 ? 1.1 : 0.9), 0.5, 2.2);
+queueSaveTreeCam();
 }, { passive:false });
 shopOverlayEl.addEventListener('mousedown', e=>{
 if (e.button === 2 && shopPhase === 'hole'){ treeDrag = true; tdx = e.clientX; tdy = e.clientY; }
@@ -5352,6 +5872,7 @@ if (e.button === 2 && shopPhase === 'hole'){ treeDrag = true; tdx = e.clientX; t
 shopOverlayEl.addEventListener('dblclick', ()=>{
 if (shopPhase !== 'hole') return;
 treeZoomT = 1; treePanXT = 0; treePanYT = 0;
+queueSaveTreeCam();
 });
 /* ============================== TREE DUST PARALLAX ============================== */
 const treeDust = document.getElementById('treeDust');
@@ -5405,6 +5926,26 @@ p.el.style.left = (p.baseX + dx) + '%';
 p.el.style.top = (p.baseY + dy) + '%';
 }
 }
+}
+/* ---------- ember glints on maxed nodes ---------- */
+let emberAcc = 0;
+function spawnEmber(wrap){
+const s = document.createElement('span');
+s.className = 'ember';
+s.style.left = (15+Math.random()*70)+'%';
+s.style.top = (30+Math.random()*55)+'%';
+s.style.setProperty('--ex', (Math.random()*16-8).toFixed(1)+'px');
+s.style.setProperty('--et', (0.9+Math.random()*0.7).toFixed(2)+'s');
+wrap.appendChild(s);
+setTimeout(()=>s.remove(), 1700);
+}
+function updateTreeEmbers(dt){
+if (shopPhase !== 'hole') return;
+emberAcc += dt;
+if (emberAcc < 0.4) return;
+emberAcc = 0;
+const maxed = TREE.filter(n => upgrades[n.key] >= UPG[n.key].max && nodeEls[n.key].wrap.style.display !== 'none');
+if (maxed.length && Math.random() < 0.85) spawnEmber(nodeEls[maxed[(Math.random()*maxed.length)|0].key].wrap);
 }
 /* ============================== RAIN COUNTDOWN UI ============================== */
 const rainTimeEl = document.getElementById('rainTime');
@@ -5567,6 +6108,7 @@ n.start(t); n.stop(t+dur);
 
 /* ---------- custom audio files: put them in an /audio folder next to index.html ---------- */
 const customBuf = {};
+let customAmb = null, customInit = false;
 function loadAudio(name, url){
 return fetch(url)
 .then(r=>{ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
@@ -5591,19 +6133,18 @@ t.gain.gain.setTargetAtTime(0.0001, AC.currentTime, 0.35);
 setTimeout(()=>{ try{ t.src.stop(); }catch(e){} }, 1600);
 }
 let ambienceRamp = 0;
-function startCustomAmbience(vol=0.6){
+function startCustomAmbience(vol=0.8){
 const buf = customBuf.ambience;
 if (!buf || customAmb || !AC) return;
 customAmb = AC.createBufferSource();
 customAmb.buffer = buf; customAmb.loop = true;
 const g = AC.createGain(); g.gain.value = vol;
-customAmb.connect(g); g.connect(windBus); // follows the AMBIENCE setting + ducks in the tree
+customAmb.connect(g); g.connect(windBus);   // follows the AMBIENCE setting + tree ducking
 customAmb.start();
 }
 function initCustomAudio(){
 if (customInit) return; customInit = true;
 loadAudio('ambience','audio/ambience.mp3').then(()=>startCustomAmbience());
-/* more files: loadAudio('crickets','audio/crickets.mp3') etc. */
 }
 function playCustom(name, vol=1, loop=false){ // one-shot helper for any loaded file
 const buf = customBuf[name]; if(!buf || !AC) return null;
@@ -5619,23 +6160,9 @@ const dropS  = () => noiseS(0.1,0.09,500,1000);
 const jumpS  = () => tone(300,0.12,'sine',0.1,0,140);
 const stepS  = () => {
 const f = 260 + Math.random()*180;
-noiseS(0.07, 0.07, f, f*2.1);
-tone(85+Math.random()*25, 0.05, 'sine', 0.035);
+noiseS(0.07, 0.049, f, f*2.1);
+tone(85+Math.random()*25, 0.05, 'sine', 0.0245);
 };
-function startCustomAmbience(vol=0.8){
-const buf = customBuf.ambience;
-if (!buf || customAmb || !AC) return;
-customAmb = AC.createBufferSource();
-customAmb.buffer = buf; customAmb.loop = true;
-const g = AC.createGain(); g.gain.value = vol;
-customAmb.connect(g); g.connect(windBus);   // follows the AMBIENCE setting + tree ducking
-customAmb.start();
-}
-function initCustomAudio(){
-if (customInit) return; customInit = true;
-loadAudio('ambience','audio/ambience.mp3').then(()=>startCustomAmbience());
-}
-
 let musicOn = false, musicGain = null, musicDelay = null;
 const DORIAN = [293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25, 587.33];
 let melodyIdx = 3, mBeat = 0;
@@ -5838,10 +6365,6 @@ const wcNum = document.getElementById('wcNum');
 let locked = false, started = false;
 let chScale = 1;
 function setCoinDisplay(v){
-if (cheat){
-if (coinNum.dataset.mode !== 'inf'){ coinNum.innerHTML = '∞'; coinNum.dataset.mode = 'inf'; }
-return;
-}
 const str = fmt(v);
 if (!/^\d+$/.test(str)){
 if (coinNum.dataset.mode !== 'txt:'+str){ coinNum.innerHTML = str; coinNum.dataset.mode = 'txt:'+str; }
@@ -5885,6 +6408,12 @@ ovTitle.textContent = 'PAUSED';
 ovSub.textContent = 'The goblin waits, coin in hand…';
 ovGoal.textContent = '';
 ovBtn.textContent = 'RESUME';
+
+const statsBtn = document.getElementById('ovStatsBtn');
+if (statsBtn) statsBtn.style.display = '';
+const resetBtn = document.getElementById('ovResetBtn');
+if (resetBtn) resetBtn.style.display = '';
+disarmReset();
 overlay.classList.remove('hidden');
 }
 /* ---------- first sight of the hole ---------- */
@@ -5926,7 +6455,7 @@ return;
 }
 if (cine){ if ((cine.type === 'intro' || cine.type === 'throw') && e.code === 'KeyE') cine.capClick = true; return; }
 if (e.code === 'Space' && locked && player.grounded && !shopOpen && camMode === 'play'){
-player.vy = JUMP_V; player.grounded = false; jumpS();
+player.vy = JUMP_V; player.grounded = false; stats.jumps++; jumpS();
 }
 if (e.code === 'KeyE' && (locked || shopOpen)) tryInteract();
 if ((e.code === 'Digit1' || e.code === 'Numpad1') && locked && camMode === 'play' && !shopOpen && !cine && !dlgOpen) tryWhistle();
@@ -5960,14 +6489,18 @@ if (nearCat){ petCat(); return; }
 });
 addEventListener('mouseup', e=>{
 if (e.button === 2) {
+if (treeDrag && shopPhase === 'hole') queueSaveTreeCam();
 treeDrag = false;
 }
 if (e.button === 0) mouseHeld = false;
 });
 addEventListener('contextmenu', e=>e.preventDefault());
 /* safety net: in play but unlocked (denied lock, cinematic ended) → next click re-locks */
-addEventListener('mousedown', ()=>{
-if (started && !locked && !shopOpen && !cine && !dlgOpen && !mergeOpen && overlay.classList.contains('hidden')){
+addEventListener('mousedown', (e)=>{
+if (!started) return; // never auto-lock before the game has actually begun
+if (mergeOpen || ritualOpen || statsOpen) return; // never lock inside these menus
+if (e.target.closest && e.target.closest('button, #dialog, #mergeConfirm, #mergeOverlay, #holeBtns, #settingsUI, #shopOverlay, #overlay, #statsOverlay, #prodIntro')) return; // never lock when clicking UI
+{
 try { renderer.domElement.requestPointerLock(); } catch(e){}
 }
 });
@@ -5976,23 +6509,37 @@ overlay.addEventListener('click', ()=>{
 if (menuReady) return; // 3D menu active: only the 3D button starts the game
 initAudio();
 if (AC && AC.state === 'suspended') AC.resume();
-ensureFirstGoblin();
+if (started){
+// resuming from pause: state is live in memory — never reload the save
+try { renderer.domElement.requestPointerLock(); } catch(e){}
+return;
+}
 if (!introDone) {
+ensureFirstGoblin();
 introDone = true;
 startIntroCine();
 } else {
+if (!loadGame()) ensureFirstGoblin();
 try { renderer.domElement.requestPointerLock(); } catch(e){}
 }
 });
 document.addEventListener('pointerlockchange', ()=>{
 locked = document.pointerLockElement === renderer.domElement;
-if (locked && shopOpen){ // never stay locked inside the skill tree
+if (locked && (shopOpen || mergeOpen || ritualOpen || statsOpen)){ // never stay locked inside menus
 locked = false;
 try { document.exitPointerLock(); } catch(err){}
 document.body.classList.remove('locked');
 return;
 }
 if (locked){
+/* if the 3D menu is still up or the production intro hasn't finished, back out */
+if (!started && !cine && (menuReady || !prodIntroDone)){
+try { document.exitPointerLock(); } catch(err){}
+locked = false;
+document.body.classList.remove('locked');
+return;
+}
+closeStats();
 document.body.classList.add('locked');
 overlay.classList.add('hidden');
 if (!started){
@@ -6002,7 +6549,7 @@ player.pos.set(0,EYE,6.8); yaw = 0; pitch = -0.08;
 } else {
 document.body.classList.remove('locked');
 mouseHeld = false;
-if (started && !shopOpen && !cine && !dlgOpen && !mergeOpen) showPause();
+if (started && !shopOpen && !cine && !dlgOpen && !mergeOpen && !ritualOpen) showPause();
 }
 });
 addEventListener('resize', ()=>{
@@ -6130,9 +6677,9 @@ if (!started){ started = true; player.pos.set(0,EYE,6.8); yaw = 0; pitch = -0.08
   document.body.classList.remove('menu');
   renderer.domElement.style.cursor = '';
   initAudio();
-  if (AC && AC.state === 'suspended') AC.resume();
-  ensureFirstGoblin();
-  initCustomAudio();
+if (AC && AC.state === 'suspended') AC.resume();
+if (!loadGame()) ensureFirstGoblin();
+initCustomAudio();
   if (!introDone){ introDone = true; startIntroCine(); }
   else { try { renderer.domElement.requestPointerLock(); } catch(e){} }
 }
@@ -6320,21 +6867,424 @@ applySettings();
 });
 });
 applySettings();
+/* ============================== SAVE / LOAD ============================== */
+const SAVE_KEY = 'grimbleSave';
+let wipePending = false;
+/* one-time migration: if a previous autosave marked introDone but the
+   player never actually finished the intro, wipe the stale save so the
+   cinematic replays correctly */
+try {
+  const _raw = localStorage.getItem(SAVE_KEY);
+  if (_raw){
+    const _d = JSON.parse(_raw);
+    if (_d && _d.v === 1 && _d.introDone && _d.earned === 0 && _d.prestige === 0){
+      localStorage.removeItem(SAVE_KEY);
+    }
+  }
+} catch(e){}
+function saveGame(){
+/* never write before the run begins or mid-cutscene — those snapshots
+   are exactly what caused "random mid-game" resumes */
+if (!started || cine || wipePending) return;
+try {
+const data = {
+v:1,
+      earned, prestige,
+      upgrades:{...upgrades},
+      goblins: goblins.filter(g=>!g.isBub).map(g=>({ chief:!!g.chief, bub:false, tier:g.tier||1, name:g.name||null })),
+whistleCd: Math.max(0,whistleCd),
+holeJobCd: Math.max(0,holeJobCd),
+shovelOwned, strangerTalked, tutDone,
+introDone: introDone && !goblins.some(g=>g.isBub),
+      witchSpawned, vendorGreeted, pickupCount,
+            shovelDlgDone, reMaxToastDone, goblinsAwakened,
+      holeThoughtDone,
+      strangerExists: !!stranger,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  } catch(e){}
+}
 
+function loadGame(){
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    if (!d || d.v !== 1) return false;
+
+    earned        = d.earned        || 0;
+    prestige      = d.prestige      || 0;
+    whistleCd     = d.whistleCd     || 0;
+    holeJobCd     = d.holeJobCd     || 0;
+    shovelOwned   = !!d.shovelOwned;
+    strangerTalked= !!d.strangerTalked;
+    tutDone       = !!d.tutDone;
+    introDone     = !!d.introDone;
+    witchSpawned  = !!d.witchSpawned;
+    vendorGreeted = !!d.vendorGreeted;
+    pickupCount   = d.pickupCount   || 0;
+    shovelDlgDone = !!d.shovelDlgDone;
+     reMaxToastDone= !!d.reMaxToastDone;
+    goblinsAwakened = !!d.goblinsAwakened;
+    holeThoughtDone = !!d.holeThoughtDone;
+
+    if (d.upgrades) for (const k in upgrades) if (k in d.upgrades) upgrades[k] = d.upgrades[k];
+
+        /* Bub is a story-only goblin. If an old save stored him as a wanderer,
+   replay the intro instead of letting him roam the meadow. */
+if (d.goblins && d.goblins.some(g=>g.bub)) introDone = false;
+/* --- restore goblins --- */
+for (const g of [...goblins]){ scene.remove(g.root); scene.remove(g.shadow); if(g.smear) scene.remove(g.smear); }
+goblins.length = 0;
+if (!introDone) {
+/* Pre-intro: only a hidden Bub for the falling cinematic */
+const g = makeGoblin(1.8, 7.6, { bub:true });
+g.root.visible = false;
+g.shadow.visible = false;
+} else {
+/* filter is a double-safety: Bub can never be restored as a wanderer */
+const gList = (d.goblins && d.goblins.length) ? d.goblins.filter(gd=>!gd.bub) : [];
+for (const gd of gList){
+const spot = randomGoblinSpot();
+const g = makeGoblin(spot.x, spot.z, { chief:!!gd.chief, tier:gd.tier||1 });
+if (!goblinsAwakened) g.state = 'wait';
+}
+/* safety: an awakened meadow must never be completely empty */
+if (!goblins.length && goblinsAwakened){
+const spot = randomGoblinSpot();
+makeGoblin(spot.x, spot.z);
+}
+}
+
+    /* --- restore stranger --- */
+    if (d.strangerExists && !stranger) makeStranger(17,14);
+
+    /* --- restore witch --- */
+    if (witchSpawned){ witchVisible = true; witch.root.visible = true; witch.spawnT = -1.001; }
+
+    /* --- restore shovel --- */
+    if (shovelOwned){
+if (shovelView) camera.remove(shovelView); // never stack a second view shovel
+shovelView = buildShovelModel();
+shovelView.position.set(0,-0.81,-1.42);
+      shovelView.rotation.set(2.05,0,0);
+      if (!camera.parent) scene.add(camera);
+      camera.add(shovelView);
+      camera.updateMatrixWorld(true);
+      shovelView.userData.blade.getWorldPosition(shovelBlade);
+      shovelBlade.y = Math.min(shovelBlade.y, 0.5);
+      shovelBladePrev.copy(shovelBlade);
+    }
+
+    /* --- clear intro plug if intro already played --- */
+    if (introDone){
+      scene.remove(introPlug);
+      if (plugGrass){ scene.remove(plugGrass); plugGrass = null; }
+      if (holeRim) holeRim.material.opacity = 1;
+    }
+
+       /* rebuild hole geometry to match restored maw level */
+    buildHole();
+
+    /* if the shovel dialogue finished but the shovel wasn't picked up yet, respawn it */
+    if (shovelDlgDone && !shovelOwned) spawnShovelWorld();
+
+    /* if the stranger upgrade was bought but the cutscene hasn't played, re-queue it */
+    if (upgrades.stranger > 0 && !stranger) strangerCinePending = true;
+
+    setCoinDisplay(earned);
+    updatePrestigeBadge();
+    return true;
+  } catch(e){ return false; }
+}
+
+/* autosave every 30 s + on tab hide + on close */
+setInterval(saveGame, 30000);
+document.addEventListener('visibilitychange', ()=>{ if (document.hidden) saveGame(); });
+window.addEventListener('beforeunload', saveGame);
+
+/* ============================== STATISTICS + RAIN DROPLETS + GOBLIN NAME TAG ============================== */
+const STATS_KEY = 'grimbleStats';
+const stats = {
+  coinsEarned:0,
+  coinsFed:0,
+  coinsThrown:0,
+  coinsPicked:0,
+  goblinsSpawned:0,
+  goblinsThrown:0,
+  goblinsMerged:0,
+  upgradesBought:0,
+  prestiges:0,
+  catsPetted:0,
+  jumps:0,
+  whistleUses:0,
+  holeJobUses:0,
+  distance:0,
+  playTime:0,
+  rainTime:0
+};
+
+try { Object.assign(stats, JSON.parse(localStorage.getItem(STATS_KEY) || '{}')); } catch(e){}
+for (const k of Object.keys(stats)) if (!isFinite(stats[k])) stats[k] = 0;
+
+function saveStats(){
+  try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch(e){}
+}
+
+setInterval(saveStats, 15000);
+document.addEventListener('visibilitychange', ()=>{ if (document.hidden) saveStats(); });
+window.addEventListener('beforeunload', saveStats);
+
+function fmtTime(s){
+  s = Math.max(0, Math.floor(s));
+  const h = Math.floor(s/3600);
+  const m = Math.floor((s%3600)/60);
+  const sec = s%60;
+  if (h) return h + 'h ' + m + 'm';
+  if (m) return m + 'm ' + sec + 's';
+  return sec + 's';
+}
+
+function refreshStats(){
+  const grid = document.getElementById('statsGrid');
+  if (!grid) return;
+
+  const rows = [
+    ['Current coins', fmt(earned)],
+    ['Lifetime coins earned', fmt(Math.floor(stats.coinsEarned))],
+    ['Coins fed to hole', fmt(Math.floor(stats.coinsFed))],
+    ['Coins thrown', fmt(Math.floor(stats.coinsThrown))],
+    ['Coins picked up', fmt(Math.floor(stats.coinsPicked))],
+    ['Coins in world', live.length],
+    ['Goblins in meadow', goblins.length],
+    ['Goblins spawned', stats.goblinsSpawned],
+    ['Goblins thrown', stats.goblinsThrown],
+    ['Goblins merged', stats.goblinsMerged],
+    ['Upgrades bought', stats.upgradesBought],
+    ['Prestiges', stats.prestiges],
+    ['Prestige level', prestige],
+    ['Cats petted', stats.catsPetted],
+    ['Jumps', stats.jumps],
+    ['Whistles', stats.whistleUses],
+    ['Hole-Jobs', stats.holeJobUses],
+    ['Distance walked', Math.floor(stats.distance) + 'm'],
+    ['Time played', fmtTime(stats.playTime)],
+    ['Time in rain', fmtTime(stats.rainTime)],
+  ];
+
+  grid.innerHTML = rows.map(r => `<div class="statRow"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('');
+}
+
+let statsOpen = false;
+
+function openStats(){
+  statsOpen = true;
+  refreshStats();
+  const el = document.getElementById('statsOverlay');
+  if (el) el.classList.remove('hidden');
+}
+
+function closeStats(){
+  statsOpen = false;
+  const el = document.getElementById('statsOverlay');
+  if (el) el.classList.add('hidden');
+}
+
+const ovStatsBtnEl = document.getElementById('ovStatsBtn');
+if (ovStatsBtnEl){
+ovStatsBtnEl.addEventListener('pointerdown', e => e.stopPropagation());
+ovStatsBtnEl.addEventListener('mousedown', e => e.stopPropagation());
+ovStatsBtnEl.addEventListener('click', e => {
+e.stopPropagation();
+e.preventDefault();
+openStats();
+});
+}
+/* ---------- reset save: two-click confirm, then a full fresh restart ---------- */
+const ovResetBtnEl = document.getElementById('ovResetBtn');
+let resetArmT = 0;
+function disarmReset(){
+if (!ovResetBtnEl) return;
+clearTimeout(resetArmT);
+ovResetBtnEl.classList.remove('arm');
+ovResetBtnEl.textContent = 'RESET SAVE';
+}
+if (ovResetBtnEl){
+ovResetBtnEl.addEventListener('pointerdown', e => e.stopPropagation());
+ovResetBtnEl.addEventListener('mousedown', e => e.stopPropagation());
+ovResetBtnEl.addEventListener('click', e => {
+e.stopPropagation();
+e.preventDefault();
+if (!ovResetBtnEl.classList.contains('arm')){
+ovResetBtnEl.classList.add('arm');
+ovResetBtnEl.textContent = 'CLICK AGAIN — WIPE EVERYTHING';
+clearTimeout(resetArmT);
+resetArmT = setTimeout(disarmReset, 4000);
+return;
+}
+disarmReset();
+try {
+localStorage.removeItem('grimbleSave');
+localStorage.removeItem('grimbleStats');
+localStorage.removeItem('grimbleTreeCam');
+} catch(err){}
+location.reload();
+});
+}
+
+const statsCloseEl = document.getElementById('statsClose');
+if (statsCloseEl){
+  statsCloseEl.addEventListener('pointerdown', e => e.stopPropagation());
+  statsCloseEl.addEventListener('mousedown', e => e.stopPropagation());
+  statsCloseEl.addEventListener('click', e => {
+    e.stopPropagation();
+    e.preventDefault();
+    closeStats();
+  });
+}
+
+const statsOverlayEl = document.getElementById('statsOverlay');
+if (statsOverlayEl){
+  statsOverlayEl.addEventListener('pointerdown', e => e.stopPropagation());
+  statsOverlayEl.addEventListener('mousedown', e => e.stopPropagation());
+  statsOverlayEl.addEventListener('click', e => {
+    e.stopPropagation();
+    if (e.target === statsOverlayEl) closeStats();
+  });
+}
+
+addEventListener('keydown', e => {
+  if (e.code === 'Escape' && statsOpen) closeStats();
+});
+
+function updateGoblinNameTag(){
+  const el = document.getElementById('goblinName');
+  if (!el) return;
+
+  if (!nearGoblin || !nearGoblin.name || !locked || camMode !== 'play' || shopOpen || dlgOpen || cine || mergeOpen || ritualOpen){
+    el.classList.remove('show');
+    return;
+  }
+
+  _v1.copy(nearGoblin.root.position);
+  _v1.y += (nearGoblin.baseScale || 1) * 1.45;
+  _v1.project(camera);
+
+  if (_v1.z > 1){
+    el.classList.remove('show');
+    return;
+  }
+
+  el.style.left = (( _v1.x * 0.5 + 0.5) * innerWidth).toFixed(1) + 'px';
+  el.style.top  = ((-_v1.y * 0.5 + 0.5) * innerHeight).toFixed(1) + 'px';
+  el.textContent = nearGoblin.name;
+  el.classList.add('show');
+}
+
+function makeRainDropletTile(){
+  const S = 512;
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const x = c.getContext('2d');
+  x.clearRect(0,0,S,S);
+
+  const wrapDraw = (fn, px, py) => {
+    for (let ox=-S; ox<=S; ox+=S){
+      for (let oy=-S; oy<=S; oy+=S){
+        fn(px+ox, py+oy);
+      }
+    }
+  };
+
+  for(let i=0;i<120;i++){
+    const px = Math.random()*S;
+    const py = Math.random()*S;
+    const r = 1.5 + Math.random()*5.5;
+    const a = 0.05 + Math.random()*0.16;
+
+    wrapDraw((xx,yy)=>{
+      const g = x.createRadialGradient(xx,yy,0,xx,yy,r);
+      g.addColorStop(0, `rgba(255,255,255,${a})`);
+      g.addColorStop(0.55, `rgba(215,235,255,${a*0.32})`);
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      x.fillStyle = g;
+      x.beginPath();
+      x.arc(xx, yy, r, 0, Math.PI*2);
+      x.fill();
+    }, px, py);
+  }
+
+  for(let i=0;i<36;i++){
+    const px = Math.random()*S;
+    const py = Math.random()*S;
+    const len = 10 + Math.random()*44;
+    const w = 1 + Math.random()*2.4;
+    const a = 0.04 + Math.random()*0.10;
+    const drift = (Math.random()-0.5)*4;
+
+    wrapDraw((xx,yy)=>{
+      const g = x.createLinearGradient(xx, yy, xx, yy+len);
+      g.addColorStop(0, 'rgba(255,255,255,0)');
+      g.addColorStop(0.25, `rgba(230,240,255,${a})`);
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      x.strokeStyle = g;
+      x.lineWidth = w;
+      x.lineCap = 'round';
+      x.beginPath();
+      x.moveTo(xx, yy);
+      x.lineTo(xx + drift, yy + len);
+      x.stroke();
+    }, px, py);
+  }
+
+  return c.toDataURL('image/png');
+}
+
+const rainDropletsEl = document.getElementById('rainDroplets');
+if (rainDropletsEl){
+  rainDropletsEl.style.backgroundImage = `url(${makeRainDropletTile()})`;
+}
+
+function updateRainDroplets(time){
+  if (!rainDropletsEl) return;
+
+  const o = Math.min(0.42, rainFactor * 0.42);
+  rainDropletsEl.style.opacity = o.toFixed(3);
+
+  if (o > 0.003){
+    const x = ((time * 2.2 + Math.sin(time*0.18)*16) % 512 + 512) % 512;
+const y = (time * 26) % 512;
+    rainDropletsEl.style.backgroundPosition = `${x.toFixed(1)}px ${y.toFixed(1)}px`;
+  }
+}
+
+/* ---------- FPS counter ---------- */
+const fpsBox = document.getElementById('fpsBox');
+let fpsAccum = 0, fpsFrames = 0;
+function fpsTick(rawDt){
+fpsAccum += rawDt; fpsFrames++;
+if (fpsAccum >= 0.5){
+fpsBox.textContent = Math.round(fpsFrames/fpsAccum) + ' FPS';
+fpsAccum = 0; fpsFrames = 0;
+}
+}
 /* ============================== MAIN LOOP ============================== */
 const clock = new THREE.Clock();
 let elapsed = 0;
 let rainUpdateAccum = 0;
 function animate(){
 requestAnimationFrame(animate);
-const dt = Math.min(clock.getDelta(), 0.05);
-const paused = shopPhase === 'hole' || (cine && cine.type === 'sac') || mergeOpen;
+const rawDt = clock.getDelta();
+const dt = Math.min(rawDt, 0.05);
+fpsTick(rawDt);
+const paused = shopPhase === 'hole' || (cine && cine.type === 'sac') || mergeOpen || ritualOpen || statsOpen;
 if (!paused) elapsed += dt;
 if (!paused){
 if (keys.has('KeyQ') && keys.has('KeyP') && !dlgOpen) cheatT += dt; else if (!keys.has('KeyQ') || !keys.has('KeyP')) cheatT = 0;
 if (!cheat && cheatT >= 5){
 cheat = true;
-setCoinDisplay(0);
+setCoinDisplay(earned);
 toast('The meadow provides…');
 tone(392,0.3,'sine',0.2); tone(523,0.3,'sine',0.2,0.12); tone(659,0.5,'sine',0.2,0.24);
 if (shopOpen) refreshTree();
@@ -6350,6 +7300,11 @@ if (inHole && elapsed > eerieNext){ eerieTone(); eerieNext = elapsed + 4 + Math.
 }
 if (!paused){
 updateRain(dt, elapsed);
+updateRainDroplets(elapsed);
+if (started){
+  stats.playTime += dt;
+  stats.rainTime += dt * rainFactor;
+}
 for (const g of goblins){ updateGoblin(g, dt, elapsed); updateGoblinSmear(g, dt); }
 let ng = goblins[0], bd = Infinity;
 for (const g of goblins){
@@ -6380,8 +7335,11 @@ updateSuck(elapsed);
 updateAbilUI();
 updateTreeSway(elapsed);
 if (lampLight) {
-  lampLight.intensity = (14 + Math.sin(elapsed*11)*1.2 + Math.sin(elapsed*23+1.7)*0.8) * (1 + 0.5*rainFactor);
+lampLight.intensity = (14 + Math.sin(elapsed*11)*1.2 + Math.sin(elapsed*23+1.7)*0.8) * (1 + 1.6*rainFactor);
+lampLight.distance = 9 + 5 * rainFactor;
+lampLight.color.setHSL(0.07, 0.85, 0.55 + 0.1*rainFactor);
 }
+updateFireplace(elapsed);
 updatePennants(elapsed);
 // Update lantern moths orbit with sine wobble
 for(const moth of mothGeos){
@@ -6393,6 +7351,7 @@ moth.rotation.z = elapsed * 3 + u.phase;
 }
 // Update hole dust prestige uniform
 holeDustMat.uniforms.uPrestige.value = THREE.MathUtils.lerp(holeDustMat.uniforms.uPrestige.value, Math.min(prestige, 1), Math.min(1, 2*dt));
+if (prestigeRing) prestigeRing.rotation.y += dt*0.12;
 for (const c of clouds){
 c.position.x += c.userData.spd*dt;
 if (c.position.x > 260) c.position.x = -260;
@@ -6421,16 +7380,13 @@ if (strangerCinePending && started && !cine && !dlgOpen && !shopOpen && camMode 
 strangerCinePending = false;
 startStrangerCine();
 }
-if (strangerCinePending && started && !cine && !dlgOpen && !shopOpen && camMode === 'play'){
-strangerCinePending = false;
-startStrangerCine();
-}
 grassMat.uniforms.uTime.value = elapsed;
 holeDustMat.uniforms.uTime.value = elapsed;
 boilUniforms.uBoil.value = Math.floor(elapsed * 8); // 8fps cranked boil
 updateListener();
 updateTreeCam(dt);
 updateTreeDust(dt);
+updateTreeEmbers(dt);
 rainUpdateAccum += dt;
 if (rainUpdateAccum >= 0.5) {
 rainUpdateAccum = 0;
