@@ -490,6 +490,13 @@ body.merge #settingsUI { display:none; }
   background:rgba(6,40,32,.8); border:2px solid #2ee6a8; border-radius:12px; padding:9px 22px; cursor:pointer;
   box-shadow:0 0 18px rgba(46,230,168,.3); transition:all .12s; }
 #mergeBack:hover { background:rgba(10,60,48,.9); box-shadow:0 0 26px rgba(46,230,168,.5); }
+#mergeAphro { position:absolute; top:78px; left:50%; transform:translateX(-50%); display:none; pointer-events:auto;
+font-family:'MedievalSharp',cursive; font-size:21px; letter-spacing:2px; color:#fff;
+background:linear-gradient(180deg,#ff8ac2,#e0247f 60%,#a01058); border:3px solid #ffb0d8; border-radius:16px;
+padding:12px 36px; cursor:pointer; box-shadow:0 0 26px rgba(255,80,170,.55), 0 6px 0 #700c40;
+animation:aphroPulse 1.6s ease-in-out infinite; }
+#mergeAphro:hover { filter:brightness(1.12); }
+@keyframes aphroPulse { 50% { box-shadow:0 0 46px rgba(255,90,180,.9), 0 6px 0 #700c40; transform:translateX(-50%) scale(1.05); } }
 #mergeConfirm { position:fixed; inset:0; z-index:16; display:flex; align-items:center; justify-content:center;
   background:rgba(0,0,0,.55); }
 #mergeConfirm.hidden { display:none; }
@@ -640,6 +647,7 @@ animation:readyPulse 2.6s ease-in-out infinite; }
   <div id="mergeInfo"></div>
   <button id="mergeBack">&#8592; BACK</button>
 <button id="mergeSplit" style="position:absolute;top:26px;left:160px;pointer-events:auto;font-family:'MedievalSharp',cursive;font-size:17px;letter-spacing:2px;color:#ffc9c9;background:rgba(60,10,10,.8);border:2px solid #ff6b6b;border-radius:12px;padding:9px 22px;cursor:pointer;box-shadow:0 0 18px rgba(255,80,80,.3);transition:all .12s;">&#8599; SPLIT</button>
+<button id="mergeAphro">&#9829; Create the Aphrodite &#9829;</button>
 </div>
 <div id="mergeConfirm" class="hidden">
   <div class="mcPanel">
@@ -863,9 +871,10 @@ return c;
 };
 const throwInterval = () => Math.max(4, 10 * Math.pow(0.85, upgrades.rate-1));
 const goblinInterval = g => {
-  let base = throwInterval();
-  if (g.tier && g.tier >= 2) base *= Math.pow(2, g.tier-1); // tier 2 = ×2 slower, tier 3 = ×4 …
-  return base;
+let base = throwInterval();
+if (g.tier >= 4) base *= 0.5;              // Aphrodite flings twice as fast as normal
+else if (g.tier >= 2) base *= Math.pow(2, g.tier-1); // tier 2 = ×2 slower, tier 3 = ×4 …
+return base;
 };
 const allMaxed = () => Object.keys(UPG).every(k => upgrades[k] >= UPG[k].max);
 const ICO = {
@@ -1202,6 +1211,7 @@ x.lineTo(128+Math.cos(a)*121,128+Math.sin(a)*121); x.stroke(); }
 const coinFaceTex  = canvasTex(256,256, coinFaceDraw(['#fff0b0','#f6c94f','#d99e1f','#8a5c0d','#a5770e','#ffe98f']));
 const coinFaceTexS = canvasTex(256,256, coinFaceDraw(['#ffffff','#dcdce6','#a8a8ba','#5c5c70','#7a7a90','#f4f4ff']));
 const coinFaceTexG = canvasTex(256,256, coinFaceDraw(['#ffc8c8','#e85a5a','#aa2a2a','#6b0d0d','#8a1a1a','#ffb0b0']));
+const coinFaceTexP = canvasTex(256,256, coinFaceDraw(['#ffd8ec','#ff6bb0','#e0247f','#8a1050','#b01868','#ffc0e0']));
 const blobTex = canvasTex(128,128,(x,w,h)=>{
 const g=x.createRadialGradient(64,64,4,64,64,64);
 g.addColorStop(0,'rgba(0,0,0,0.55)'); g.addColorStop(1,'rgba(0,0,0,0)');
@@ -1914,7 +1924,7 @@ const sp = coinSmears[idx++];
 sp.position.set(P[i3]-vx/spd*0.3, P[i3+1]-vy/spd*0.3, P[i3+2]-vz/spd*0.3);
 orientSmear(sp, vx, vy, vz, spd);
 sp.scale.set(THREE.MathUtils.clamp(spd*0.09,0.4,1.4), 0.16, 1);
-sp.material.color.setHex(SIL[i]===2 ? 0xffa0a0 : (SIL[i]===1 ? 0xe8ecff : 0xffe9a8));
+sp.material.color.setHex(SIL[i]===3 ? 0xffa0cc : (SIL[i]===2 ? 0xffa0a0 : (SIL[i]===1 ? 0xe8ecff : 0xffe9a8)));
 sp.material.opacity = THREE.MathUtils.clamp((spd-6)/14,0,0.5);
 sp.visible = true;
 }
@@ -1959,7 +1969,10 @@ function goblinPalette(opts){
   const chief=opts.chief, bub=opts.bub, tier=opts.tier||1;
   if (chief) return { skin:0x8f2f2a, skinD:0x6d221f, cloth:0x3a2a20 };
   if (bub)   return { skin:0x9a5cff, skinD:0x6d35b0, cloth:0x8a5a33 };
-  if (tier===3){
+if (tier>=4){
+return { skin:0xff4fa0, skinD:0xd1297a, cloth:0xffd0e8 };  // bright pink Aphrodite
+}
+if (tier===3){
 return { skin:0xc62828, skinD:0x8e1c1c, cloth:0x4a2a2a };  // red tier 3
 }
 if (tier>=2){
@@ -1979,11 +1992,20 @@ function buildGoblinModel(opts={}){
   root.add(inner);
   const body=new THREE.Mesh(new THREE.SphereGeometry(0.27,12,10), skinD);
   body.scale.set(1,1.15,0.9); body.position.y=0.56; inner.add(body);
-  const head=new THREE.Group(); head.position.y=0.97; inner.add(head);
-head.scale.setScalar(bub ? 1.44 : 1.2); // all goblins get 20% larger heads
-  head.add(new THREE.Mesh(new THREE.SphereGeometry(0.21,12,10), skin));
-  const nose=new THREE.Mesh(new THREE.SphereGeometry(0.05,8,6), skin);
-  nose.position.set(0,-0.03,0.2); nose.visible=!bub; head.add(nose);
+const tier=opts.tier||1;
+const head=new THREE.Group(); head.position.y=0.97; inner.add(head);
+head.scale.setScalar(tier>=4 ? 2.4 : (bub ? 1.44 : 1.2)); // Aphrodite's head is double the others (eyes + ears scale with it)
+head.add(new THREE.Mesh(new THREE.SphereGeometry(0.21,12,10), skin));
+const nose=new THREE.Mesh(new THREE.SphereGeometry(0.05,8,6), skin);
+nose.position.set(0,-0.03,0.2); nose.visible=!bub; head.add(nose);
+if (tier>=4){ // cat-like "3" mouth: two downward arcs
+for(const s of [-1,1]){
+const arc=new THREE.Mesh(new THREE.TorusGeometry(0.034,0.009,6,10,Math.PI), new THREE.MeshBasicMaterial({color:0x7a1040}));
+arc.rotation.z=Math.PI;
+arc.position.set(0.033*s,-0.105,0.175);
+head.add(arc);
+}
+}
   const eb=bub?1.4:1, pupZ=bub?0.245:0.21;
   let eyeL,eyeR,pupL,pupR,earL,earR;
   for(const s of [-1,1]){
@@ -2020,7 +2042,7 @@ head.scale.setScalar(bub ? 1.44 : 1.2); // all goblins get 20% larger heads
 function makeGoblin(x, z, opts={}){
   const chief=!!opts.chief, bub=!!opts.bub, tier=opts.tier||1;
   const model=buildGoblinModel(opts);
-  const g={ name:(bub ? 'Bub' : pickGoblinName()), state:'idle', t:1+Math.random(), target:new THREE.Vector3(), vel:new THREE.Vector3(),
+  const g={ name:(bub ? 'Bub' : ((opts.tier||1)>=4 ? 'Aphrodite' : pickGoblinName())), state:'idle', t:1+Math.random(), target:new THREE.Vector3(), vel:new THREE.Vector3(),
     yaw:Math.random()*6.28, gait:0, throwT:0, thrown:false, clock:Math.random()*6,
     slamClock:Math.random()*5, chief, bub, tier, headYawDef:0, nextBlink:1+Math.random()*3, blinkT:0,
     nextEarT:1+Math.random()*5, earTwitch:0, earSide:1,
@@ -2033,12 +2055,16 @@ function makeGoblin(x, z, opts={}){
   g.eyeBase=model.eyeBase; g.pupZ=model.pupZ;
   g.isBub=bub; g.cols=model.cols; g.mats=model.mats;
   let base=chief?1.425:0.95;
-  if(!chief && !bub) base*=Math.pow(1.3, tier-1);   // merged goblins are 30% bigger per tier
+if(!chief && !bub){
+if (tier>=4) base = 0.95*Math.pow(1.3,2)*3;   // Aphrodite: 3× a tier-3 goblin
+else base *= Math.pow(1.3, tier-1);   // merged goblins are 30% bigger per tier
+}
   g.baseScale=base;
   g.root.scale.setScalar(g.baseScale);
   g.root.position.set(x,0,z);
   scene.add(g.root);
-  g.shadow=new THREE.Mesh(new THREE.PlaneGeometry(chief?1.8:1.2, chief?1.8:1.2),
+  const shSize=(chief?1.8:1.2)*(g.baseScale>1.5?g.baseScale*0.9:1);
+g.shadow=new THREE.Mesh(new THREE.PlaneGeometry(shSize, shSize),
     new THREE.MeshBasicMaterial({ map:blobTex, transparent:true, depthWrite:false }));
   g.shadow.rotation.x=-Math.PI/2; g.shadow.position.y=0.02; g.shadow.renderOrder=2;
   scene.add(g.shadow);
@@ -2286,7 +2312,7 @@ if (dHole < 4.2) _dir.addScaledVector(_tmp.set(p.x/dHole,0,p.z/dHole), (4.2-dHol
 const dS = Math.hypot(p.x-STALL_POS.x, p.z-STALL_POS.z);
 if (dS < 3.4) _dir.addScaledVector(_tmp.set((p.x-STALL_POS.x)/dS,0,(p.z-STALL_POS.z)/dS), (3.4-dS)/3.4*2.0);
 _dir.normalize();
-_want.copy(_dir).multiplyScalar(g.tier===3 ? GOB_SPEED*0.5 : (g.chief ? GOB_SPEED*0.55 : GOB_SPEED));
+_want.copy(_dir).multiplyScalar(g.tier>=4 ? GOB_SPEED*0.35 : (g.tier===3 ? GOB_SPEED*0.5 : (g.chief ? GOB_SPEED*0.55 : GOB_SPEED)));
 g.vel.lerp(_want, 1-Math.exp(-6*dt));
 p.addScaledVector(g.vel, dt);
 if (g.vel.lengthSq() > 0.1) g.yaw = lerpAngle(g.yaw, Math.atan2(g.vel.x, g.vel.z), Math.min(1,10*dt));
@@ -2294,10 +2320,17 @@ const prevGait = g.gait;
 g.gait += g.vel.length()*dt*3.0;
 const s = Math.sin(g.gait);
 g.legL.rotation.x = s*0.9; g.legR.rotation.x = -s*0.9;
-/* tier 3 heavy thump on each step */
-if (g.tier===3 && Math.floor(prevGait/Math.PI)!==Math.floor(g.gait/Math.PI)){
+/* heavy thump on each step — tier 3, and far heavier for the Aphrodite */
+if ((g.tier===3||g.tier>=4) && Math.floor(prevGait/Math.PI)!==Math.floor(g.gait/Math.PI)){
 const d=Math.hypot(player.pos.x-p.x, player.pos.z-p.z);
-if(d<14){
+if (g.tier>=4){
+if(d<24){
+const vol=THREE.MathUtils.clamp((24-d)/24,0,1);
+toneAt(45,0.3,'sine',0.5*vol,0,-20,p.x,p.z,26);
+noiseAt(0.22,0.28*vol,300,60,0,p.x,p.z,26);
+shake=Math.max(shake,0.35*vol);
+}
+} else if(d<14){
 const vol=THREE.MathUtils.clamp((14-d)/14,0,1);
 toneAt(65,0.18,'sine',0.25*vol,0,-25,p.x,p.z,16);
 shake=Math.max(shake,0.12*vol);
@@ -2319,13 +2352,14 @@ g.thrown = true;
 toneAt(300+Math.random()*80, 0.09, 'sine', 0.045, 0, 140, p.x, p.z, 16);
 noiseAt(0.14, 0.04, 1200, 400, 0, p.x, p.z, 16);
 const fx = Math.sin(g.yaw), fz = Math.cos(g.yaw);
-for(let k=0;k<upgrades.stack;k++){
+const stackN=(g.tier>=4)?20:upgrades.stack;   // Aphrodite hurls 20 coins per throw
+for(let k=0;k<stackN;k++){
 const a = Math.random()*Math.PI*2, m = 0.8+Math.random()*1.7;
 const delay = k * 0.08;
 g.coinQueue.push({
 pos: new THREE.Vector3(p.x+fx*0.35+(Math.random()-0.5)*0.35, p.y+1.05+Math.random()*0.3, p.z+fz*0.35+(Math.random()-0.5)*0.35),
 vel: new THREE.Vector3(Math.cos(a)*m + g.vel.x*0.3, 7.8+Math.random()*2.0, Math.sin(a)*m + g.vel.z*0.3),
-coinType: g.tier===3 ? 2 : (g.tier>=2 ? 1 : ((upgrades.shiny>0 && Math.random()<0.01)?1:0)),
+coinType: g.tier>=4 ? 3 : (g.tier===3 ? 2 : (g.tier>=2 ? 1 : ((upgrades.shiny>0 && Math.random()<0.01)?1:0))),
 at: g.coinQueueT + k*0.08
 });
 }
@@ -2837,7 +2871,7 @@ model.legL.rotation.set(0,0,0); model.legR.rotation.set(0,0,0);
 model.head.rotation.set(0,0,0); model.inner.rotation.set(0,0,0); model.inner.position.y=0;
 model.root.position.set(startX+i*spacing,0,0);
 model.root.rotation.y=0;
-const mergeable=!g.chief;
+const mergeable=!g.chief && (g.tier||1)<4;   // the Aphrodite cannot be merged or split
 let ring=null;
 if(mergeable){
 ring=new THREE.Mesh(new THREE.RingGeometry(0.45,0.56,32),
@@ -2850,7 +2884,7 @@ const tc = document.createElement('canvas'); tc.width=64; tc.height=32;
 const tx = tc.getContext('2d');
 tx.font = 'bold 22px MedievalSharp, cursive';
 tx.textAlign='center'; tx.textBaseline='middle';
-const tierColors = { 1:'#4fa896', 2:'#2e7d32', 3:'#c62828' };
+const tierColors = { 1:'#4fa896', 2:'#2e7d32', 3:'#c62828', 4:'#ff4fa0' };
 tx.fillStyle = g.chief ? '#ff6b6b' : (tierColors[g.tier||1] || '#7dfcd0');
 tx.fillText(g.chief ? 'CHIEF' : 'T'+(g.tier||1), 32, 16);
 const tt = new THREE.CanvasTexture(tc); tt.colorSpace = THREE.SRGBColorSpace;
@@ -2865,9 +2899,11 @@ mergeModels.push({model,gob:g,mergeable,tier:g.tier||1,basePos:model.root.positi
 const ps=Math.max(1,(halfW+0.8)/7);   // platform grows so every goblin stands on it
 mergePlatform.scale.set(ps,1,ps);
 const dist=halfW/Math.tan(THREE.MathUtils.degToRad(mergeCamera.fov/2))+2.5;
-  mergeCamera.position.set(0,2.3,Math.max(7,dist));
-  mergeCamera.lookAt(0,0.9,0);
-  updateMergeInfo();
+ mergeCamera.position.set(0,2.3,Math.max(7,dist));
+mergeCamera.lookAt(0,0.9,0);
+const t3=list.filter(g=>(g.tier||1)===3).length;
+document.getElementById('mergeAphro').style.display = t3>=5 ? '' : 'none';
+updateMergeInfo();
 }
 function updateMergeInfo(){
 const mergeable=mergeModels.filter(m=>m.mergeable);
@@ -2875,6 +2911,7 @@ const counts={};
 for(const m of mergeable) counts[m.tier]=(counts[m.tier]||0)+1;
 const can=Object.values(counts).some(c=>c>=2);
 if(mergeModels.length===0) mergeInfoEl.textContent='No goblins to show.';
+else if((counts[3]||0)>=5) mergeInfoEl.textContent='Five tier-3 goblins resonate… the ritual is ready.';
 else if(!can) mergeInfoEl.textContent='You need two goblins of the same tier to merge them.';
 else if(selectedModel) mergeInfoEl.textContent='Click another matching goblin to merge.';
 else mergeInfoEl.textContent='Click a goblin to select it for merging.';
@@ -2892,6 +2929,10 @@ function openMergeMenu(){
   tone(880,0.12,'sine',0.12,0,220); tone(1320,0.18,'sine',0.1,0.1,180);
 }
 function closeMergeMenu(){
+mergeOpen=false; dragModel=null; dropTarget=null; pendingMerge=null;
+mergeConfirmEl.classList.add('hidden');
+dragModel=null; dropTarget=null;
+mergeConfirmEl.classList.add('hidden');
 mergeOpen=false; selectedModel=null; pendingMerge=null;
 splitMode=false;
 document.getElementById('mergeSplit').style.borderColor='#ff6b6b';
@@ -3016,7 +3057,7 @@ if(!mergeOpen||e.button!==0||pendingMerge) return;
 setMergeNdc(e);
 const m=pickMergeModel();
 /* split mode: click a tier 2+ goblin to unmerge it */
-if(splitMode&&m&&m.tier>=2){
+if(splitMode&&m&&m.tier>=2&&m.tier<4){
 removeGoblinFromWorld(m.gob);
 const s1=randomGoblinSpot(), s2=randomGoblinSpot();
 makeGoblin(s1.x,s1.z,{tier:m.tier-1});
@@ -3040,10 +3081,13 @@ tone(440,0.06,'sine',0.08);
 selectedModel=null;
 updateMergeSelection();
 tone(300,0.05,'sine',0.06);
-} else if(selectedModel.tier===m.tier){
+} else if(selectedModel.tier===m.tier && m.tier<3){
 pendingMerge={a:selectedModel,b:m};
 showMergeConfirm();
 tone(660,0.08,'sine',0.1); tone(880,0.1,'sine',0.08,0.05);
+} else if(selectedModel.tier===m.tier && m.tier>=3){
+toast('Tier-3 goblins can only fuse via the Aphrodite ritual.');
+tone(220,0.12,'sine',0.1);
 } else {
 selectedModel=m;
 updateMergeSelection();
@@ -3052,6 +3096,24 @@ tone(440,0.06,'sine',0.08);
 });
 addEventListener('mouseup',e=>{
 /* click-to-select handles everything in mousedown — nothing needed here */
+});
+/* ---------- Aphrodite ritual ---------- */
+const pinkBurst = makeBurst(0xff5fa8);
+function startAphroCine(){
+mouseHeld=false;
+camMode='aphroCine';
+letterbox(true);
+document.body.classList.add('cineMode');
+const gobs=goblins.map(g=>{
+g.state='wait'; g.coinQueue.length=0;   // freeze: no wandering, no coins
+return { g, base:g.root.position.clone(), ph:Math.random()*6.28, gone:false };
+});
+cine={ type:'aphro', t:0, fromPos:camera.position.clone(), gobs, beam:null, glow:null, light:null, rose:null };
+tone(60,1.5,'sine',0.3,0,-20);
+}
+document.getElementById('mergeAphro').addEventListener('click',()=>{
+closeMergeMenu();
+startAphroCine();
 });
 /* ============================== VENDOR + STALL (with cat) ============================== */
 const vendor = { nextBlink:2.2, blinkT:0, waveAmt:0, nextEarT:3, earTwitch:0, earSide:1 };
@@ -3667,10 +3729,12 @@ const coinGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.045, 18);
 const coinMat  = toonMap(coinFaceTex);
 const coinMatS = toonMap(coinFaceTexS);
 const coinMatG = toonMap(coinFaceTexG);
+const coinMatP = toonMap(coinFaceTexP);
 const coinMeshG = new THREE.InstancedMesh(coinGeo, coinMat,  MAX_COINS);
 const coinMeshS = new THREE.InstancedMesh(coinGeo, coinMatS, MAX_COINS);
 const coinMeshG2 = new THREE.InstancedMesh(coinGeo, coinMatG, MAX_COINS);
-for (const m of [coinMeshG, coinMeshS, coinMeshG2]){
+const coinMeshP = new THREE.InstancedMesh(coinGeo, coinMatP, MAX_COINS);
+for (const m of [coinMeshG, coinMeshS, coinMeshG2, coinMeshP]){
 m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 m.frustumCulled = false;
 m.count = 0;
@@ -3691,9 +3755,25 @@ const VMULT = new Float32Array(MAX_COINS);
 const SLEEPF = new Uint8Array(MAX_COINS);
 const RESTF  = new Float32Array(MAX_COINS);
 const SPINT  = new Float32Array(MAX_COINS);
-const GNDT   = new Float32Array(MAX_COINS); // time spent sliding on the ground
 const RINGT  = new Float32Array(MAX_COINS); // seconds hovering inside the prestige ring
+const GNDT   = new Float32Array(MAX_COINS); // time spent sliding on the ground
 const SSCL   = new Float32Array(MAX_COINS);  // sacrifice shrink (1 = full)
+const CRAD   = new Float32Array(MAX_COINS);  // per-coin collision radius (bigger coins = bigger)
+for(let i=0;i<MAX_COINS;i++) CRAD[i]=COL_R;
+function supportOfCoin(i,q){
+const ay = 1 - 2*(q.x*q.x + q.z*q.z);
+const hl = Math.sqrt(Math.max(0, 1 - ay*ay));
+return CRAD[i]*hl + COIN_HH*(CRAD[i]/COL_R)*Math.abs(ay);
+}
+/* impact-proportional clinks: flat-face hits slap, edge hits tick */
+let clinkBudget = 0;
+function coinClink(x,z,impact,flat){
+if (clinkBudget<=0 || impact<1.5) return;
+clinkBudget--;
+const vol = Math.min(0.09, 0.015 + impact*0.012);
+if (flat) noiseAt(0.05, vol, 2600, 900, 0, x, z, 14);          // face slap
+else toneAt(1450+Math.random()*350, 0.05, 'triangle', vol*0.8, 0, -500, x, z, 14); // edge tick
+}
 const CXA = new Int32Array(MAX_COINS), CYA = new Int32Array(MAX_COINS), CZA = new Int32Array(MAX_COINS);
 const live = [], livePos = new Int32Array(MAX_COINS);
 const freeStack = []; for(let i=MAX_COINS-1;i>=0;i--) freeStack.push(i);
@@ -3720,6 +3800,7 @@ V[i3]=vel.x; V[i3+1]=vel.y; V[i3+2]=vel.z;
 AV[i3]=(Math.random()-0.5)*24; AV[i3+1]=(Math.random()-0.5)*24; AV[i3+2]=(Math.random()-0.5)*24;
 Q[i].set((Math.random()-0.5)*0.3,(Math.random()-0.5)*0.3,(Math.random()-0.5)*0.3,1).normalize();
 SIL[i]=coinType; VMULT[i]=coinType===2?50:(coinType===1?10:1);
+CRAD[i]=coinType===2?0.24:(coinType===1?0.22:COL_R);  // red > silver > gold
 ST[i]=1;
 stats.coinsThrown++;
 SLEEPF[i]=0; RESTF[i]=0; SSCL[i]=1; GNDT[i]=0; RINGT[i]=0;
@@ -3746,7 +3827,6 @@ setCoinDisplay(earned);
 coinNum.classList.remove('bump'); void coinNum.offsetWidth; coinNum.classList.add('bump');
 if (!suckOn) holePopup('+' + gain);
 if (Math.hypot(player.pos.x, player.pos.z) < EARN_SOUND_R) earnSound();
-burstSparks(P[i*3], -2, P[i*3+2]);
 if (shopOpen) refreshTree();
 }
 }
@@ -3762,14 +3842,15 @@ const i3 = i*3;
 const dx=P[i3]-ro.x, dy=P[i3+1]-ro.y, dz=P[i3+2]-ro.z;
 const t = dx*rd.x + dy*rd.y + dz*rd.z;
 if (t < 0.15 || t > bestT) continue;
-if (dx*dx+dy*dy+dz*dz - t*t < 0.0676){ best=i; bestT=t; }
+const pr = CRAD[i]+0.06;
+if (dx*dx+dy*dy+dz*dz - t*t < pr*pr){ best=i; bestT=t; }
 }
 return best;
 }
 /* write all instances to the GPU buffers */
 const coinDummy = new THREE.Object3D();
 function composeCoinInstances(){
-let ng=0, ns=0, ng2=0;
+let ng=0, ns=0, ng2=0, np=0;
 for(let li=0; li<live.length; li++){
 const i = live[li];
 if (ST[i]===0) continue;
@@ -3778,7 +3859,11 @@ if (k <= 0.02) continue;
 const i3=i*3;
 coinDummy.position.set(P[i3],P[i3+1],P[i3+2]);
 coinDummy.quaternion.copy(Q[i]);
-if (SIL[i]===2){
+if (SIL[i]===3){
+coinDummy.scale.set(1.25*k,1.6*k,1.25*k);
+coinDummy.updateMatrix();
+coinMeshP.setMatrixAt(np++, coinDummy.matrix);
+} else if (SIL[i]===2){
 coinDummy.scale.set(1.2*k,1.5*k,1.2*k);
 coinDummy.updateMatrix();
 coinMeshG2.setMatrixAt(ng2++, coinDummy.matrix);
@@ -3792,10 +3877,11 @@ coinDummy.updateMatrix();
 coinMeshG.setMatrixAt(ng++, coinDummy.matrix);
 }
 }
-coinMeshG.count=ng; coinMeshS.count=ns; coinMeshG2.count=ng2;
+coinMeshG.count=ng; coinMeshS.count=ns; coinMeshG2.count=ng2; coinMeshP.count=np;
 coinMeshG.instanceMatrix.needsUpdate = true;
 coinMeshS.instanceMatrix.needsUpdate = true;
 coinMeshG2.instanceMatrix.needsUpdate = true;
+coinMeshP.instanceMatrix.needsUpdate = true;
 }
 function coinAwake(i){ return ST[i]===1 && !SLEEPF[i]; }
 function buildCoinHash(){
@@ -3810,11 +3896,12 @@ const k=hKey(cx,cy,cz);
 hNext[i]=hHead[k]; hHead[k]=i;
 }
 }
+const PEN_SLOP = 0.005, PEN_CORR = 0.8;   // slop + partial correction = calmer piles
 function resolveCoinPair(i,j){
 const i3=i*3, j3=j*3;
 const dx=P[j3]-P[i3], dz=P[j3+2]-P[i3+2];
 const h2=dx*dx+dz*dz;
-const minH=COL_R*2;
+const minH=CRAD[i]+CRAD[j];
 if (h2 > minH*minH) return;
 const dy=P[j3+1]-P[i3+1];
 const ady=Math.abs(dy);
@@ -3827,7 +3914,7 @@ if (!coinAwake(j) && coinAwake(i) && vi2 > 0.3){ SLEEPF[j]=0; RESTF[j]=0; }
 const ai=coinAwake(i), aj=coinAwake(j);
 if (!ai && !aj) return;
 CONTACT[i]=1; CONTACT[j]=1;
-const vpen = STACK_H - ady;
+const vpen = Math.max(0, STACK_H - ady - PEN_SLOP)*PEN_CORR;
 if (h < minH*0.7){
 // one coin on top of the other: resolve vertically (piling)
 const up = dy > 0 ? j : i, dn = dy > 0 ? i : j;
@@ -3837,6 +3924,7 @@ const sd = coinAwake(dn) ? (coinAwake(up)?0.5:1) : 0;
 P[iu+1] += vpen*su;
 P[id+1] -= vpen*sd;
 const rv = V[iu+1] - V[id+1];
+if (rv < -1.2) coinClink(P[i3],P[i3+2],-rv,false);
 if (rv < 0){
 if (su) V[iu+1] -= rv*0.6*su;
 if (sd) V[id+1] += rv*0.6*sd;
@@ -3846,13 +3934,14 @@ if (su){ V[iu]*=fr; V[iu+2]*=fr; }
 if (sd){ V[id]*=fr; V[id+2]*=fr; }
 } else {
 // side by side: push apart horizontally
-const hpen = minH - h;
+const hpen = Math.max(0, minH - h - PEN_SLOP)*PEN_CORR;
 const nx=dx/h, nz=dz/h;
 const si = ai ? (aj?0.5:1) : 0;
 const sj = aj ? (ai?0.5:1) : 0;
 P[i3]   -= nx*hpen*si; P[i3+2] -= nz*hpen*si;
 P[j3]   += nx*hpen*sj; P[j3+2] += nz*hpen*sj;
 const rv = (V[j3]-V[i3])*nx + (V[j3+2]-V[i3+2])*nz;
+if (rv < -1.2) coinClink(P[i3],P[i3+2],-rv,false);
 if (rv < 0){
 if (si){ V[i3] += nx*rv*0.6*si; V[i3+2] += nz*rv*0.6*si; }
 if (sj){ V[j3] -= nx*rv*0.6*sj; V[j3+2] -= nz*rv*0.6*sj; }
@@ -3894,13 +3983,14 @@ const s=(holeRS()-0.14)/dH; P[i3]*=s; P[i3+2]*=s;
 const q=Q[i], qx=q.x, qy=q.y, qz=q.z, qw=q.w;
 const ax=2*(qx*qy-qz*qw), ay=1-2*(qx*qx+qz*qz), az=2*(qx*qw+qy*qz);
 const hl=Math.sqrt(Math.max(0,1-ay*ay));
-const sup=COIN_R*hl+COIN_HH*Math.abs(ay);
+const sup=CRAD[i]*hl+COIN_HH*(CRAD[i]/COL_R)*Math.abs(ay);
 if (P[i3+1] < sup+0.001){
-  P[i3+1]=sup;
-  const impact=-V[i3+1];
-  if (impact>0){
-    const b=impact*BOUNCE;
-    V[i3+1]= b<0.55 ? 0 : b;
+P[i3+1]=sup;
+const impact=-V[i3+1];
+if (impact>0){
+const b=impact*BOUNCE;
+V[i3+1]= b<0.55 ? 0 : b;
+if (impact>1.5) coinClink(P[i3],P[i3+2],impact, hl<0.5); // flat slap vs edge tick
     if (impact>2.5){
       AV[i3]  +=(Math.random()-0.5)*impact*1.6;
       AV[i3+2]+=(Math.random()-0.5)*impact*1.6;
@@ -3918,7 +4008,7 @@ if (P[i3+1] < sup+0.001){
     _qTmp.setFromUnitVectors(_v1,_tmp);
     _qT2.slerpQuaternions(IDQ,_qTmp,Math.min(1,10*dt));
     Q[i].premultiply(_qT2);
-    const wR=spd/COIN_R;
+    const wR=spd/CRAD[i];
     const k=1-Math.exp(-8*dt);
     AV[i3]+=(hx*wR-AV[i3])*k; AV[i3+1]+=(0-AV[i3+1])*k; AV[i3+2]+=(hz*wR-AV[i3+2])*k;
     const rf=Math.exp(-1.4*dt);
@@ -3937,9 +4027,9 @@ if (P[i3+1] < sup+0.001){
 }
 }
 }
-/* coin–coin contacts, 2 solver iterations for stable piles */
+/* coin–coin contacts, 4 solver iterations for stable piles */
 buildCoinHash();
-for(let iter=0; iter<2; iter++){
+for(let iter=0; iter<4; iter++){
 for(let li=0; li<live.length; li++){
 const i=live[li], s=ST[i];
 if (s!==1 && s!==2) continue;
@@ -4036,6 +4126,7 @@ _qTmp.setFromEuler(_euler.set(SPINT[i]*1.2, SPINT[i]*0.9, 0));
 Q[i].slerp(_qTmp, Math.min(1,4*dt));
 }
 /* fixed-step rigid body simulation — runs in telescope/iso view too */
+clinkBudget = 4;   // per-frame impact sound budget (no clink spam)
 physAccum += dt;
 let n=0;
 while (physAccum >= PHYS_DT && n<3){ physAccum -= PHYS_DT; stepCoins(PHYS_DT); n++; }
@@ -4045,9 +4136,9 @@ shovelPushCoins(dt);
 for(let li=0; li<live.length; li++){
   const i=live[li];
   if (ST[i]!==2) continue;
-  const i3=i*3, s0=supportOf(Q[i]);
-  Q[i].slerp(IDQ, Math.min(1, 10*dt));
-  P[i3+1] += supportOf(Q[i]) - s0;
+const i3=i*3, s0=supportOfCoin(i,Q[i]);
+Q[i].slerp(IDQ, Math.min(1, 10*dt));
+P[i3+1] += supportOfCoin(i,Q[i]) - s0;
 }
 composeCoinInstances();
 }
@@ -4698,6 +4789,89 @@ toast('The meadow awaits…');
 const SUCK_T = new THREE.Vector3(0,2.6,0);
 function updateCine(dt, time){
 const c = cine; c.t += dt;
+if (c.type === 'aphro'){
+const t=c.t;
+const lookY = t>16.2 ? 2.6 : 1;
+if (t<1.2){
+const e=sm(t/1.2);
+camera.position.lerpVectors(c.fromPos,_cA.set(7,4.6,11.5),e);
+camera.lookAt(0,lookY,0);
+} else {
+camera.position.set(7+Math.sin(t*0.3)*0.35,4.6,11.5);
+camera.lookAt(0,lookY,0);
+}
+/* phase 1 (1.2–6.2s): violent shaking */
+if (t>=1.2 && t<6.2){
+const amp=sm(Math.min(1,(t-1.2)/0.6));
+for(const it of c.gobs){
+const s=Math.min(it.g.baseScale,2);
+it.g.root.position.set(
+it.base.x+Math.sin(t*47+it.ph)*0.09*amp*s,
+Math.abs(Math.sin(t*39+it.ph*2))*0.12*amp*s,
+it.base.z+Math.cos(t*43+it.ph)*0.09*amp*s);
+it.g.root.rotation.z=Math.sin(t*51+it.ph)*0.09*amp;
+}
+shake=Math.max(shake,0.22*amp);
+if (Math.random()<dt*5) toneAt(48+Math.random()*30,0.16,'sine',0.22,0,-18,0,0,34);
+}
+/* phase 2 (6.2–16.2s): pulled into the hole */
+else if (t>=6.2 && t<16.2){
+const k=sm((t-6.2)/10);
+for(const it of c.gobs){
+if (it.gone) continue;
+const ang=it.ph+k*6, rad=(1-k)*1.6;
+it.g.root.position.set(
+it.base.x*(1-k)+Math.cos(ang)*rad*(1-k),
+Math.max(-3,(it.base.y+0.6)*(1-k)-k*1.4),
+it.base.z*(1-k)+Math.sin(ang)*rad*(1-k));
+it.g.root.rotation.y+=dt*5;
+it.g.root.scale.setScalar(Math.max(0.01,it.g.baseScale*(1-k*0.85)));
+it.g.shadow.position.set(it.g.root.position.x,0.02,it.g.root.position.z);
+it.g.shadow.material.opacity=0.5*(1-k);
+if (k>=0.98){ it.gone=true; it.g.root.visible=false; it.g.shadow.visible=false; }
+}
+shake=Math.max(shake,0.12);
+if (Math.random()<dt*6) pinkBurst.burst(0,0.4,0,2.5,2.5);
+}
+/* phase 3: hole glows pink, massive ray, Aphrodite rises */
+else {
+if (!c.beam){
+c.beam=new THREE.Mesh(new THREE.CylinderGeometry(0.9,1.7,70,24,1,true),
+new THREE.MeshBasicMaterial({color:0xff4fa0,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));
+c.beam.position.set(0,32,0); scene.add(c.beam);
+c.glow=new THREE.Sprite(new THREE.SpriteMaterial({map:violetGlowTex,color:0xff4fa0,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:0}));
+c.glow.scale.setScalar(7); c.glow.position.y=0.6; scene.add(c.glow);
+c.light=new THREE.PointLight(0xff4fa0,0,40,2); c.light.position.set(0,3,0); scene.add(c.light);
+tone(32,3.2,'sine',0.55,0,-6); noiseS(2.2,0.35,200,40);   // deep bass
+shake=Math.max(shake,1.2);
+pinkBurst.burst(0,1,0,4,5);
+const g=makeGoblin(0,0,{tier:4});
+g.state='wait'; g.root.position.set(0,-6,0); g.shadow.visible=false;
+c.rose=g;
+}
+const fade=Math.max(0,1-Math.max(0,(t-19.8)/1.4));
+c.beam.material.opacity=Math.min(0.85,(t-16.2)*2.5)*fade;
+c.glow.material.opacity=Math.min(0.9,(t-16.2)*2.5)*fade;
+c.light.intensity=Math.min(60,(t-16.2)*80)*fade;
+if (c.rose){
+const k2=sm(THREE.MathUtils.clamp((t-16.6)/3.0,0,1));
+c.rose.root.position.y=THREE.MathUtils.lerp(-6,0,k2);
+c.rose.root.rotation.y+=dt*0.6;
+if (k2>=1 && c.rose.state==='wait'){ c.rose.state='idle'; c.rose.t=1+Math.random(); c.rose.shadow.visible=true; pickTargetFor(c.rose); }
+}
+if (t>21.4){
+/* the whole meadow is sacrificed — filter this loop (e.g. it.g.tier<3) to spare lower tiers */
+for(const it of c.gobs) removeGoblinFromWorld(it.g);
+scene.remove(c.beam); scene.remove(c.glow); scene.remove(c.light);
+cine=null;
+document.body.classList.remove('cineMode');
+letterbox(false);
+startCineHandoff();
+toast('The Aphrodite has risen…');
+}
+}
+return;
+}
 if (c.type === 'intro'){
 const t = c.t;
 const gob = c.gob;
@@ -5457,7 +5631,8 @@ if (nearCoin >= 0){
 const i3=nearCoin*3;
 outlineMesh.position.set(P[i3],P[i3+1],P[i3+2]);
 outlineMesh.quaternion.copy(Q[nearCoin]);
-if (SIL[nearCoin]===2) outlineMesh.scale.set(1.18*1.2, 1.9*1.5, 1.18*1.2);
+if (SIL[nearCoin]===3) outlineMesh.scale.set(1.18*1.25, 1.9*1.6, 1.18*1.25);
+else if (SIL[nearCoin]===2) outlineMesh.scale.set(1.18*1.2, 1.9*1.5, 1.18*1.2);
 else if (SIL[nearCoin]===1) outlineMesh.scale.set(1.18*1.1, 1.9*1.3, 1.18*1.1);
 else outlineMesh.scale.set(1.18, 1.9, 1.18);
 }
@@ -6346,7 +6521,7 @@ const g = AC.createGain(); g.gain.value = vol;
 s.connect(g); g.connect(master); s.start();
 return { src:s, gain:g };
 }
-const ching  = () => { tone(1244,0.09,'triangle',0.12); tone(1864,0.22,'sine',0.1,0.05); };
+const ching  = () => { tone(1244,0.09,'triangle',0.06); tone(1864,0.22,'sine',0.05,0.05); };
 const earnSound = () => { [880,1174,1568,2093].forEach((f,i)=>tone(f,0.18,'triangle',0.1,i*0.07)); noiseS(0.5,0.035,4000,8000,0.12); };
 const thumpS = () => tone(95,0.12,'sine',0.3,0,-40);
 const dropS  = () => noiseS(0.1,0.09,500,1000);
@@ -6928,10 +7103,7 @@ if (menuTitle){
 const k = Math.min(1, t/1.8);
 menuTitle.position.y = THREE.MathUtils.lerp(8.9, 3.35, bounceOut(k)) + Math.sin(time*0.9)*0.09;
 if (k >= 1 && !menuTitleLanded){
-menuTitleLanded = true;
-thumpS();
-tone(70, 0.5, 'sine', 0.3, 0, -30);
-noiseS(0.4, 0.2, 250, 70);
+menuTitleLanded = true;   // lands silently now
 }
 }
 if (menuBtn){
