@@ -2309,9 +2309,9 @@ if (g.t <= 0 && goblinsAwakened){ pickTargetFor(g); g.state='run'; }
 else if (g.state === 'run'){
 _dir.subVectors(g.target, p); _dir.y=0; _dir.normalize();
 const dHole = Math.hypot(p.x, p.z);
-if (dHole < 4.2) _dir.addScaledVector(_tmp.set(p.x/dHole,0,p.z/dHole), (4.2-dHole)/4.2*2.4);
+if (dHole < 4.2) _dir.addScaledVector(_tmp.set(p.x/Math.max(dHole,0.0001),0,p.z/Math.max(dHole,0.0001)), (4.2-dHole)/4.2*2.4);
 const dS = Math.hypot(p.x-STALL_POS.x, p.z-STALL_POS.z);
-if (dS < 3.4) _dir.addScaledVector(_tmp.set((p.x-STALL_POS.x)/dS,0,(p.z-STALL_POS.z)/dS), (3.4-dS)/3.4*2.0);
+if (dS < 3.4) _dir.addScaledVector(_tmp.set((p.x-STALL_POS.x)/Math.max(dS,0.0001),0,(p.z-STALL_POS.z)/Math.max(dS,0.0001)), (3.4-dS)/3.4*2.0);
 _dir.normalize();
 _want.copy(_dir).multiplyScalar(g.tier>=4 ? GOB_SPEED*0.35 : (g.tier===3 ? GOB_SPEED*0.5 : (g.chief ? GOB_SPEED*0.55 : GOB_SPEED)));
 g.vel.lerp(_want, 1-Math.exp(-6*dt));
@@ -2394,8 +2394,8 @@ if (t >= 0.7){ g.state='idle'; g.t = 1+Math.random(); }
 }
 g.root.position.y = whistleBuffT > 0 ? Math.abs(Math.sin(time*7 + g.squirmT))*0.25 : 0;
 const dC = Math.hypot(p.x,p.z);
-if (dC < holeRS()+0.8){ const s=(holeRS()+0.8)/dC; p.x*=s; p.z*=s; }
-if (dC > WORLD_R-3){ const s=(WORLD_R-3)/dC; p.x*=s; p.z*=s; }
+if (dC > 0.0001 && dC < holeRS()+0.8){ const s=(holeRS()+0.8)/dC; p.x*=s; p.z*=s; }
+if (dC > WORLD_R-3){ const s=(WORLD_R-3)/Math.max(dC,0.0001); p.x*=s; p.z*=s; }
 g.root.rotation.y = g.yaw;
 g.root.updateMatrixWorld(true);
 const dx = player.pos.x - p.x, dz = player.pos.z - p.z;
@@ -2893,7 +2893,7 @@ const dist=halfW/Math.tan(THREE.MathUtils.degToRad(mergeCamera.fov/2))+2.5;
  mergeCamera.position.set(0,2.3,Math.max(7,dist));
 mergeCamera.lookAt(0,0.9,0);
 const t3=list.filter(g=>(g.tier||1)===3).length;
-document.getElementById('mergeAphro').style.display = t3>=5 ? '' : 'none';
+document.getElementById('mergeAphro').style.display = t3>=5 ? 'block' : 'none';
 updateMergeInfo();
 }
 function updateMergeInfo(){
@@ -6439,7 +6439,8 @@ return {pan, k:fall*fall};
 }
 function toneAt(f,dur,type='sine',vol=0.2,delay=0,slide=0,x=0,z=0,maxR=18){
 if(!AC||!settings.sfx) return;
-const pg=panInfo(x,z,maxR); if(pg.k<=0.01) return;
+if(!isFinite(f)||!isFinite(vol)) return;
+const pg=panInfo(x,z,maxR); if(pg.k<=0.01||!isFinite(pg.k)) return;
 const t=AC.currentTime+delay, o=AC.createOscillator(), g=AC.createGain(), p=AC.createStereoPanner();
 o.type=type; o.frequency.setValueAtTime(f,t);
 if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(40,f+slide),t+dur);
@@ -6451,7 +6452,8 @@ o.start(t); o.stop(t+dur+0.05);
 }
 function noiseAt(dur,vol,f0,f1,delay=0,x=0,z=0,maxR=18){
 if(!AC||!settings.sfx) return;
-const pg=panInfo(x,z,maxR); if(pg.k<=0.01) return;
+if(!isFinite(vol)) return;
+const pg=panInfo(x,z,maxR); if(pg.k<=0.01||!isFinite(pg.k)) return;
 const t=AC.currentTime+delay, n=AC.createBufferSource(); n.buffer=noiseBuf;
 const f=AC.createBiquadFilter(); f.type='bandpass'; f.Q.value=1;
 f.frequency.setValueAtTime(f0,t); f.frequency.exponentialRampToValueAtTime(f1,t+dur);
