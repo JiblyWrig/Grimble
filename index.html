@@ -794,7 +794,7 @@ const WITCH_CFG = { name:'MAUD', lines:DLG, bail:true,
 finalHint:'<kbd>E</kbd> — SACRIFICE EVERYTHING &nbsp;·&nbsp; <kbd>Q</kbd> — NOT YET', onDone:()=>openRitual() };
 const GRIM_CFG = { name:'GRIMBLE', lines:GDLG, onDone:()=>startThrowCine() };
 /* ============================== UPGRADES ============================== */
-const upgrades = { value:1, rate:1, stack:1, goblins:0, goblins2:0, maw:0, tempo:0, chieftains:0, help:0, shiny:0, whistle:0, ledger:0, width:0, holejob:0, stranger:0, gob3:0, gob4:0, gob5:0, gob6:0, gob7:0 };
+const upgrades = { value:1, rate:1, stack:1, goblins:0, goblins2:0, maw:0, tempo:0, chieftains:0, help:0, shiny:0, whistle:0, ledger:0, width:0, holejob:0, stranger:0, gob3:0, gob4:0, gob5:0, gob6:0, gob7:0, gob8:0, gob9:0, gob10:0, gob11:0, gob12:0, gob13:0, gob14:0, gob15:0, gob16:0, gob17:0 };
 const UPG = {
 help:   { base:1,  max:1 },
 value:  { base:5,  max:10 },
@@ -813,6 +813,16 @@ gob4:{ base:5000, max:1 },
 gob5:{ base:15000, max:1 },
 gob6:{ base:50000, max:1 },
 gob7:{ base:100000, max:1 },
+gob8:{ base:200000, max:1 },
+gob9:{ base:400000, max:1 },
+gob10:{ base:750000, max:1 },
+gob11:{ base:1500000, max:1 },
+gob12:{ base:3000000, max:1 },
+gob13:{ base:5000000, max:1 },
+gob14:{ base:8000000, max:1 },
+gob15:{ base:12000000, max:1 },
+gob16:{ base:18000000, max:1 },
+gob17:{ base:25000000, max:1 },
 maw:{ base:300, max:10 },
 tempo:{ base:500, max:8 },
 };
@@ -832,6 +842,16 @@ else if (k === 'gob4') c = 5000;
 else if (k === 'gob5') c = 15000;
 else if (k === 'gob6') c = 50000;
 else if (k === 'gob7') c = 100000;
+else if (k === 'gob8') c = 200000;
+else if (k === 'gob9') c = 400000;
+else if (k === 'gob10') c = 750000;
+else if (k === 'gob11') c = 1500000;
+else if (k === 'gob12') c = 3000000;
+else if (k === 'gob13') c = 5000000;
+else if (k === 'gob14') c = 8000000;
+else if (k === 'gob15') c = 12000000;
+else if (k === 'gob16') c = 18000000;
+else if (k === 'gob17') c = 25000000;
 else if (k === 'tempo') c = Math.floor(500 * Math.pow(2, upgrades.tempo));
 else if (k === 'maw') c = Math.floor(300 * Math.pow(2, upgrades.maw));
 else if (k === 'ledger') c = 300 * Math.pow(2, upgrades.ledger);
@@ -881,6 +901,16 @@ const TREE = [
 { key:'gob5',      x:970, y:220, ico:ICO.goblins,name:'+ Goblin',    from:'gob4',   need:()=>upgrades.gob4>0 },
 { key:'gob6',      x:970, y:60,  ico:ICO.goblins,name:'+ Goblin',    from:'gob5',   need:()=>upgrades.gob5>0 },
 { key:'gob7',      x:1070,y:220, ico:ICO.goblins,name:'+ Goblin',    from:'gob6',   need:()=>upgrades.gob6>0 },
+{ key:'gob8',      x:1170,y:300, ico:ICO.goblins,name:'+ Goblin',    from:'gob7',   need:()=>upgrades.gob7>0 },
+{ key:'gob9',      x:1170,y:140, ico:ICO.goblins,name:'+ Goblin',    from:'gob8',   need:()=>upgrades.gob8>0 },
+{ key:'gob10',     x:1270,y:220, ico:ICO.goblins,name:'+ Goblin',    from:'gob9',   need:()=>upgrades.gob9>0 },
+{ key:'gob11',     x:1370,y:300, ico:ICO.goblins,name:'+ Goblin',    from:'gob10',  need:()=>upgrades.gob10>0 },
+{ key:'gob12',     x:1370,y:140, ico:ICO.goblins,name:'+ Goblin',    from:'gob11',  need:()=>upgrades.gob11>0 },
+{ key:'gob13',     x:1470,y:220, ico:ICO.goblins,name:'+ Goblin',    from:'gob12',  need:()=>upgrades.gob12>0 },
+{ key:'gob14',     x:1570,y:300, ico:ICO.goblins,name:'+ Goblin',    from:'gob13',  need:()=>upgrades.gob13>0 },
+{ key:'gob15',     x:1570,y:140, ico:ICO.goblins,name:'+ Goblin',    from:'gob14',  need:()=>upgrades.gob14>0 },
+{ key:'gob16',     x:1670,y:220, ico:ICO.goblins,name:'+ Goblin',    from:'gob15',  need:()=>upgrades.gob15>0 },
+{ key:'gob17',     x:1770,y:220, ico:ICO.goblins,name:'+ Goblin',    from:'gob16',  need:()=>upgrades.gob16>0 },
 { key:'maw',       x:-150,y:-40, ico:ICO.holejob,name:'Wider Maw',   from:'goblins2',need:()=>upgrades.goblins2>0 },
 { key:'tempo',     x:350, y:560, ico:ICO.whistle,name:'Second Wind', from:'help',   need:()=>upgrades.whistle>0 && upgrades.holejob>0 },
 ];
@@ -2858,12 +2888,15 @@ function openMergeMenu(){
   tone(880,0.12,'sine',0.12,0,220); tone(1320,0.18,'sine',0.1,0.1,180);
 }
 function closeMergeMenu(){
-  mergeOpen=false; dragModel=null; dropTarget=null; pendingMerge=null;
-  mergeConfirmEl.classList.add('hidden');
-  mergeOverlayEl.classList.add('hidden');
-  document.body.classList.remove('merge');
-  fadeMusic(0.55);
-  try{renderer.domElement.requestPointerLock();}catch(e){}
+mergeOpen=false; selectedModel=null; pendingMerge=null;
+splitMode=false;
+document.getElementById('mergeSplit').style.borderColor='#ff6b6b';
+document.getElementById('mergeSplit').style.boxShadow='0 0 18px rgba(255,80,80,.3)';
+mergeConfirmEl.classList.add('hidden');
+mergeOverlayEl.classList.add('hidden');
+document.body.classList.remove('merge');
+fadeMusic(0.55);
+try{renderer.domElement.requestPointerLock();}catch(e){}
 }
 function showMergeConfirm(){
 const {a,b}=pendingMerge, t=a.tier, nt=t+1, mult=Math.pow(2,nt-1);
@@ -2978,6 +3011,19 @@ addEventListener('mousedown',e=>{
 if(!mergeOpen||e.button!==0||pendingMerge) return;
 setMergeNdc(e);
 const m=pickMergeModel();
+/* split mode: click a tier 2+ goblin to unmerge it */
+if(splitMode&&m&&m.tier>=2){
+removeGoblinFromWorld(m.gob);
+const s1=randomGoblinSpot(), s2=randomGoblinSpot();
+makeGoblin(s1.x,s1.z,{tier:m.tier-1});
+makeGoblin(s2.x,s2.z,{tier:m.tier-1});
+splitMode=false;
+document.getElementById('mergeSplit').style.borderColor='#ff6b6b';
+document.getElementById('mergeSplit').style.boxShadow='0 0 18px rgba(255,80,80,.3)';
+tone(400,0.2,'sine',0.15,0,-120); tone(280,0.25,'sine',0.12,0.08,-80);
+buildMergeScene();
+return;
+}
 if(!m||!m.mergeable){
 if(selectedModel){ selectedModel=null; updateMergeSelection(); }
 return;
@@ -3001,18 +3047,7 @@ tone(440,0.06,'sine',0.08);
 }
 });
 addEventListener('mouseup',e=>{
-if(!mergeOpen||e.button!==0) return;
-if(dragModel){
-if(dropTarget){
-pendingMerge={a:dragModel,b:dropTarget}; showMergeConfirm();
-tone(660,0.08,'sine',0.1); tone(880,0.1,'sine',0.08,0.05); // snap confirm
-} else {
-dragModel.model.root.position.copy(dragModel.basePos); dragModel.model.root.position.y=0;
-tone(220,0.06,'sine',0.06); // drop back
-}
-dragModel=null; dropTarget=null;
-renderer.domElement.style.cursor='';
-}
+/* click-to-select handles everything in mousedown — nothing needed here */
 });
 /* ============================== VENDOR + STALL (with cat) ============================== */
 const vendor = { nextBlink:2.2, blinkT:0, waveAmt:0, nextEarT:3, earTwitch:0, earSide:1 };
@@ -3946,12 +3981,12 @@ _qT2.setFromAxisAngle(_toCam, spinAng).multiply(_qTmp);
 Q[held].slerp(_qT2, 1-Math.exp(-9*dt));
 }
 
-/* prestige ring: coins inside the dotted radius get claimed */
+/* prestige ring: coins inside the dotted radius get claimed — only after they have landed */
 if (prestige>0){
 const mr=magnetR();
 for(let li=0; li<live.length; li++){
 const i=live[li], s=ST[i];
-if (s!==1 && s!==2) continue;
+if (s!==2) continue;   // only claim coins already resting on the ground
 const i3=i*3;
 if (Math.hypot(P[i3],P[i3+2]) < mr){ ST[i]=5; SLEEPF[i]=0; RESTF[i]=0; }
 }
@@ -3977,15 +4012,16 @@ let pull, sw, ty, k;
 if (suckOn){ pull=11; sw=0; ty=1.0; k=Math.min(1,3.5*dt); }
 else {
 const t01=Math.min(1, hd/magnetR());
-pull = 0.5*(0.7 + 2.0*(1-t01)*(1-t01));   // lazy at the rim, eager near the pit — halved
-sw = 0.25*t01;                             // gentle inward spiral — halved
-ty = hd > HOLE_R ? 0.16 : 0.3;
+pull = 0.7 + 2.0*(1-t01)*(1-t01);   // lazy at the rim, eager near the pit
+sw = 0.5*t01;                       // gentle inward spiral
+ty = 0.06;                          // stay grounded — no floating
 k = Math.min(1,4*dt);
 }
 V[i3]  += ((ux*pull - uz*sw) - V[i3])*k;
 V[i3+2]+= ((uz*pull + ux*sw) - V[i3+2])*k;
 V[i3+1]+= (ty-P[i3+1])*Math.min(1,6*dt);
 P[i3]+=V[i3]*dt; P[i3+1]+=V[i3+1]*dt; P[i3+2]+=V[i3+2]*dt;
+if (!suckOn && P[i3+1] < 0.03) P[i3+1] = 0.03;   // never clip below ground
 SPINT[i]+=dt;
 _qTmp.setFromEuler(_euler.set(SPINT[i]*1.2, SPINT[i]*0.9, 0));
 Q[i].slerp(_qTmp, Math.min(1,4*dt));
@@ -5069,7 +5105,7 @@ c.suck = c.suck.filter(it => it.ci === undefined);
 function doPrestigeReset(){
 prestige++;
 stats.prestiges++;
-for (const k in upgrades) upgrades[k] = (k==='help'||k==='goblins'||k==='goblins2'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob'||k==='stranger'||k==='gob3'||k==='gob4'||k==='gob5'||k==='gob6'||k==='gob7'||k==='maw'||k==='tempo') ? 0 : 1;
+for (const k in upgrades) upgrades[k] = (k==='help'||k==='goblins'||k==='goblins2'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob'||k==='stranger'||k==='gob3'||k==='gob4'||k==='gob5'||k==='gob6'||k==='gob7'||k==='gob8'||k==='gob9'||k==='gob10'||k==='gob11'||k==='gob12'||k==='gob13'||k==='gob14'||k==='gob15'||k==='gob16'||k==='gob17'||k==='maw'||k==='tempo') ? 0 : 1;
 buildHole(); // maw reset → pit shrinks back to base size (and swallowed grass restores)
 earned = 0;
 setCoinDisplay(0);
@@ -5135,7 +5171,7 @@ document.getElementById('rbMultOld').textContent = '×' + prestigeMult();
 document.getElementById('rbMultNew').textContent = '×' + (prestigeMult()+1);
 let bought = 0;
 for (const k in UPG){
-const start = (k==='chieftains'||k==='help'||k==='goblins'||k==='goblins2'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob'||k==='stranger'||k==='gob3'||k==='gob4'||k==='gob5'||k==='gob6'||k==='gob7'||k==='maw'||k==='tempo') ? 0 : 1;
+const start = (k==='chieftains'||k==='help'||k==='goblins'||k==='goblins2'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob'||k==='stranger'||k==='gob3'||k==='gob4'||k==='gob5'||k==='gob6'||k==='gob7'||k==='gob8'||k==='gob9'||k==='gob10'||k==='gob11'||k==='gob12'||k==='gob13'||k==='gob14'||k==='gob15'||k==='gob16'||k==='gob17'||k==='maw'||k==='tempo') ? 0 : 1;
 bought += upgrades[k]-start;
 }
 const merged = goblins.filter(g=>(g.tier||1) > 1).length;
@@ -5862,7 +5898,7 @@ function refreshTree(){
 shopCoinsEl.textContent = fmt(earned);
 let bought = 0, maxT = 0;
 for (const k in UPG){
-const start = (k==='chieftains'||k==='help'||k==='goblins'||k==='goblins2'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob'||k==='stranger'||k==='gob3'||k==='gob4'||k==='gob5'||k==='gob6'||k==='gob7'||k==='maw'||k==='tempo') ? 0 : 1;
+const start = (k==='chieftains'||k==='help'||k==='goblins'||k==='goblins2'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob'||k==='stranger'||k==='gob3'||k==='gob4'||k==='gob5'||k==='gob6'||k==='gob7'||k==='gob8'||k==='gob9'||k==='gob10'||k==='gob11'||k==='gob12'||k==='gob13'||k==='gob14'||k==='gob15'||k==='gob16'||k==='gob17'||k==='maw'||k==='tempo') ? 0 : 1;
 bought += upgrades[k]-start;
 maxT += UPG[k].max-start;
 }
@@ -5969,7 +6005,7 @@ break;
 }
 toast('Another goblin shuffles in…');
 }
-if (key === 'gob3' || key === 'gob4' || key === 'gob5' || key === 'gob6' || key === 'gob7'){
+if (key === 'gob3' || key === 'gob4' || key === 'gob5' || key === 'gob6' || key === 'gob7' || key === 'gob8' || key === 'gob9' || key === 'gob10' || key === 'gob11' || key === 'gob12' || key === 'gob13' || key === 'gob14' || key === 'gob15' || key === 'gob16' || key === 'gob17'){
 for(let i=0;i<20;i++){
 const r = 8 + Math.random()*12, a = Math.random()*Math.PI*2;
 const x = Math.cos(a)*r, z = Math.sin(a)*r;
@@ -6091,26 +6127,8 @@ p.el.style.top = (p.baseY + dy) + '%';
 }
 }
 }
-/* ---------- ember glints on maxed nodes ---------- */
-let emberAcc = 0;
-function spawnEmber(wrap){
-const s = document.createElement('span');
-s.className = 'ember';
-s.style.left = (15+Math.random()*70)+'%';
-s.style.top = (30+Math.random()*55)+'%';
-s.style.setProperty('--ex', (Math.random()*16-8).toFixed(1)+'px');
-s.style.setProperty('--et', (0.9+Math.random()*0.7).toFixed(2)+'s');
-wrap.appendChild(s);
-setTimeout(()=>s.remove(), 1700);
-}
-function updateTreeEmbers(dt){
-if (shopPhase !== 'hole') return;
-emberAcc += dt;
-if (emberAcc < 0.4) return;
-emberAcc = 0;
-const maxed = TREE.filter(n => upgrades[n.key] >= UPG[n.key].max && nodeEls[n.key].wrap.style.display !== 'none');
-if (maxed.length && Math.random() < 0.85) spawnEmber(nodeEls[maxed[(Math.random()*maxed.length)|0].key].wrap);
-}
+/* ---------- ember glints removed ---------- */
+function updateTreeEmbers(dt){}
 /* ============================== RAIN COUNTDOWN UI ============================== */
 const rainTimeEl = document.getElementById('rainTime');
 function updateRainDisplay() {
