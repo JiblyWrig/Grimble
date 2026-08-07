@@ -639,6 +639,7 @@ animation:readyPulse 2.6s ease-in-out infinite; }
   <div id="mergeTitle">GOBLIN FUSION</div>
   <div id="mergeInfo"></div>
   <button id="mergeBack">&#8592; BACK</button>
+<button id="mergeSplit" style="position:absolute;top:26px;left:160px;pointer-events:auto;font-family:'MedievalSharp',cursive;font-size:17px;letter-spacing:2px;color:#ffc9c9;background:rgba(60,10,10,.8);border:2px solid #ff6b6b;border-radius:12px;padding:9px 22px;cursor:pointer;box-shadow:0 0 18px rgba(255,80,80,.3);transition:all .12s;">&#8599; SPLIT</button>
 </div>
 <div id="mergeConfirm" class="hidden">
   <div class="mcPanel">
@@ -793,7 +794,7 @@ const WITCH_CFG = { name:'MAUD', lines:DLG, bail:true,
 finalHint:'<kbd>E</kbd> — SACRIFICE EVERYTHING &nbsp;·&nbsp; <kbd>Q</kbd> — NOT YET', onDone:()=>openRitual() };
 const GRIM_CFG = { name:'GRIMBLE', lines:GDLG, onDone:()=>startThrowCine() };
 /* ============================== UPGRADES ============================== */
-const upgrades = { value:1, rate:1, stack:1, goblins:0, goblins2:0, maw:0, tempo:0, chieftains:0, help:0, shiny:0, whistle:0, ledger:0, width:0, holejob:0, stranger:0 };
+const upgrades = { value:1, rate:1, stack:1, goblins:0, goblins2:0, maw:0, tempo:0, chieftains:0, help:0, shiny:0, whistle:0, ledger:0, width:0, holejob:0, stranger:0, gob3:0, gob4:0, gob5:0, gob6:0, gob7:0 };
 const UPG = {
 help:   { base:1,  max:1 },
 value:  { base:5,  max:10 },
@@ -807,6 +808,11 @@ ledger:{ base:300, max:3 },
 width:{ base:150, max:10 },
 holejob:{ base:500, max:1 },
 stranger:{ base:1000, max:1 },
+gob3:{ base:2000, max:1 },
+gob4:{ base:5000, max:1 },
+gob5:{ base:15000, max:1 },
+gob6:{ base:50000, max:1 },
+gob7:{ base:100000, max:1 },
 maw:{ base:300, max:10 },
 tempo:{ base:500, max:8 },
 };
@@ -821,6 +827,11 @@ else if (k === 'whistle') c = 100;
 else if (k === 'width') c = 150 * Math.pow(2, upgrades.width);
 else if (k === 'holejob') c = 500;
 else if (k === 'stranger') c = 1000;
+else if (k === 'gob3') c = 2000;
+else if (k === 'gob4') c = 5000;
+else if (k === 'gob5') c = 15000;
+else if (k === 'gob6') c = 50000;
+else if (k === 'gob7') c = 100000;
 else if (k === 'tempo') c = Math.floor(500 * Math.pow(2, upgrades.tempo));
 else if (k === 'maw') c = Math.floor(300 * Math.pow(2, upgrades.maw));
 else if (k === 'ledger') c = 300 * Math.pow(2, upgrades.ledger);
@@ -865,6 +876,11 @@ const TREE = [
 { key:'width',     x:630, y:220, ico:ICO.width,  name:'Wide Blade',  from:'rate',  need:()=>upgrades.rate>1 },
 { key:'holejob',   x:690, y:80,  ico:ICO.holejob,name:'Hole-Job',    from:'width', need:()=>upgrades.width>0 },
 { key:'stranger',  x:770, y:220, ico:ICO.stranger,name:'Stranger',    from:'width', need:()=>upgrades.width>=2, green:true },
+{ key:'gob3',      x:870, y:300, ico:ICO.goblins,name:'+ Goblin',    from:'stranger',need:()=>upgrades.stranger>0 },
+{ key:'gob4',      x:870, y:140, ico:ICO.goblins,name:'+ Goblin',    from:'gob3',   need:()=>upgrades.gob3>0 },
+{ key:'gob5',      x:970, y:220, ico:ICO.goblins,name:'+ Goblin',    from:'gob4',   need:()=>upgrades.gob4>0 },
+{ key:'gob6',      x:970, y:60,  ico:ICO.goblins,name:'+ Goblin',    from:'gob5',   need:()=>upgrades.gob5>0 },
+{ key:'gob7',      x:1070,y:220, ico:ICO.goblins,name:'+ Goblin',    from:'gob6',   need:()=>upgrades.gob6>0 },
 { key:'maw',       x:-150,y:-40, ico:ICO.holejob,name:'Wider Maw',   from:'goblins2',need:()=>upgrades.goblins2>0 },
 { key:'tempo',     x:350, y:560, ico:ICO.whistle,name:'Second Wind', from:'help',   need:()=>upgrades.whistle>0 && upgrades.holejob>0 },
 ];
@@ -1155,7 +1171,7 @@ x.lineTo(128+Math.cos(a)*121,128+Math.sin(a)*121); x.stroke(); }
 }
 const coinFaceTex  = canvasTex(256,256, coinFaceDraw(['#fff0b0','#f6c94f','#d99e1f','#8a5c0d','#a5770e','#ffe98f']));
 const coinFaceTexS = canvasTex(256,256, coinFaceDraw(['#ffffff','#dcdce6','#a8a8ba','#5c5c70','#7a7a90','#f4f4ff']));
-const coinFaceTexG = canvasTex(256,256, coinFaceDraw(['#c8ffc8','#5ae85a','#2aaa2a','#0d6b0d','#1a8a1a','#b0ffb0']));
+const coinFaceTexG = canvasTex(256,256, coinFaceDraw(['#ffc8c8','#e85a5a','#aa2a2a','#6b0d0d','#8a1a1a','#ffb0b0']));
 const blobTex = canvasTex(128,128,(x,w,h)=>{
 const g=x.createRadialGradient(64,64,4,64,64,64);
 g.addColorStop(0,'rgba(0,0,0,0.55)'); g.addColorStop(1,'rgba(0,0,0,0)');
@@ -1868,7 +1884,7 @@ const sp = coinSmears[idx++];
 sp.position.set(P[i3]-vx/spd*0.3, P[i3+1]-vy/spd*0.3, P[i3+2]-vz/spd*0.3);
 orientSmear(sp, vx, vy, vz, spd);
 sp.scale.set(THREE.MathUtils.clamp(spd*0.09,0.4,1.4), 0.16, 1);
-sp.material.color.setHex(SIL[i]===2 ? 0xa0ffa0 : (SIL[i]===1 ? 0xe8ecff : 0xffe9a8));
+sp.material.color.setHex(SIL[i]===2 ? 0xffa0a0 : (SIL[i]===1 ? 0xe8ecff : 0xffe9a8));
 sp.material.opacity = THREE.MathUtils.clamp((spd-6)/14,0,0.5);
 sp.visible = true;
 }
@@ -2244,9 +2260,19 @@ _want.copy(_dir).multiplyScalar(g.tier===3 ? GOB_SPEED*0.5 : (g.chief ? GOB_SPEE
 g.vel.lerp(_want, 1-Math.exp(-6*dt));
 p.addScaledVector(g.vel, dt);
 if (g.vel.lengthSq() > 0.1) g.yaw = lerpAngle(g.yaw, Math.atan2(g.vel.x, g.vel.z), Math.min(1,10*dt));
+const prevGait = g.gait;
 g.gait += g.vel.length()*dt*3.0;
 const s = Math.sin(g.gait);
 g.legL.rotation.x = s*0.9; g.legR.rotation.x = -s*0.9;
+/* tier 3 heavy thump on each step */
+if (g.tier===3 && Math.floor(prevGait/Math.PI)!==Math.floor(g.gait/Math.PI)){
+const d=Math.hypot(player.pos.x-p.x, player.pos.z-p.z);
+if(d<14){
+const vol=THREE.MathUtils.clamp((14-d)/14,0,1);
+toneAt(65,0.18,'sine',0.25*vol,0,-25,p.x,p.z,16);
+shake=Math.max(shake,0.12*vol);
+}
+}
 g.armL.rotation.x = -s*0.75; g.armR.rotation.x = s*0.75;
 g.inner.position.y = Math.abs(Math.cos(g.gait))*0.05;
 g.earL.rotation.z = 1.85 + Math.sin(g.gait*2)*0.18;
@@ -2718,6 +2744,12 @@ const mergeInfoEl=document.getElementById('mergeInfo');
 const mergeConfirmEl=document.getElementById('mergeConfirm');
 const mcTextEl=document.getElementById('mcText');
 document.getElementById('mergeBack').addEventListener('click',()=>closeMergeMenu());
+let splitMode=false;
+document.getElementById('mergeSplit').addEventListener('click',()=>{
+splitMode=!splitMode;
+document.getElementById('mergeSplit').style.borderColor=splitMode?'#ff2222':'#ff6b6b';
+document.getElementById('mergeSplit').style.boxShadow=splitMode?'0 0 26px rgba(255,40,40,.6)':'0 0 18px rgba(255,80,80,.3)';
+});
 document.getElementById('mcYes').addEventListener('click',()=>doMerge());
 document.getElementById('mcNo').addEventListener('click',()=>cancelMerge());
 const mergeRay=new THREE.Raycaster();
@@ -2831,7 +2863,7 @@ function closeMergeMenu(){
 }
 function showMergeConfirm(){
 const {a,b}=pendingMerge, t=a.tier, nt=t+1, mult=Math.pow(2,nt-1);
-const coinName = nt===3 ? 'green coins (50× value)' : 'silver coins';
+const coinName = nt===3 ? 'red coins (50× value)' : 'silver coins';
 mcTextEl.innerHTML=`Two <b>tier-${t}</b> goblins will fuse into one <b>tier-${nt}</b> goblin.<br><br>`+
 `It will be <b>30% larger</b>${nt===3?' and <b style="color:#ff6b6b">red</b>':''}.<br>`+
 `Tier-${nt} goblins throw <b>${coinName}</b>, but take <b>&times;${mult}</b> as long between throws.`;
@@ -2933,12 +2965,24 @@ addEventListener('mousedown',e=>{
 if(!mergeOpen||e.button!==0||pendingMerge) return;
 setMergeNdc(e);
 const m=pickMergeModel();
+/* split mode: click a tier 2+ goblin to unmerge it */
+if(splitMode&&m&&m.tier>=2){
+removeGoblinFromWorld(m.gob);
+const s1=randomGoblinSpot(), s2=randomGoblinSpot();
+makeGoblin(s1.x,s1.z,{tier:m.tier-1});
+makeGoblin(s2.x,s2.z,{tier:m.tier-1});
+splitMode=false;
+document.getElementById('mergeSplit').style.borderColor='#ff6b6b';
+document.getElementById('mergeSplit').style.boxShadow='0 0 18px rgba(255,80,80,.3)';
+tone(400,0.2,'sine',0.15,0,-120); tone(280,0.25,'sine',0.12,0.08,-80);
+buildMergeScene();
+return;
+}
 if(m&&m.mergeable){
 dragModel=m;
 const p=mergeGroundPoint();
 if(p) dragOffset.copy(m.model.root.position).sub(p); else dragOffset.set(0,0,0);
 renderer.domElement.style.cursor='grabbing';
-tone(440,0.06,'sine',0.08); // pickup blip
 }
 });
 addEventListener('mouseup',e=>{
@@ -3355,7 +3399,7 @@ fireFlames.push({ m:f, ph:Math.random()*6.28, baseY:f.position.y });
 }
 const fg = new THREE.Sprite(new THREE.SpriteMaterial({ map:fireGlowTex, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, opacity:0.55 }));
 fg.scale.setScalar(2.2); fg.position.y = 0.5; fire.add(fg);
-fireLight = new THREE.PointLight(0xff7a2a, 10, 8, 2);
+fireLight = new THREE.PointLight(0xff7a2a, 5, 8, 2);
 fireLight.position.y = 0.6; fire.add(fireLight);
 fire.position.copy(FIRE_POS);
 scene.add(fire);
@@ -3363,7 +3407,7 @@ STALL_COLL.push({ x:FIRE_POS.x, z:FIRE_POS.z, r:0.6 });
 }
 function updateFireplace(time){
 if (!fireLight) return;
-fireLight.intensity = 9 + Math.sin(time*11)*1.5 + Math.sin(time*23+1.3) + Math.sin(time*47)*0.5;
+fireLight.intensity = 4.5 + Math.sin(time*11)*0.75 + Math.sin(time*23+1.3)*0.5 + Math.sin(time*47)*0.25;
 for (const f of fireFlames){
 const k = 1 + Math.sin(time*9+f.ph)*0.18 + Math.sin(time*17+f.ph*2)*0.08;
 f.m.scale.set(k, 1 + Math.sin(time*12+f.ph)*0.25, k);
@@ -5010,7 +5054,7 @@ c.suck = c.suck.filter(it => it.ci === undefined);
 function doPrestigeReset(){
 prestige++;
 stats.prestiges++;
-for (const k in upgrades) upgrades[k] = (k==='help'||k==='goblins'||k==='goblins2'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob'||k==='stranger'||k==='maw'||k==='tempo') ? 0 : 1;
+for (const k in upgrades) upgrades[k] = (k==='help'||k==='goblins'||k==='goblins2'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob'||k==='stranger'||k==='gob3'||k==='gob4'||k==='gob5'||k==='gob6'||k==='gob7'||k==='maw'||k==='tempo') ? 0 : 1;
 buildHole(); // maw reset → pit shrinks back to base size (and swallowed grass restores)
 earned = 0;
 setCoinDisplay(0);
@@ -5076,7 +5120,7 @@ document.getElementById('rbMultOld').textContent = '×' + prestigeMult();
 document.getElementById('rbMultNew').textContent = '×' + (prestigeMult()+1);
 let bought = 0;
 for (const k in UPG){
-const start = (k==='chieftains'||k==='help'||k==='goblins'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob'||k==='stranger') ? 0 : 1;
+const start = (k==='chieftains'||k==='help'||k==='goblins'||k==='goblins2'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob'||k==='stranger'||k==='gob3'||k==='gob4'||k==='gob5'||k==='gob6'||k==='gob7'||k==='maw'||k==='tempo') ? 0 : 1;
 bought += upgrades[k]-start;
 }
 const merged = goblins.filter(g=>(g.tier||1) > 1).length;
@@ -5803,7 +5847,7 @@ function refreshTree(){
 shopCoinsEl.textContent = fmt(earned);
 let bought = 0, maxT = 0;
 for (const k in UPG){
-const start = (k==='chieftains'||k==='help'||k==='goblins'||k==='goblins2'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob'||k==='stranger'||k==='maw'||k==='tempo') ? 0 : 1;
+const start = (k==='chieftains'||k==='help'||k==='goblins'||k==='goblins2'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob'||k==='stranger'||k==='gob3'||k==='gob4'||k==='gob5'||k==='gob6'||k==='gob7'||k==='maw'||k==='tempo') ? 0 : 1;
 bought += upgrades[k]-start;
 maxT += UPG[k].max-start;
 }
@@ -5900,6 +5944,17 @@ break;
 toast('Another goblin shuffles in…');
 }
 if (key === 'goblins2'){
+for(let i=0;i<20;i++){
+const r = 8 + Math.random()*12, a = Math.random()*Math.PI*2;
+const x = Math.cos(a)*r, z = Math.sin(a)*r;
+if (Math.hypot(x-STALL_POS.x, z-STALL_POS.z) < 4) continue;
+if (Math.hypot(x-WITCH_POS.x, z-WITCH_POS.z) < 3) continue;
+makeGoblin(x, z);
+break;
+}
+toast('Another goblin shuffles in…');
+}
+if (key === 'gob3' || key === 'gob4' || key === 'gob5' || key === 'gob6' || key === 'gob7'){
 for(let i=0;i<20;i++){
 const r = 8 + Math.random()*12, a = Math.random()*Math.PI*2;
 const x = Math.cos(a)*r, z = Math.sin(a)*r;
