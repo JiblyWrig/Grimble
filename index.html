@@ -6759,6 +6759,7 @@ clearTimeout(toastTimer);
 toastTimer = setTimeout(()=>toastEl.classList.remove('show'), 2400);
 }
 function showPause(){
+if (!started || !menuReady) return;   // the pause screen can never replace the main menu at boot
 ovTitle.textContent = 'PAUSED';
 ovSub.textContent = 'The goblin waits, coin in hand…';
 ovGoal.textContent = '';
@@ -6802,6 +6803,14 @@ addEventListener('keydown', e=>{
 if (e.code === 'Space') e.preventDefault();
 keys.add(e.code);
 if (mergeOpen && e.code === 'Escape'){ closeMergeMenu(); return; }
+/* ESC → pause, even in odd states where pointerlockchange never fires */
+if (e.code === 'Escape' && started && !shopOpen && !dlgOpen && !cine && !mergeOpen && !ritualOpen && !statsOpen){
+if (locked){
+try{ document.exitPointerLock(); }catch(err){}   // pointerlockchange will show the pause menu
+} else {
+showPause();                                      // lock was already gone — show it directly
+}
+}
 if (!started) return;
 if (dlgOpen){
 if (e.code === 'KeyE') advanceDlg();
@@ -7166,6 +7175,13 @@ if (p && p.catch) p.catch(()=>{});
 } catch(e){}
 }
 addEventListener('mousedown', goFullscreen);
+/* the browser eats the first ESC to leave fullscreen and keeps pointer lock —
+drop the lock ourselves so the pause menu actually appears */
+document.addEventListener('fullscreenchange', ()=>{
+if (!document.fullscreenElement && started && locked && !cine && !shopOpen && !mergeOpen && !ritualOpen && !statsOpen){
+try{ document.exitPointerLock(); }catch(err){}
+}
+});
 /* ---------- JayaBeth Productions intro ---------- */
 const prodIntroEl = document.getElementById('prodIntro');
 prodIntroEl.addEventListener('click', ()=>{
@@ -7356,6 +7372,23 @@ shovelView.position.set(0,-0.81,-1.42);
 setInterval(saveGame, 30000);
 document.addEventListener('visibilitychange', ()=>{ if (document.hidden) saveGame(); });
 window.addEventListener('beforeunload', saveGame);
+/* ---------- menu progression preview: boot the menu with the save's hole state ---------- */
+function applyMenuPreview(){
+try {
+const raw = localStorage.getItem(SAVE_KEY);
+if (!raw) return;
+const d = JSON.parse(raw);
+if (!d || d.v !== 1 || !d.introDone) return;   // fresh saves keep the sealed meadow
+if (d.upgrades) for (const k in upgrades) if (k in d.upgrades) upgrades[k] = d.upgrades[k];
+prestige = d.prestige || 0;
+buildHole();                                    // maw width matches the save
+scene.remove(introPlug);                        // the hole was already torn open
+if (plugGrass){ scene.remove(plugGrass); plugGrass = null; }
+if (holeRim) holeRim.material.opacity = 1;
+updatePrestigeBadge();                          // violet glow + dotted claim ring in the menu
+} catch(e){}
+}
+applyMenuPreview();
 
 /* ============================== STATISTICS + RAIN DROPLETS + GOBLIN NAME TAG ============================== */
 const STATS_KEY = 'grimbleStats';
@@ -7382,7 +7415,8 @@ try { Object.assign(stats, JSON.parse(localStorage.getItem(STATS_KEY) || '{}'));
 for (const k of Object.keys(stats)) if (!isFinite(stats[k])) stats[k] = 0;
 
 function saveStats(){
-  try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch(e){}
+if (wipePending) return;   // never rewrite stats after a reset
+try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch(e){}
 }
 
 setInterval(saveStats, 15000);
@@ -7477,6 +7511,8 @@ resetArmT = setTimeout(disarmReset, 4000);
 return;
 }
 disarmReset();
+wipePending = true;   // blocks every autosave (interval, hide, unload) from restoring the old save
+started = false;
 try {
 localStorage.removeItem('grimbleSave');
 localStorage.removeItem('grimbleStats');
