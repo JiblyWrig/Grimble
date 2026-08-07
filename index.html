@@ -721,7 +721,7 @@ const EARN_Y = -8.5;
 const EYE = 1.62, GRAV = 20, JUMP_V = 7.4;
 const REST_Y = 0.03;
 const GOB_SPEED = 2.8;
-const MAX_WORLD_COINS = 2000;
+const MAX_WORLD_COINS = 4000;
 const MAX_GOBLINS = 12;
 const MAX_CHIEFS = 5;
 const EARN_SOUND_R = 10;
@@ -889,7 +889,7 @@ const TREE = [
 { key:'rate',      x:570, y:360, ico:ICO.rate,   name:'Prod. Rate',  from:'stack',  need:()=>upgrades.stack>1 },
 { key:'value',     x:130, y:360, ico:ICO.value,  name:'Coin Value',  from:'stack',  need:()=>upgrades.stack>1 },
 { key:'goblins',   x:70,  y:220, ico:ICO.goblins,name:'+ Goblin',    from:'value',  need:()=>upgrades.value>1 },
-{ key:'goblins2', x:70,  y:60,  ico:ICO.goblins, name:'+ Goblin',    from:'goblins',need:()=>upgrades.goblins>0 },
+{ key:'goblins2', x:70,  y:60,  ico:ICO.goblins, name:'+2 Goblins',  from:'goblins',need:()=>upgrades.goblins>0 },
 { key:'shiny',     x:-70, y:220, ico:ICO.shiny,  name:'Shiny Odds',  from:'goblins',need:()=>upgrades.goblins>0 },
 { key:'whistle',   x:-150,y:110, ico:ICO.whistle,name:'Goblin Whistle', from:'shiny', need:()=>upgrades.shiny>0 },
 { key:'ledger',    x:-150,y:330, ico:ICO.ledger, name:"Grimble's Ledger", from:'shiny', need:()=>upgrades.shiny>0 },
@@ -2711,9 +2711,11 @@ const sporeMat = new THREE.PointsMaterial({ size:0.08, color:0x2ee6a8, transpare
 const spores = new THREE.Points(sporeGeo, sporeMat);
 mergeScene.add(spores);
 }
+const mergePlatform=new THREE.Group();
+mergeScene.add(mergePlatform);
 { // glowing platform + alien soil
 const disc=new THREE.Mesh(new THREE.CylinderGeometry(7,7.4,0.25,48), toon(0x10202e));
-disc.position.y=-0.13; mergeScene.add(disc);
+disc.position.y=-0.13; mergePlatform.add(disc);
 /* ---- alien soil: dark indigo dirt, violet mottling, cracks, mineral specks ---- */
 const alienSoilTex = canvasTex(512,512,(x,w,h)=>{
 x.fillStyle='#141022'; x.fillRect(0,0,w,h);
@@ -2741,7 +2743,7 @@ x.beginPath(); x.arc(Math.random()*w, Math.random()*h, 1+Math.random()*2.5, 0, 7
 }
 });
 const soil=new THREE.Mesh(new THREE.CircleGeometry(6.95,48), new THREE.MeshLambertMaterial({ map:alienSoilTex }));
-soil.rotation.x=-Math.PI/2; soil.position.y=0.002; mergeScene.add(soil);
+soil.rotation.x=-Math.PI/2; soil.position.y=0.002; mergePlatform.add(soil);
 /* ---- bioluminescent spots (teal + violet) glowing out of the dirt ---- */
 const alienGlowTex = canvasTex(512,512,(x,w,h)=>{
 x.clearRect(0,0,w,h);
@@ -2755,10 +2757,10 @@ x.fillStyle=g; x.beginPath(); x.arc(cx,cy,r,0,7); x.fill();
 }
 });
 const glow=new THREE.Mesh(new THREE.CircleGeometry(6.95,48), new THREE.MeshBasicMaterial({ map:alienGlowTex, transparent:true, blending:THREE.AdditiveBlending, depthWrite:false }));
-glow.rotation.x=-Math.PI/2; glow.position.y=0.01; mergeScene.add(glow);
+glow.rotation.x=-Math.PI/2; glow.position.y=0.01; mergePlatform.add(glow);
 const ring=new THREE.Mesh(new THREE.TorusGeometry(7.1,0.06,8,64),
 new THREE.MeshBasicMaterial({color:0x2ee6a8,transparent:true,opacity:0.7}));
-ring.rotation.x=Math.PI/2; ring.position.y=0.02; mergeScene.add(ring);
+ring.rotation.x=Math.PI/2; ring.position.y=0.02; mergePlatform.add(ring);
 }
 let mergeFlashSprite=null,mergeFlashT=0,mergeFlashOn=false;
 function flashMerge(pos){
@@ -2859,8 +2861,10 @@ model.root.add(ts);
 mergeScene.add(model.root);
 mergeModels.push({model,gob:g,mergeable,tier:g.tier||1,basePos:model.root.position.clone(),phase:Math.random()*6.28,ring});
 });
-  const halfW=(n-1)*spacing/2+1.4;
-  const dist=halfW/Math.tan(THREE.MathUtils.degToRad(mergeCamera.fov/2))+2.5;
+ const halfW=(n-1)*spacing/2+1.4;
+const ps=Math.max(1,(halfW+0.8)/7);   // platform grows so every goblin stands on it
+mergePlatform.scale.set(ps,1,ps);
+const dist=halfW/Math.tan(THREE.MathUtils.degToRad(mergeCamera.fov/2))+2.5;
   mergeCamera.position.set(0,2.3,Math.max(7,dist));
   mergeCamera.lookAt(0,0.9,0);
   updateMergeInfo();
@@ -3688,6 +3692,7 @@ const SLEEPF = new Uint8Array(MAX_COINS);
 const RESTF  = new Float32Array(MAX_COINS);
 const SPINT  = new Float32Array(MAX_COINS);
 const GNDT   = new Float32Array(MAX_COINS); // time spent sliding on the ground
+const RINGT  = new Float32Array(MAX_COINS); // seconds hovering inside the prestige ring
 const SSCL   = new Float32Array(MAX_COINS);  // sacrifice shrink (1 = full)
 const CXA = new Int32Array(MAX_COINS), CYA = new Int32Array(MAX_COINS), CZA = new Int32Array(MAX_COINS);
 const live = [], livePos = new Int32Array(MAX_COINS);
@@ -3717,7 +3722,7 @@ Q[i].set((Math.random()-0.5)*0.3,(Math.random()-0.5)*0.3,(Math.random()-0.5)*0.3
 SIL[i]=coinType; VMULT[i]=coinType===2?50:(coinType===1?10:1);
 ST[i]=1;
 stats.coinsThrown++;
-SLEEPF[i]=0; RESTF[i]=0; SSCL[i]=1; GNDT[i]=0;
+SLEEPF[i]=0; RESTF[i]=0; SSCL[i]=1; GNDT[i]=0; RINGT[i]=0;
 SPINT[i]=Math.random()*10;
 return i;
 }
@@ -3981,14 +3986,18 @@ _qT2.setFromAxisAngle(_toCam, spinAng).multiply(_qTmp);
 Q[held].slerp(_qT2, 1-Math.exp(-9*dt));
 }
 
-/* prestige ring: coins inside the dotted radius get claimed — only after they have landed */
+/* prestige ring: coins get claimed once they touch the ground —
+or automatically after hovering inside for 3s without a bounce */
 if (prestige>0){
 const mr=magnetR();
 for(let li=0; li<live.length; li++){
 const i=live[li], s=ST[i];
-if (s!==2) continue;   // only claim coins already resting on the ground
+if (s!==1 && s!==2) continue;
 const i3=i*3;
-if (Math.hypot(P[i3],P[i3+2]) < mr){ ST[i]=5; SLEEPF[i]=0; RESTF[i]=0; }
+if (Math.hypot(P[i3],P[i3+2]) < mr){
+if (s===2){ ST[i]=5; SLEEPF[i]=0; RESTF[i]=0; RINGT[i]=0; }
+else if ((RINGT[i]+=dt) > 3){ ST[i]=5; SLEEPF[i]=0; RESTF[i]=0; }
+} else RINGT[i]=0;
 }
 }
 /* suction: hole-job yanks fast, the prestige ring pulls slow */
@@ -5839,7 +5848,7 @@ stack:'Deeper pockets on every throw.',
 rate:'The goblins fling faster.',
 value:'Shinier coins, heavier purses.',
 goblins:'More hands, more coins.',
-goblins2:'One more pair of thieving hands.',
+goblins2:'Two more pairs of thieving hands.',
 maw:'A hungrier mouth swallows more.',
 tempo:'Catch your breath — the tools recharge sooner.',
 chieftains:'Red kings slam silver into the dirt.',
@@ -5858,7 +5867,7 @@ case 'value':      return `coin value ${L} <span class="arr">→</span> ${L+1}`;
 case 'rate':       return `throw interval ${throwInterval().toFixed(1)}s <span class="arr">→</span> ${Math.max(4, 10*Math.pow(0.85, L)).toFixed(1)}s`;
 case 'stack':      return `${L} <span class="arr">→</span> ${L+1} coins per throw`;
 case 'goblins':    return `${L} <span class="arr">→</span> ${L+1} goblins`;
-case 'goblins2':   return `${L} <span class="arr">→</span> ${L+1} goblins`;
+case 'goblins2':   return `+2 goblins <span class="arr">→</span> ${L+1} node level`;
 case 'chieftains': return `${L} <span class="arr">→</span> ${L+1} chieftains`;
 case 'shiny':      return `no silver chance <span class="arr">→</span> 1% silver throws`;
 case 'whistle':    return `press <kbd>1</kbd> — 5s frenzy, 5min cooldown`;
@@ -5995,6 +6004,7 @@ break;
 toast('Another goblin shuffles in…');
 }
 if (key === 'goblins2'){
+for(let k=0;k<2;k++){
 for(let i=0;i<20;i++){
 const r = 8 + Math.random()*12, a = Math.random()*Math.PI*2;
 const x = Math.cos(a)*r, z = Math.sin(a)*r;
@@ -6003,7 +6013,8 @@ if (Math.hypot(x-WITCH_POS.x, z-WITCH_POS.z) < 3) continue;
 makeGoblin(x, z);
 break;
 }
-toast('Another goblin shuffles in…');
+}
+toast('Two goblins shuffle in…');
 }
 if (key === 'gob3' || key === 'gob4' || key === 'gob5' || key === 'gob6' || key === 'gob7' || key === 'gob8' || key === 'gob9' || key === 'gob10' || key === 'gob11' || key === 'gob12' || key === 'gob13' || key === 'gob14' || key === 'gob15' || key === 'gob16' || key === 'gob17'){
 for(let i=0;i<20;i++){
