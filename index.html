@@ -753,6 +753,7 @@ const _euler = new THREE.Euler();
 let holeGlowSprite = null;
 let holeDustMat = null;
 let grassMat = null;
+let grassGeoRef = null, grassInfo0 = null, flowerGeoRef = null;
 let holeRim = null;
 let plugGrass = null;
 /* Rain every 5 minutes: 300s clear, 10s fade in, 120s rain, 10s fade out */
@@ -1272,6 +1273,24 @@ holeRim = new THREE.Mesh(new THREE.RingGeometry(R-0.02, R+0.9, 64),
 new THREE.MeshBasicMaterial({ map:rimTex, transparent:true, depthWrite:false, opacity:0 }));
 holeRim.rotation.x = -Math.PI/2; holeRim.position.y = 0.015; holeRim.renderOrder = 1;
 scene.add(holeRim);
+/* collapse grass/flowers that would float over the widened maw (restore if it shrinks) */
+const RR = holeRS() + 0.25, RR2 = RR*RR;
+if (grassGeoRef && grassInfo0){
+const aP = grassGeoRef.getAttribute('aPos'), aI = grassGeoRef.getAttribute('aInfo');
+for(let i=0;i<aP.count;i++){
+const x=aP.getX(i), z=aP.getZ(i);
+aI.setY(i, (x*x+z*z < RR2) ? 0 : grassInfo0[i*4+1]);
+}
+aI.needsUpdate = true;
+}
+if (flowerGeoRef){
+const fp = flowerGeoRef.getAttribute('instancePosition');
+for(let i=0;i<fp.count;i++){
+const x=fp.getX(i), z=fp.getZ(i);
+fp.setY(i, (x*x+z*z < RR2) ? -1000 : 0);
+}
+fp.needsUpdate = true;
+}
 }
 buildHole();
 // Violet glow at hole center (appears after prestige)
@@ -1574,6 +1593,8 @@ gl_FragColor = vec4(col,1.0);
 const grass = new THREE.Mesh(geo, grassMat);
 grass.frustumCulled = false;
 scene.add(grass);
+grassGeoRef = geo;
+grassInfo0 = aInfo.slice();
 /* grass covering the hole plug — falls away with the hole in the intro */
 {
 const R = HOLE_R + 0.25;
@@ -1672,6 +1693,7 @@ gl_FragColor = vec4(col, 0.5);
 const flowers = new THREE.Mesh(instancedFlowerGeo, flowerMat);
 flowers.frustumCulled = false;
 scene.add(flowers);
+flowerGeoRef = instancedFlowerGeo;
 }
 /* ---------- pollen ---------- */
 const POLLEN_N = 90;
@@ -2021,9 +2043,8 @@ const wig = Math.sin(p*Math.PI*2)*0.4*(1-p*0.4);
 if (g.earSide < 0) g.earL.rotation.z = 1.85 + wig; else g.earR.rotation.z = -1.85 - wig;
 }
 g.coinQueueT += dt;
-if (g.coinQueue.length > 0 && g.coinQueueT >= g.coinQueue[0].delay) {
+while (g.coinQueue.length > 0 && g.coinQueueT >= g.coinQueue[0].at) {
 const q = g.coinQueue.shift();
-g.coinQueueT = 0;
 spawnCoin(q.pos, q.vel, q.silver);
 }
 if (g.state === 'held'){
@@ -2245,7 +2266,7 @@ g.coinQueue.push({
 pos: new THREE.Vector3(p.x+fx*0.35+(Math.random()-0.5)*0.35, p.y+1.05+Math.random()*0.3, p.z+fz*0.35+(Math.random()-0.5)*0.35),
 vel: new THREE.Vector3(Math.cos(a)*m + g.vel.x*0.3, 7.8+Math.random()*2.0, Math.sin(a)*m + g.vel.z*0.3),
 silver: (g.tier>=2) ? true : (upgrades.shiny>0 && Math.random()<0.01),
-delay: delay
+at: g.coinQueueT + k*0.08
 });
 }
 g.clock = 0;
@@ -2268,7 +2289,7 @@ g.coinQueue.push({
 pos: new THREE.Vector3(sx, 0.6, sz),
 vel: new THREE.Vector3((Math.random()-0.5)*2.5, 8+Math.random()*2, (Math.random()-0.5)*2.5),
 silver: true,
-delay: 0
+at: g.coinQueueT
 });
 burstSparks(p.x, 0.25, p.z);
 starFlash(sx, 0.8, sz, 1.5);
@@ -3831,8 +3852,8 @@ let pull, sw, ty, k;
 if (suckOn){ pull=11; sw=0; ty=1.0; k=Math.min(1,3.5*dt); }
 else {
 const t01=Math.min(1, hd/magnetR());
-pull = 0.7 + 2.0*(1-t01)*(1-t01);   // lazy at the rim, eager near the pit
-sw = 0.5*t01;                       // gentle inward spiral
+pull = 0.5*(0.7 + 2.0*(1-t01)*(1-t01));   // lazy at the rim, eager near the pit — halved
+sw = 0.25*t01;                             // gentle inward spiral — halved
 ty = hd > HOLE_R ? 0.16 : 0.3;
 k = Math.min(1,4*dt);
 }
@@ -4055,7 +4076,7 @@ blade.position.set(0, 0.22, 0.045); blade.rotation.x = 0.12; g.add(blade);
 for (const s of [-1,1]){
 const riv = new THREE.Mesh(new THREE.SphereGeometry(0.05,6,6), wood);
 riv.position.set(s*(halfW-0.03), 0.24, 0.07);   // rivets sit on the blade edge at every width
-riv.scale.set(1.1,1.1,1.7);
+riv.scale.set(1.1*(0.8+0.2*wm), 1.1*(0.8+0.2*wm), 1.7*(0.8+0.2*wm));
 g.add(riv);
 }
 g.userData.blade = blade;
@@ -4113,8 +4134,9 @@ if (!shovelView || shovelPush < 0.25) return;
 camera.getWorldDirection(_camD);
 _camR.crossVectors(_camD, UP).normalize();
 const wmS = 1 + 0.2*(upgrades.width||0);
-const R = 0.4 + 0.35*wmS, R2 = R*R;   // reach scales with blade width (0.75 at base)
-const TIP = 0.4*wmS + COL_R;           // never grab past the blade tips
+const HALF_W = 0.4*wmS;                // half blade width — rivets sit at HALF_W - 0.03
+const DEPTH = COL_R + 0.12;            // forward/backward catch window around the blade plane
+const HEIGHT = 0.38;                   // vertical catch window above the blade
 const kPos = Math.min(1, 12*dt);       // soft positional push — no snapping, no stutter
 const kVel = Math.min(1, 9*dt);
 for(let li=0; li<live.length; li++){
@@ -4122,25 +4144,27 @@ const i = live[li], s = ST[i];
 if (s!==1 && s!==2) continue;
 const i3 = i*3;
 const dx=P[i3]-shovelBlade.x, dy=P[i3+1]-shovelBlade.y, dz=P[i3+2]-shovelBlade.z;
-const d2 = dx*dx+dy*dy+dz*dz;
-if (d2 > R2) continue;
-const lat0 = dx*_camR.x + dz*_camR.z;
-if (Math.abs(lat0) > TIP) continue;
-const d = Math.sqrt(d2)||0.001;
-const nx=dx/d, ny=dy/d, nz=dz/d;
+/* lateral position along the straight blade edge */
+const lat = dx*_camR.x + dz*_camR.z;
+if (Math.abs(lat) > HALF_W + COL_R) continue;   // outside blade width + coin radius
+/* forward distance from the blade plane */
+const fwd = dx*_camD.x + dz*_camD.z;
+if (fwd < -DEPTH || fwd > DEPTH) continue;      // not near the blade face
+/* vertical window */
+if (dy < -0.15 || dy > HEIGHT) continue;
 if (s===2){ ST[i]=1; SLEEPF[i]=0; RESTF[i]=0; }
-/* ease the coin out of the blade sphere instead of teleporting it */
-const pen = R - d;
-P[i3]   += nx*pen*kPos;
-P[i3+1] += ny*pen*kPos*0.5;
-P[i3+2] += nz*pen*kPos;
-/* glide velocity toward blade velocity + a gentle outward shove */
-V[i3]   += (shovelBladeVel.x*1.05 + nx*0.9 - V[i3])*kVel;
-V[i3+1] += (shovelBladeVel.y*0.5 + ny*0.25 + 0.3 - V[i3+1])*kVel;
-V[i3+2] += (shovelBladeVel.z*1.05 + nz*0.9 - V[i3+2])*kVel;
+/* push coin forward off the blade face */
+const pen = DEPTH - fwd;
+P[i3]   += _camD.x*pen*kPos;
+P[i3+1] += Math.max(0, 0.06-dy)*kPos*0.35;
+P[i3+2] += _camD.z*pen*kPos;
+/* velocity follows blade + forward nudge */
+V[i3]   += (shovelBladeVel.x*1.05 + _camD.x*0.9 - V[i3])*kVel;
+V[i3+1] += (shovelBladeVel.y*0.5 + 0.3 - V[i3+1])*kVel;
+V[i3+2] += (shovelBladeVel.z*1.05 + _camD.z*0.9 - V[i3+2])*kVel;
 AV[i3] += (Math.random()-0.5)*2*kVel; AV[i3+2] += (Math.random()-0.5)*2*kVel;
-const SIDE = 0.34*(1 + 0.2*upgrades.width);
-const lat = (P[i3]-shovelBlade.x)*_camR.x + (P[i3+2]-shovelBlade.z)*_camR.z;
+/* side walls sit exactly at the rivets — full blade capacity */
+const SIDE = HALF_W - 0.03;
 if (Math.abs(lat) > SIDE){
 const over = lat - Math.sign(lat)*SIDE;
 P[i3] -= _camR.x*over*kPos; P[i3+2] -= _camR.z*over*kPos;
@@ -4918,7 +4942,8 @@ c.suck = c.suck.filter(it => it.ci === undefined);
 function doPrestigeReset(){
 prestige++;
 stats.prestiges++;
-for (const k in upgrades) upgrades[k] = (k==='help'||k==='goblins'||k==='goblins2'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob'||k==='stranger') ? 0 : 1;
+for (const k in upgrades) upgrades[k] = (k==='help'||k==='goblins'||k==='goblins2'||k==='shiny'||k==='whistle'||k==='ledger'||k==='width'||k==='holejob'||k==='stranger'||k==='maw'||k==='tempo') ? 0 : 1;
+buildHole(); // maw reset → pit shrinks back to base size (and swallowed grass restores)
 earned = 0;
 setCoinDisplay(0);
 while (live.length) removeCoin(live[0], false);
