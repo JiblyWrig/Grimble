@@ -365,6 +365,22 @@ padding:7px 20px; cursor:pointer; margin:14px auto 0; display:block; transition:
 animation:resetPulse .8s ease-in-out infinite; }
 @keyframes resetPulse { 50% { box-shadow:0 0 16px rgba(255,90,60,.65); } }
 
+/* ---------- achievement popup ---------- */
+#achPopup { position:fixed; top:10vh; left:50%; transform:translateX(-50%) translateY(-30px); z-index:70;
+display:flex; gap:14px; align-items:center; padding:14px 26px; pointer-events:none; opacity:0;
+transition:all .35s cubic-bezier(.2,1.4,.4,1);
+background:linear-gradient(160deg, rgba(40,32,10,.95), rgba(20,14,4,.97));
+border:2px solid #f5cf5f; border-radius:14px;
+box-shadow:0 0 30px rgba(245,207,95,.45), 0 12px 30px rgba(0,0,0,.7); }
+#achPopup.show { opacity:1; transform:translateX(-50%) translateY(0); }
+#achTrophy { font-size:34px; filter:drop-shadow(0 0 8px rgba(245,207,95,.8)); }
+#achTitle { font-size:10px; letter-spacing:3px; color:#a9c48a; font-weight:800; }
+#achName { font-family:'MedievalSharp',cursive; font-size:20px; color:#f5cf5f; }
+#achDesc { font-size:12px; color:#cfe3b8; }
+.achPart { position:fixed; width:7px; height:7px; border-radius:2px; z-index:69; pointer-events:none;
+animation:achFall 1.5s ease-in forwards; }
+@keyframes achFall { 0% { transform:translate(0,0) rotate(0deg); opacity:1; }
+100% { transform:translate(var(--dx), 46vh) rotate(560deg); opacity:0; } }
 #statsOverlay { position:fixed; inset:0; z-index:36; display:flex; align-items:center; justify-content:center;
 background:rgba(0,0,0,.58); transition:opacity .22s, visibility 0s; }
 #statsOverlay.hidden { opacity:0; visibility:hidden; pointer-events:none; transition:opacity .22s, visibility 0s linear .22s; }
@@ -686,6 +702,7 @@ animation:readyPulse 2.6s ease-in-out infinite; }
 <button id="ovResetBtn" style="display:none">RESET SAVE</button>
 </div>
 </div>
+<div id="achPopup"><div id="achTrophy">🏆</div><div><div id="achTitle">ACHIEVEMENT UNLOCKED</div><div id="achName"></div><div id="achDesc"></div></div></div>
 <div id="statsOverlay" class="hidden">
 <div class="statsPanel panel">
 <div class="statsTitle">STATISTICS</div>
@@ -974,6 +991,7 @@ vec3 col = mix(hor, zen, pow(max(h,0.0),0.55));
 if(h<0.0) col=mix(col, mix(vec3(0.55,0.66,0.55),vec3(0.35,0.38,0.40),uRain), min(1.0,-h*3.0));
 float s=max(dot(d,uSun),0.0);
 col += vec3(1.0,0.93,0.75)*(pow(s,300.0)*1.25 + pow(s,12.0)*0.18) * (1.0-0.85*uRain);
+col *= 1.0 - 0.2*uRain;   // rainy sky 20% darker
 gl_FragColor=vec4(col,1.0); }`
 });
 scene.add(new THREE.Mesh(new THREE.SphereGeometry(300, 32, 16), skyMat));
@@ -2112,8 +2130,10 @@ head.add(arc);
            eyeBase:eb, pupZ, cols:[pal.skin,pal.skinD,pal.cloth], mats:[skin,skinD,cloth] };
 }
 function makeGoblin(x, z, opts={}){
-  const chief=!!opts.chief, bub=!!opts.bub, tier=opts.tier||1;
-  const model=buildGoblinModel(opts);
+const chief=!!opts.chief, bub=!!opts.bub, tier=opts.tier||1;
+if (tier > (achFlags.maxTier||1)) achFlags.maxTier = tier;
+if (tier >= 4) achFlags.aphro = true;
+const model=buildGoblinModel(opts);
   const g={ name:(bub ? 'Bub' : ((opts.tier||1)>=4 ? 'Aphrodite' : pickGoblinName())), state:'idle', t:1+Math.random(), target:new THREE.Vector3(), vel:new THREE.Vector3(),
     yaw:Math.random()*6.28, gait:0, throwT:0, thrown:false, clock:Math.random()*6,
     slamClock:Math.random()*5, chief, bub, tier, headYawDef:0, nextBlink:1+Math.random()*3, blinkT:0,
@@ -2153,6 +2173,7 @@ const a = Math.random()*Math.PI*2;
 const x = Math.cos(a)*r, z = Math.sin(a)*r;
 if (Math.hypot(x-STALL_POS.x, z-STALL_POS.z) < 4) continue;
 if (Math.hypot(x-WITCH_POS.x, z-WITCH_POS.z) < 3) continue;
+if (Math.hypot(x-SHACK_POS.x, z-SHACK_POS.z) < 3.2) continue;
 g.target.set(x, 0, z);
 return;
 }
@@ -3825,6 +3846,124 @@ tShadow.renderOrder = 2;
 scene.add(tShadow);
 STALL_COLL.push({ x:TELE_POS.x, z:TELE_POS.z, r:0.5 });
 }
+/* ============================== ACHIEVEMENT SHACK (right of the stall) ============================== */
+const SHACK_POS = new THREE.Vector3(4.9, 0, -23.0);
+const achUnlocked = new Set();
+const achFlags = { maxTier:1, aphro:false, shovel:false };
+try { const ad = JSON.parse(localStorage.getItem('grimbleAch')||'null'); if (ad){ (ad.unlocked||[]).forEach(id=>achUnlocked.add(id)); Object.assign(achFlags, ad.flags||{}); } } catch(e){}
+function saveAch(){ try{ localStorage.setItem('grimbleAch', JSON.stringify({unlocked:[...achUnlocked], flags:achFlags})); }catch(e){} }
+const ACH = [
+{ id:'sip',    name:"First Sip",          desc:"Feed the hole its very first coin.",   test:()=>stats.coinsFed>=1 },
+{ id:'pocket', name:"Pocket Change",      desc:"Earn 100 coins in total.",             test:()=>stats.coinsEarned>=100 },
+{ id:'baron',  name:"Coin Baron",         desc:"Earn 10,000 coins in total.",          test:()=>stats.coinsEarned>=10000 },
+{ id:'hoard',  name:"Dragon's Hoard",     desc:"Earn 1,000,000 coins in total.",       test:()=>stats.coinsEarned>=1000000 },
+{ id:'fuse',   name:"Fuse Apprentice",    desc:"Merge two goblins into one.",          test:()=>stats.goblinsMerged>=1 },
+{ id:'red',    name:"Red Menace",         desc:"Create a tier-3 goblin.",              test:()=>(achFlags.maxTier||1)>=3 },
+{ id:'cat',    name:"Cat's Favorite",     desc:"Pet the cat 10 times.",                test:()=>stats.catsPetted>=10 },
+{ id:'hop',    name:"Hoppy",              desc:"Jump 50 times.",                       test:()=>stats.jumps>=50 },
+{ id:'walk',   name:"Wanderer",           desc:"Walk 1,000 metres.",                   test:()=>stats.distance>=1000 },
+{ id:'whistle',name:"Whistle Blower",     desc:"Blow the goblin whistle 5 times.",     test:()=>stats.whistleUses>=5 },
+{ id:'job',    name:"Hole-Jobber",        desc:"Run 5 Hole-Jobs.",                     test:()=>stats.holeJobUses>=5 },
+{ id:'rebirth',name:"Rebirth",            desc:"Prestige once.",                       test:()=>stats.prestiges>=1 },
+{ id:'loop',   name:"Eternal Loop",       desc:"Prestige 5 times.",                    test:()=>stats.prestiges>=5 },
+{ id:'shovel', name:"Shovel Knight",      desc:"Claim the old snow shovel.",           test:()=>!!achFlags.shovel },
+{ id:'rain',   name:"Rain Dancer",        desc:"Spend 5 minutes in the rain.",         test:()=>stats.rainTime>=300 },
+{ id:'aphro',  name:"Aphrodite's Blessing",desc:"Summon the Aphrodite.",               test:()=>!!achFlags.aphro },
+];
+let achAccum = 0;
+const trophyGeo = (()=>{
+const base = new THREE.CylinderGeometry(0.06,0.075,0.025,10); base.translate(0,0.0125,0);
+const stem = new THREE.CylinderGeometry(0.016,0.028,0.06,8);  stem.translate(0,0.055,0);
+const cup  = new THREE.CylinderGeometry(0.055,0.022,0.09,10); cup.translate(0,0.13,0);
+const hL = new THREE.TorusGeometry(0.032,0.009,6,10); hL.translate(-0.06,0.13,0);
+const hR = new THREE.TorusGeometry(0.032,0.009,6,10); hR.translate(0.06,0.13,0);
+return mergeGeometries([base,stem,cup,hL,hR]);
+})();
+function makeTrophySolid(){ return new THREE.Mesh(trophyGeo, toon(0xf5cf5f)); }
+function makeTrophyGhost(){
+const l = new THREE.LineSegments(new THREE.EdgesGeometry(trophyGeo),
+new THREE.LineDashedMaterial({ color:0x7dfcd0, transparent:true, opacity:0.4, dashSize:0.02, gapSize:0.016, depthWrite:false }));
+l.computeLineDistances();
+return l;
+}
+const achSlots = [];
+{
+const shack = new THREE.Group();
+const wallMat = new THREE.MeshLambertMaterial({ map: woodTex });
+const roofMat = toon(0x4a3520);
+const back = new THREE.Mesh(new THREE.BoxGeometry(3.3,2.3,0.08), wallMat); back.position.set(0,1.15,-1.34); shack.add(back);
+const left = new THREE.Mesh(new THREE.BoxGeometry(0.08,2.3,2.7), wallMat); left.position.set(-1.62,1.15,-0.05); shack.add(left);
+const right= new THREE.Mesh(new THREE.BoxGeometry(0.08,2.3,2.7), wallMat); right.position.set( 1.62,1.15,-0.05); shack.add(right);
+const roofA = new THREE.Mesh(new THREE.BoxGeometry(3.6,0.06,1.8), roofMat); roofA.rotation.x= 0.45; roofA.position.set(0,2.55,-0.78); shack.add(roofA);
+const roofB = new THREE.Mesh(new THREE.BoxGeometry(3.6,0.06,1.8), roofMat); roofB.rotation.x=-0.45; roofB.position.set(0,2.55, 0.78); shack.add(roofB);
+for(const y of [0.99,1.54]){ const b=new THREE.Mesh(new THREE.BoxGeometry(2.9,0.05,0.4), wallMat); b.position.set(0,y,-1.1); shack.add(b); }
+for(const sx of [-1,1]){ const b=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.05,1.9), wallMat); b.position.set(sx*1.42,1.25,-0.1); shack.add(b); }
+shack.position.copy(SHACK_POS);
+scene.add(shack);
+addOutlineShells(shack, 1.03);
+for(const c of [[0,-1.34,0.6],[-1.0,-1.34,0.55],[1.0,-1.34,0.55],[-1.62,-0.7,0.55],[-1.62,0.5,0.55],[1.62,-0.7,0.55],[1.62,0.5,0.55]]){
+STALL_COLL.push({ x:SHACK_POS.x+c[0], z:SHACK_POS.z+c[1], r:c[2] });
+}
+/* trophy slots: 10 on the back wall, 3 per side wall */
+const slotDefs = [];
+for(const y of [1.02,1.57]) for(const x of [-1.15,-0.58,0,0.58,1.15]) slotDefs.push({x,y,z:-1.02,ry:0});
+for(const sx of [-1,1]) for(const z of [-0.75,-0.25,0.25,0.75]) slotDefs.push({x:sx*1.36,y:1.28,z,ry:sx<0?Math.PI/2:-Math.PI/2});
+for(let i=0;i<ACH.length;i++){
+const d = slotDefs[i];
+const grp = new THREE.Group();
+grp.position.set(SHACK_POS.x+d.x, d.y, SHACK_POS.z+d.z);
+grp.rotation.y = d.ry;
+scene.add(grp);
+const slot = { grp, obj:null };
+achSlots.push(slot);
+slot.obj = achUnlocked.has(ACH[i].id) ? makeTrophySolid() : makeTrophyGhost();
+grp.add(slot.obj);
+}
+}
+function swapTrophy(i, solid){
+const s = achSlots[i]; if(!s) return;
+if (s.obj) s.grp.remove(s.obj);
+s.obj = solid ? makeTrophySolid() : makeTrophyGhost();
+s.grp.add(s.obj);
+}
+const achPopupEl = document.getElementById('achPopup');
+const achNameEl = document.getElementById('achName');
+const achDescEl = document.getElementById('achDesc');
+const achQueue = []; let achBusy = false;
+function queueAchPopup(a){ achQueue.push(a); if(!achBusy) nextAchPopup(); }
+function nextAchPopup(){
+const a = achQueue.shift();
+if(!a){ achBusy=false; return; }
+achBusy = true;
+achNameEl.textContent = a.name;
+achDescEl.textContent = a.desc;
+achPopupEl.classList.add('show');
+tone(523,0.12,'triangle',0.12); tone(659,0.12,'triangle',0.12,0.09); tone(784,0.16,'triangle',0.12,0.18); tone(1046,0.35,'sine',0.1,0.27);
+for(let i=0;i<26;i++){
+const p=document.createElement('div'); p.className='achPart';
+p.style.left=(50+(Math.random()-0.5)*34)+'vw';
+p.style.top='15vh';
+p.style.background=['#f5cf5f','#7dfcd0','#c9a6ef','#ffffff'][i%4];
+p.style.setProperty('--dx',((Math.random()-0.5)*26)+'vw');
+p.style.animationDelay=(Math.random()*0.35)+'s';
+document.body.appendChild(p);
+setTimeout(()=>p.remove(),2000);
+}
+setTimeout(()=>{ achPopupEl.classList.remove('show'); setTimeout(nextAchPopup,400); },2600);
+}
+function checkAchievements(silent){
+for(let i=0;i<ACH.length;i++){
+const a=ACH[i];
+if(achUnlocked.has(a.id) || !a.test()) continue;
+achUnlocked.add(a.id); saveAch();
+swapTrophy(i,true);
+if(!silent){
+achSlots[i].grp.getWorldPosition(_v1);
+goldBurst.burst(_v1.x,_v1.y+0.1,_v1.z,1.2,1.6);
+queueAchPopup(a);
+}
+}
+}
 /* ============================== COINS — INSTANCED + SoA (max 2000, no shadows) ============================== */
 const MAX_COINS = MAX_WORLD_COINS;
 const COIN_GRAV = 20;
@@ -4471,6 +4610,7 @@ if (!shovelWorld) return;
 scene.remove(shovelWorld);
 shovelWorld = null;
 shovelOwned = true;
+achFlags.shovel = true;
 shovelView = buildShovelModel();
 shovelView.position.set(0, -0.81, -1.42);
 shovelView.rotation.set(2.05, 0, 0);
@@ -6486,27 +6626,41 @@ rainFactor = f*f*(3-2*f);
 skyMat.uniforms.uRain.value = rainFactor;
 scene.fog.color.lerpColors(FOGC, RAIN_FOGC, rainFactor*0.85);
 grassMat.uniforms.uFogColor.value.copy(scene.fog.color);
-sun.intensity = 1.15*(1-0.5*rainFactor);
-hemi.intensity = 0.95*(1-0.45*rainFactor);
+sun.intensity = 1.15*(1-0.6*rainFactor);   // rain now 20% darker than before
+hemi.intensity = 0.95*(1-0.56*rainFactor);
 for (const c of clouds) c.material.color.setScalar(1-0.45*rainFactor);
 rainMat.uniforms.uFactor.value = rainFactor;
 rainMat.uniforms.uTime.value = time;
 rainMat.uniforms.uCenter.value.copy(camera.position);
-if (AC && rainGain){
-const target = (settings.ambience ? 0.036 : 0)*rainFactor*ambienceRamp;
-rainGain.gain.value += (target - rainGain.gain.value)*Math.min(1, 3*dt);
+updateRainAudio(dt);
 }
-if (AC && rainGain2){
-const t2 = (settings.ambience ? 0.05 : 0)*rainFactor;
-rainGain2.gain.value += (t2 - rainGain2.gain.value)*Math.min(1, 3*dt);
+/* ---------- rain.mp3: fades in with the rain, never loops, ambience fades back when it ends ---------- */
+function updateRainAudio(dt){
+if (!AC) return;
+const want = rainFactor > 0.02 && settings.ambience;
+if (want && !rainSnd && customBuf.rain){
+const src = AC.createBufferSource();
+src.buffer = customBuf.rain;
+src.loop = false;   // one shot: if it finishes mid-rain, the ambience simply returns
+const g = AC.createGain();
+g.gain.value = 0.0001;
+src.connect(g); g.connect(master);
+src.onended = ()=>{ if (rainSnd && rainSnd.src === src) rainSnd.ended = true; };
+src.start();
+rainSnd = { src, gain:g, ended:false };
 }
-if (AC && settings.ambience){
-if (rainFactor > 0.15 && Math.random() < dt*rainFactor*7) tone(1600+Math.random()*1800, 0.03, 'sine', 0.012*rainFactor, 0, -700); // droplet ticks
-if (rainFactor > 0.6 && Math.random() < dt*0.02){ tone(48+Math.random()*26, 1.7, 'sine', 0.22, 0, -18); noiseS(1.9, 0.12, 140, 40); } // distant thunder
+if (rainSnd){
+const target = (rainSnd.ended || !want) ? 0.0001 : 0.85*rainFactor;
+rainSnd.gain.gain.setTargetAtTime(target, AC.currentTime, 0.9);   // smooth fade in / fade out
+if (!want && rainSnd.gain.gain.value < 0.02){
+try{ rainSnd.src.stop(); }catch(e){}
+rainSnd = null;
+}
 }
 }
 /* ============================== AUDIO ============================== */
-let AC, master, noiseBuf, rainGain, rainGain2, windBus, eerieBus, eerieNext = 0;
+let AC, master, noiseBuf, windBus, eerieBus, eerieNext = 0;
+let rainSnd = null;   // rain.mp3 one-shot player { src, gain, ended }
 function initAudio(){
 if (AC) return;
 try {
@@ -6524,16 +6678,7 @@ const d = noiseBuf.getChannelData(0);
 for(let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
 windBus = AC.createGain(); windBus.gain.value = 1; windBus.connect(master);
 eerieBus = AC.createGain(); eerieBus.gain.value = 0; eerieBus.connect(master);
-const rSrc = AC.createBufferSource(); rSrc.buffer = noiseBuf; rSrc.loop = true;
-const rF = AC.createBiquadFilter(); rF.type='bandpass'; rF.frequency.value = 2600; rF.Q.value = 0.5;
-rainGain = AC.createGain(); rainGain.gain.value = 0;
-rSrc.connect(rF); rF.connect(rainGain); rainGain.connect(master);
-rSrc.start();
-const rSrc2 = AC.createBufferSource(); rSrc2.buffer = noiseBuf; rSrc2.loop = true; rSrc2.playbackRate.value = 0.9;
-const rF2 = AC.createBiquadFilter(); rF2.type='lowpass'; rF2.frequency.value = 900;
-rainGain2 = AC.createGain(); rainGain2.gain.value = 0;
-rSrc2.connect(rF2); rF2.connect(rainGain2); rainGain2.connect(master);
-rSrc2.start();
+/* old synthesized rain removed — audio/rain.mp3 handles it now (see updateRainAudio) */
 const nSrc = AC.createBufferSource(); nSrc.buffer = noiseBuf; nSrc.loop = true; nSrc.playbackRate.value = 0.5;
 const nF = AC.createBiquadFilter(); nF.type='bandpass'; nF.frequency.value = 320; nF.Q.value = 6;
 const nG = AC.createGain(); nG.gain.value = 0.22;
@@ -6677,6 +6822,7 @@ step();
 function initCustomAudio(){
 if (customInit) return; customInit = true;
 loadAudio('ambience','audio/ambience.mp3').then(()=>startCustomAmbience());
+loadAudio('rain','audio/rain.mp3');   // played once per rain, never looped
 }
 function playCustom(name, vol=1, loop=false){ // one-shot helper for any loaded file
 const buf = customBuf[name]; if(!buf || !AC) return null;
@@ -7590,6 +7736,7 @@ const stats = {
 
 try { Object.assign(stats, JSON.parse(localStorage.getItem(STATS_KEY) || '{}')); } catch(e){}
 for (const k of Object.keys(stats)) if (!isFinite(stats[k])) stats[k] = 0;
+checkAchievements(true);   // trophies for past deeds appear on the shelves, no popup spam
 
 function saveStats(){
 if (wipePending) return;   // never rewrite stats after a reset
@@ -7694,6 +7841,7 @@ try {
 localStorage.removeItem('grimbleSave');
 localStorage.removeItem('grimbleStats');
 localStorage.removeItem('grimbleTreeCam');
+localStorage.removeItem('grimbleAch');
 } catch(err){}
 location.reload();
 });
@@ -7859,7 +8007,8 @@ if (shopOpen) refreshTree();
 if (AC){
 ambienceRamp = started ? Math.min(1, ambienceRamp + dt) : 0;   // 1s fade-in after game starts
 const inHole = shopPhase === 'hole';
-windBus.gain.value  += (((inHole || !settings.ambience) ? 0 : 0.7*ambienceRamp) - windBus.gain.value)  * Math.min(1, 3*dt);
+const rainDuck = (rainSnd && !rainSnd.ended) ? 0.25 : 0.7;   // duck ambience only while rain.mp3 is actually playing
+windBus.gain.value  += (((inHole || !settings.ambience) ? 0 : rainDuck*ambienceRamp) - windBus.gain.value)  * Math.min(1, 3*dt);
 /* skill-tree ambience at half volume */
 eerieBus.gain.value += (((inHole && settings.ambience) ? 0.30 : 0) - eerieBus.gain.value) * Math.min(1, 2*dt);
 if (inHole && elapsed > eerieNext){ eerieTone(); eerieNext = elapsed + 4 + Math.random()*7; }
@@ -7955,6 +8104,8 @@ updateListener();
 updateTreeCam(dt);
 updateTreeDust(dt);
 updateTreeEmbers(dt);
+achAccum += dt;
+if (achAccum >= 1){ achAccum = 0; checkAchievements(false); }
 rainUpdateAccum += dt;
 if (rainUpdateAccum >= 0.5) {
 rainUpdateAccum = 0;
