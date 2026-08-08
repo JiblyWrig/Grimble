@@ -4213,7 +4213,7 @@ achBusy = true;
 achNameEl.textContent = a.name;
 achDescEl.textContent = a.desc;
 achPopupEl.classList.add('show');
-tone(523,0.12,'triangle',0.12); tone(659,0.12,'triangle',0.12,0.09); tone(784,0.16,'triangle',0.12,0.18); tone(1046,0.35,'sine',0.1,0.27);
+playCustom('achievement', 0.7);
 for(let i=0;i<26;i++){
 const p=document.createElement('div'); p.className='achPart';
 p.style.left=(50+(Math.random()-0.5)*34)+'vw';
@@ -6897,7 +6897,7 @@ toast('A chieftain answers the call…');
 }
 refreshTree();
 saveGame();
-tone(980,0.1,'triangle',0.18); tone(1310,0.14,'triangle',0.15,0.08);
+playCustom('buy', 0.6);
 }
 document.getElementById('ascendBtn').addEventListener('click', e=>{ e.stopPropagation(); ascend(); });
 let treeZoom = 1, treePanX = 0, treePanY = 0, treeDrag = false, tdx = 0, tdy = 0;
@@ -7277,6 +7277,9 @@ loadAudio('meow2','audio/meow2.mp3');
 loadAudio('meow3','audio/meow3.mp3');
 loadAudio('ufo','audio/ufo.mp3');
 loadAudio('thunder','audio/thunder.mp3');
+loadAudio('buy','audio/buy.mp3');
+loadAudio('achievement','audio/achievement.mp3');
+loadAudio('fire','audio/fire.mp3').then(()=>startFireLoop());
 }
 function playCustom(name, vol=1, loop=false){ // one-shot helper for any loaded file
 const buf = customBuf[name]; if(!buf || !AC) return null;
@@ -7284,6 +7287,32 @@ const s = AC.createBufferSource(); s.buffer = buf; s.loop = loop;
 const g = AC.createGain(); g.gain.value = vol;
 s.connect(g); g.connect(master); s.start();
 return { src:s, gain:g };
+}
+/* ---------- looping fireplace: spatial volume based on distance ---------- */
+let fireSnd = null;
+const FIRE_SND_R = 14;   // max audible range in metres
+function startFireLoop(){
+if (!AC || !customBuf.fire || fireSnd) return;
+const src = AC.createBufferSource();
+src.buffer = customBuf.fire;
+src.loop = true;
+const g = AC.createGain();
+g.gain.value = 0;
+const p = AC.createStereoPanner();
+src.connect(g); g.connect(p); p.connect(master);
+src.start();
+fireSnd = { src, gain:g, pan:p };
+}
+function updateFireSound(){
+if (!fireSnd || !AC || !settings.sfx) return;
+const dx = player.pos.x - FIRE_POS.x, dz = player.pos.z - FIRE_POS.z;
+const dist = Math.hypot(dx, dz);
+const k = Math.max(0, 1 - dist/FIRE_SND_R);
+const vol = k*k * 0.55;
+fireSnd.gain.gain.setTargetAtTime(vol, AC.currentTime, 0.25);
+_camR.crossVectors(_camD.set(-Math.sin(yaw),0,-Math.cos(yaw)), UP).normalize();
+const pan = dist > 0.01 ? THREE.MathUtils.clamp((dx*_camR.x + dz*_camR.z)/dist, -1, 1) : 0;
+fireSnd.pan.pan.setTargetAtTime(pan * k, AC.currentTime, 0.25);
 }
 const ching  = () => { tone(1244,0.09,'triangle',0.06); tone(1864,0.22,'sine',0.05,0.05); };
 const earnSound = () => { [880,1174,1568,2093].forEach((f,i)=>tone(f,0.18,'triangle',0.1,i*0.07)); noiseS(0.5,0.035,4000,8000,0.12); };
@@ -8531,6 +8560,7 @@ lampLight.color.setHSL(0.07, 0.85, 0.55 + 0.1*rainFactor);
 }
 updateFireplace(elapsed);
 updateFireSmoke(dt, elapsed);
+updateFireSound();
 updatePennants(elapsed);
 // Update lantern moths orbit with sine wobble
 for(const moth of mothGeos){
