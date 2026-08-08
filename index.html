@@ -5168,6 +5168,99 @@ const SHOVEL_CFG = { name:'GRIMBLE', lines:[
 "The harsh winters sure called for a solution but i won' need it right now. Why don't you go give it a holler?",
 ], onDone:()=>spawnShovelWorld() };
 let shovelDlgDone = false, shovelDlgPending = false;
+
+/* ---------- Grimble expanded dialogue ---------- */
+let grimVisitCount = 0;
+let grimLastPoolIdx = -1;
+let grimMilestoneShown = {};
+let grimMilestonePending = 0;
+let rainStartCount = 0;
+let wasRaining = false;
+let grimMetMaud = false;
+let grimMetFizz = false;
+let grimPrestigeVisits = 0;
+let grimUpgradeReacted = {};
+let grimTelescopeUsed = false;
+
+const GRIM_POOL = [
+"Back again? Good, good. The hole's been mutterin'. Don't ask me what it says. I stopped listenin'.",
+"Ye know, before the hole opened, this meadow was nothin' but grass and a particularly aggressive badger. Miss the badger sometimes. At least he made sense.",
+"Caught ye lookin' at the cat. She's been here longer than me. Longer than the stall. Longer than the hole, if ye can believe it. Don't tell her I said that.",
+"A goblin wandered up to the counter last night. Stared at me for a full minute, then threw a single coin at my forehead and ran. I've decided to respect him.",
+"The telescope? Aye, I watch the treeline. Somethin' moves out there past the fence. Probably nothin'. Probably.",
+"Ye feed the hole, the hole feeds… somethin'. And that somethin' feeds back. Circle of life, lad. Leastwise that's what I tell myself so I can sleep.",
+"If ye ever wonder why I set up shop next to a bottomless pit — good question. Rent's cheap and the foot traffic is excellent.",
+"Ye look funny.",
+"Ye here to tell me a joke?",
+"The rains look promising today.",
+];
+
+const GRIM_MILESTONES = [
+{ threshold:100,     line:"A hundred coins fed to the dark. The hole burped. That's a good sign. Or a bad one. Hard to tell with holes." },
+{ threshold:1000,    line:"A thousand, lad. Ye know, when I first saw the hole, I tossed in three buttons and a dead beetle. It spat 'em back. Took me two years to figure out it only wants value." },
+{ threshold:10000,   line:"Ten thousand. The ground hums now. Ye hear it? No? Good. Means it ain't noticed ye yet. Keep it that way." },
+{ threshold:100000,  line:"Six figures fed to nothin'. Me granddad used to say the meadow remembers every coin. I always thought he was mad. Watchin' ye, I'm not so sure." },
+{ threshold:1000000, line:"A million. The hole's glowin' funneh now, in case ye hadn't noticed. That's new. That's… that's very new. Let's just keep goin', shall we?" },
+];
+
+const GRIM_MAUD_LINES = [
+"Ah. Ye've met Maud then. Aye. She was here before me. Before the stall, before the fence, before the goblins got organized. She watched the hole open. Wouldn't tell me what she saw that night. Wouldn't tell anyone.",
+"We don't talk much, Maud and me. She looks at the hole like a mother watchin' a difficult child. I look at it like a man watchin' a difficult hole. Different perspectives, same pit.",
+];
+
+const GRIM_FIZZ_LINES = [
+"The green one. Aye, I saw the ship come in. Landed behind the fence, scared the cat, flattened three of my good cabbages. Didn't even apologize. Well. Apologized for everything else. Wouldn't apologize about the cabbages.",
+];
+
+const GRIM_PRESTIGE_1 = "Ye came back. Good. Most keepers don't. They feed and feed and then one day they walk into the treeline and don't come back. Ye're the first in… well. In a long time. Don't let that go to yer head.";
+const GRIM_PRESTIGE_2 = "Twice ye've fed everything back. The hole knows yer name now. I can tell because it stopped tryin' to pull me in when ye're standin' near it. It's patient with ye. That's either wonderful or terrible. Probably both.";
+
+const GRIM_RAIN_1 = "Rain's come. The hole drinks it, ye know. Every drop, gone. No puddles, no mud. Just… gone. Don't look at me like that. I said what I said.";
+const GRIM_RAIN_2 = "Another downpour. The goblins hate it. The cat loves it. I suspect the cat is older than the rain.";
+
+const GRIM_TELESCOPE = "Ye found me telescope. I watch the treeline. Somethin' out there past the fence watches back. Been doin' it for seven winters. Never got closer. Never left. I figure if I keep watchin', it'll keep not-comin'-closer. That's the deal.";
+
+const GRIM_UPGRADE_REACT = {
+maw:     "Widenin' the maw. Bold. The hole gets a bigger mouth, things start fallin' in that didn't used to. I've seen it happen. Keep yer distance from the rim, lad. I mean it.",
+whistle: "A whistle. Ye blow it, they frenzy. I tried that once. Accidentally blew it near the cat. The cat has not forgiven me. Three winters of cold shoulders.",
+holejob: "Ye're givin' the hole suction now. Right. Sure. Why not. The hole already eats coins. Now it eats the meadow around 'em. Progress, I suppose.",
+stranger:"Another one's comin'. I can feel it in the fence posts. They vibrate when somethin's inbound. Last time they vibrated, I got a green alien and three ruined cabbages.",
+ledger:  "Ah, ye found me ledger. Aye, the prices drop. Consider it a loyalty discount. Or consider it me gettin' sentimental. Don't tell the goblins. They'll want discounts too.",
+};
+
+function tryOpenTree(){
+grimVisitCount++;
+/* Priority 1: coin milestone pending */
+if (grimMilestonePending > 0){
+const m = GRIM_MILESTONES.find(x=>x.threshold===grimMilestonePending);
+grimMilestonePending = 0;
+if (m){ openDlg({ name:'GRIMBLE', lines:[m.line], onDone:()=>openTreeDirect() }); return; }
+}
+/* Priority 2: met Maud */
+if (witchVisible && !grimMetMaud){
+grimMetMaud = true;
+openDlg({ name:'GRIMBLE', lines:GRIM_MAUD_LINES, onDone:()=>openTreeDirect() }); return;
+}
+/* Priority 3: met Fizz */
+if (strangerTalked && !grimMetFizz){
+grimMetFizz = true;
+openDlg({ name:'GRIMBLE', lines:GRIM_FIZZ_LINES, onDone:()=>openTreeDirect() }); return;
+}
+/* Priority 4: prestige visit */
+if (prestige > grimPrestigeVisits){
+grimPrestigeVisits = prestige;
+const line = prestige===1 ? GRIM_PRESTIGE_1 : (prestige===2 ? GRIM_PRESTIGE_2 : null);
+if (line){ openDlg({ name:'GRIMBLE', lines:[line], onDone:()=>openTreeDirect() }); return; }
+}
+/* Priority 5: random pool line (visits 2+) */
+if (grimVisitCount > 1){
+let idx;
+do { idx = Math.floor(Math.random()*GRIM_POOL.length); } while (idx===grimLastPoolIdx && GRIM_POOL.length>1);
+grimLastPoolIdx = idx;
+openDlg({ name:'GRIMBLE', lines:[GRIM_POOL[idx]], onDone:()=>openTreeDirect() }); return;
+}
+openTreeDirect();
+}
 function spawnTutArrow(){
 removeTutArrow();
 const mat = toon(0xffe58a); addBoil(mat);
@@ -5707,15 +5800,15 @@ removeBlackHole(c.bh);
 c.suck = c.suck.filter(it => it.ci === undefined);
 }
     if (c.t > 9.2){
-      document.getElementById('fadeBlack').classList.remove('on');
-      document.getElementById('prestigeText').classList.remove('on');
-      cine = null;
-      document.body.classList.remove('cineMode');
-      letterbox(false);
-      startCineHandoff();
-      toast('The hole collects its own tribute now.');
-      if (!locked) showPause();
-    }
+document.getElementById('fadeBlack').classList.remove('on');
+document.getElementById('prestigeText').classList.remove('on');
+cine = null;
+document.body.classList.remove('cineMode');
+letterbox(false);
+startCineHandoff();
+toast('The hole swallows and the meadow resets. Ye\u2019ll rebuild. Ye always rebuild.');
+if (!locked) showPause();
+}
   }
 }
 function doPrestigeReset(){
@@ -6222,7 +6315,13 @@ if (cine) return;
 if (shopPhase === 'hole'){ ascend(); return; }
 if (shopPhase === 'iso'){ closeShopToPlay(); return; }
 if (camMode !== 'play') return;
-if (nearTelescope){ openShop(false, true); return; }
+if (nearTelescope){
+if (!grimTelescopeUsed){
+grimTelescopeUsed = true;
+openDlg({ name:'GRIMBLE', lines:[GRIM_TELESCOPE], onDone:()=>openShop(false, true) });
+} else openShop(false, true);
+return;
+}
 if (nearShovel){ pickupShovel(); return; }   // telescope = high meadow view, no hole button
 if (nearStranger){
 if (!strangerTalked){ strangerTalked = true; openDlg(FIZZ_CFG_FIRST); }
@@ -6253,7 +6352,7 @@ hideCap();
 openDlg(GRIM2_CFG);   // onDone opens the skill tree
 return;
 }
-openTreeDirect();
+tryOpenTree();
 }
 }
 let straightToHole = false;
@@ -6591,17 +6690,17 @@ stats.upgradesBought++;
 { const w = nodeEls[key] && nodeEls[key].wrap;
 if (w){ w.classList.remove('bought'); void w.offsetWidth; w.classList.add('bought'); setTimeout(()=>w.classList.remove('bought'), 520); } }
 if (key === 'value' && !shovelDlgDone) shovelDlgPending = true;
-if (key === 'whistle') toast('Whistle ready — press 1');
+if (key === 'whistle') toast(GRIM_UPGRADE_REACT.whistle);
 if (key === 'shiny') toast('Silver luck hums in the air…');
 if (key === 'width'){
 if (shovelWorld){ scene.remove(shovelWorld); shovelWorld = buildShovelModel(); shovelWorld.position.set(SHOVEL_SPOT.x,0.06,SHOVEL_SPOT.z); shovelWorld.rotation.set(-0.3,0.5,0); scene.add(shovelWorld); }
 if (shovelView){ const pos = shovelView.position.clone(), rot = shovelView.rotation.clone(); camera.remove(shovelView); shovelView = buildShovelModel(); shovelView.position.copy(pos); shovelView.rotation.copy(rot); camera.add(shovelView); }
 toast('The blade broadens…');
 }
-if (key === 'holejob') toast('Hole-Job ready — press 2');
+if (key === 'holejob') toast(GRIM_UPGRADE_REACT.holejob);
 if (key === 'stranger'){
 strangerCinePending = true;   // cutscene waits until you ASCEND out of the tree
-toast('A stranger wanders into the meadow…');
+toast(GRIM_UPGRADE_REACT.stranger);
 }
 if (key === 'help'){
 let need = 2 - goblins.length; // top up to exactly 2, never more
@@ -6653,8 +6752,9 @@ break;
 }
 toast('Another goblin shuffles in…');
 }
-if (key === 'maw'){ buildHole(); buildPrestigeRing(); toast('The hole widens…'); }
+if (key === 'maw'){ buildHole(); toast(GRIM_UPGRADE_REACT.maw); }
 if (key === 'tempo') toast('The tools recover faster.');
+if (key === 'ledger' && !grimUpgradeReacted.ledger){ grimUpgradeReacted.ledger = true; toast(GRIM_UPGRADE_REACT.ledger); }
 if (key === 'chieftains'){
 for(let i=0;i<20;i++){
 const r = 8 + Math.random()*12, a = Math.random()*Math.PI*2;
@@ -6790,12 +6890,19 @@ if (reel) reel.style.transform = `translateY(${-digit}em)`;
 /* ============================== RAIN ============================== */
 function updateRain(dt, time){
 cycleT = (cycleT + dt) % RAIN_CYCLE;
+const prevRain = rainFactor;
 let f;
 if (cycleT < RAIN_START) f = 0;
 else if (cycleT < RAIN_START + 10) f = (cycleT - RAIN_START)/10;
 else if (cycleT < RAIN_FULL_END) f = 1;
 else f = 1 - (cycleT - RAIN_FULL_END)/10;
 rainFactor = f*f*(3-2*f);
+/* rain event detection */
+if (rainFactor > 0.02 && prevRain <= 0.02 && started && locked && camMode==='play' && !shopOpen && !cine && !dlgOpen){
+rainStartCount++;
+if (rainStartCount === 1) toast(GRIM_RAIN_1);
+else if (rainStartCount === 2) toast(GRIM_RAIN_2);
+}
 skyMat.uniforms.uRain.value = rainFactor;
 scene.fog.color.lerpColors(FOGC, RAIN_FOGC, rainFactor*0.85);
 grassMat.uniforms.uFogColor.value.copy(scene.fog.color);
@@ -7777,10 +7884,12 @@ shovelOwned, strangerTalked, tutDone,
 introDone: introDone && !goblins.some(g=>g.isBub),
       witchSpawned, vendorGreeted, pickupCount,
             shovelDlgDone, reMaxToastDone, goblinsAwakened,
-      holeThoughtDone,
-      strangerExists: !!stranger,
-      timestamp: Date.now()
-    };
+holeThoughtDone,
+strangerExists: !!stranger,
+grimVisitCount, grimLastPoolIdx, grimMilestoneShown, rainStartCount,
+grimMetMaud, grimMetFizz, grimPrestigeVisits, grimUpgradeReacted, grimTelescopeUsed,
+timestamp: Date.now()
+};
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
   } catch(e){}
 }
@@ -7804,9 +7913,18 @@ function loadGame(){
     vendorGreeted = !!d.vendorGreeted;
     pickupCount   = d.pickupCount   || 0;
     shovelDlgDone = !!d.shovelDlgDone;
-     reMaxToastDone= !!d.reMaxToastDone;
-    goblinsAwakened = !!d.goblinsAwakened;
-    holeThoughtDone = !!d.holeThoughtDone;
+reMaxToastDone= !!d.reMaxToastDone;
+goblinsAwakened = !!d.goblinsAwakened;
+holeThoughtDone = !!d.holeThoughtDone;
+grimVisitCount = d.grimVisitCount || 0;
+grimLastPoolIdx = d.grimLastPoolIdx ?? -1;
+grimMilestoneShown = d.grimMilestoneShown || {};
+rainStartCount = d.rainStartCount || 0;
+grimMetMaud = !!d.grimMetMaud;
+grimMetFizz = !!d.grimMetFizz;
+grimPrestigeVisits = d.grimPrestigeVisits || 0;
+grimUpgradeReacted = d.grimUpgradeReacted || {};
+grimTelescopeUsed = !!d.grimTelescopeUsed;
 
     if (d.upgrades) for (const k in upgrades) if (k in d.upgrades) upgrades[k] = d.upgrades[k];
 
