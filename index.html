@@ -781,6 +781,15 @@ let reMaxToastDone = false;
 let introDone = false;
 let goblinsAwakened = false;
 const prestigeMult = () => 1 + prestige;
+/* tribute gate: 1st prestige free, then 100k / 500k / 2M / 5M (caps at 5M) */
+const prestigeCost = () => {
+const n = prestige + 1;   // the prestige you're about to perform
+if (n <= 1) return 0;
+if (n === 2) return 100000;
+if (n === 3) return 500000;
+if (n === 4) return 2000000;
+return 5000000;
+};
 const GDLG = [
 "Well well! Fresh boots in the meadow! Come closer, come closer — mind the hole, she's moody today.",
 "Aye, that pit. Tore itself open seven winters back. And when it goes hungry…",
@@ -1598,10 +1607,11 @@ geo.setAttribute('aInfo', new THREE.InstancedBufferAttribute(aInfo,4));
 geo.instanceCount = GRASS_N;
 grassMat = new THREE.ShaderMaterial({
 side:THREE.DoubleSide,
-uniforms:{ uTime:{value:0}, uPlayer:{value:new THREE.Vector3(0,0,6.8)}, uGoblin:{value:new THREE.Vector3(1.8,0,7.6)}, uFogColor:{value:FOGC} },
+uniforms:{ uTime:{value:0}, uPlayer:{value:new THREE.Vector3(0,0,6.8)}, uGoblin:{value:new THREE.Vector3(1.8,0,7.6)}, uFogColor:{value:FOGC}, uGust:{value:0}, uGustDir:{value:new THREE.Vector2(0.82,0.57)} },
 vertexShader:`
 attribute vec3 aPos; attribute vec4 aInfo;
 uniform float uTime; uniform vec3 uPlayer; uniform vec3 uGoblin;
+uniform float uGust; uniform vec2 uGustDir;
 varying float vH; varying float vTint; varying float vFog; varying vec2 vPos;
 void main(){
 float ph = aInfo.x*6.28318;
@@ -1617,6 +1627,9 @@ float w = sin(t*1.7 + dot(aPos.xz,wd)*0.9 + ph)*0.5
 + sin(t*0.5 + aPos.x*0.13 + aPos.z*0.09)*0.6;
 float bend = h*h;
 vec2 off = wd * w * 0.13 * bend * (0.6+hs*0.4);
+/* passing gust wave: patchy, intermittent, gentle */
+float gw = 0.5 + 0.5*sin(dot(aPos.xz, uGustDir)*0.5 - t*2.6 + ph*0.3);
+off += uGustDir * (uGust * gw*gw * 0.15 * bend * (0.6+hs*0.4));
 vec2 dP = aPos.xz - uPlayer.xz; float lP = length(dP);
 off += (dP/max(lP,0.001)) * smoothstep(1.1,0.0,lP)*0.22*bend;
 vec2 dG = aPos.xz - uGoblin.xz; float lG = length(dG);
@@ -1758,6 +1771,58 @@ const flowers = new THREE.Mesh(instancedFlowerGeo, flowerMat);
 flowers.frustumCulled = false;
 scene.add(flowers);
 flowerGeoRef = instancedFlowerGeo;
+}
+/* ---------- wind gusts (gentle, intermittent) ---------- */
+let gustStrength = 0, gustTarget = 0, gustTimer = 3, gustDirX = 0.82, gustDirZ = 0.57;
+function updateGusts(dt){
+gustTimer -= dt;
+if (gustTimer <= 0){
+if (gustTarget > 0){ gustTarget = 0; gustTimer = 5 + Math.random()*9; }   // calm stretch
+else {
+gustTarget = 0.6 + Math.random()*0.4;                              // gust on
+gustTimer = 2.5 + Math.random()*2.5;
+const a = Math.random()*Math.PI*2;
+gustDirX = Math.cos(a); gustDirZ = Math.sin(a);
+}
+}
+gustStrength += (gustTarget - gustStrength)*Math.min(1, 1.6*dt);
+if (grassMat){
+grassMat.uniforms.uGust.value = gustStrength;
+grassMat.uniforms.uGustDir.value.set(gustDirX, gustDirZ);
+}
+}
+/* ---------- tiny pebbles scattered around the meadow ---------- */
+{
+const PEB_N = 160;
+const pebGeo = new THREE.DodecahedronGeometry(0.06, 0);
+const pebMat = toon(0xffffff);
+const pebbles = new THREE.InstancedMesh(pebGeo, pebMat, PEB_N);
+const d = new THREE.Object3D();
+const col = new THREE.Color();
+let placedN = 0, tries = 0;
+while (placedN < PEB_N && tries < PEB_N*8){
+tries++;
+const r = 2 + Math.sqrt(Math.random())*(WORLD_R-2);
+const a = Math.random()*Math.PI*2;
+const x = Math.cos(a)*r, z = Math.sin(a)*r;
+if (Math.hypot(x,z) < HOLE_R+0.6) continue;
+if (Math.hypot(x-STALL_POS.x, z-STALL_POS.z) < 3.2) continue;
+if (Math.hypot(x-WITCH_POS.x, z-WITCH_POS.z) < 2.2) continue;
+if (Math.hypot(x-TELE_POS.x, z-TELE_POS.z) < 1.4) continue;
+d.position.set(x, 0.015, z);
+d.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+const s = 0.5 + Math.random()*0.9;   // pebble-sized: ~0.03–0.08 world units
+d.scale.set(s*(0.8+Math.random()*0.5), s*0.7, s);
+d.updateMatrix();
+pebbles.setMatrixAt(placedN, d.matrix);
+col.setHSL(0.09+Math.random()*0.05, 0.08+Math.random()*0.10, 0.42+Math.random()*0.22);
+pebbles.setColorAt(placedN, col);
+placedN++;
+}
+pebbles.count = placedN;
+pebbles.instanceMatrix.needsUpdate = true;
+if (pebbles.instanceColor) pebbles.instanceColor.needsUpdate = true;
+scene.add(pebbles);
 }
 /* ---------- pollen ---------- */
 const POLLEN_N = 90;
@@ -3540,6 +3605,49 @@ f.m.rotation.y = time*1.5 + f.ph;
 f.m.position.y = f.baseY + Math.sin(time*10+f.ph)*0.03;
 }
 }
+/* ---------- smoke puffs rising from the fireplace ---------- */
+const smokeTex = canvasTex(64,64,(x)=>{
+const g=x.createRadialGradient(32,32,2,32,32,30);
+g.addColorStop(0,'rgba(205,205,205,0.55)');
+g.addColorStop(0.6,'rgba(160,160,160,0.22)');
+g.addColorStop(1,'rgba(140,140,140,0)');
+x.fillStyle=g; x.fillRect(0,0,64,64);
+}, false);
+const smokePuffs = [];
+let smokeTimer = 0;
+function updateFireSmoke(dt, time){
+smokeTimer -= dt;
+if (smokeTimer <= 0){
+smokeTimer = 0.45 + Math.random()*0.5;
+let s = smokePuffs.find(p=>!p.active);
+if (!s && smokePuffs.length < 14){
+const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map:smokeTex, transparent:true, depthWrite:false, opacity:0 }));
+scene.add(sp);
+s = { sp, active:false, t:0, life:1, drift:0 };
+smokePuffs.push(s);
+}
+if (s && !s.active){
+s.active = true; s.t = 0; s.life = 2.6 + Math.random()*1.4;
+s.drift = Math.random()*Math.PI*2;
+s.sp.position.set(FIRE_POS.x + (Math.random()-0.5)*0.2, 0.55, FIRE_POS.z + (Math.random()-0.5)*0.2);
+s.sp.material.opacity = 0;
+s.sp.scale.setScalar(0.25);
+s.sp.visible = true;
+}
+}
+for (const s of smokePuffs){
+if (!s.active) continue;
+s.t += dt;
+const k = s.t / s.life;
+if (k >= 1){ s.active = false; s.sp.visible = false; continue; }
+s.sp.position.y += dt*0.55;
+s.sp.position.x += Math.sin(time*1.3 + s.drift)*dt*0.12 + gustStrength*gustDirX*dt*0.5;
+s.sp.position.z += Math.cos(time*1.1 + s.drift)*dt*0.10 + gustStrength*gustDirZ*dt*0.5;
+const fade = k<0.2 ? k/0.2 : 1-(k-0.2)/0.8;
+s.sp.material.opacity = 0.34*fade;
+s.sp.scale.setScalar(0.25 + k*0.85);
+}
+}
 /* ============================== CHALKBOARD (affordable upgrades) ============================== */
 const chalkCanvas = document.createElement('canvas');
 chalkCanvas.width = 256; chalkCanvas.height = 320;
@@ -4083,9 +4191,8 @@ _qTmp.setFromUnitVectors(UP,_toCam);
 _qT2.setFromAxisAngle(_toCam, spinAng).multiply(_qTmp);
 Q[held].slerp(_qT2, 1-Math.exp(-9*dt));
 }
-
 /* prestige ring: coins get claimed once they touch the ground —
-or automatically after hovering inside for 3s without a bounce */
+or automatically after hovering inside for 2s without a bounce */
 if (prestige>0){
 const mr=magnetR();
 for(let li=0; li<live.length; li++){
@@ -4094,7 +4201,7 @@ if (s!==1 && s!==2) continue;
 const i3=i*3;
 if (Math.hypot(P[i3],P[i3+2]) < mr){
 if (s===2){ ST[i]=5; SLEEPF[i]=0; RESTF[i]=0; RINGT[i]=0; }
-else if ((RINGT[i]+=dt) > 3){ ST[i]=5; SLEEPF[i]=0; RESTF[i]=0; }
+else if ((RINGT[i]+=dt) > 2){ ST[i]=5; SLEEPF[i]=0; RESTF[i]=0; }
 } else RINGT[i]=0;
 }
 }
@@ -4379,7 +4486,7 @@ const want = rmbHeld && shovelOwned && locked && camMode==='play' && !shopOpen &
 if (want && !shovelTutDone){ shovelTutDone = true; hideCap(); }
 shovelUsing = want;
 shovelPush += ((want?1:0)-shovelPush)*Math.min(1,10*dt);
-if (shovelView) shovelView.visible = !cine;
+if (shovelView) shovelView.visible = !cine && !teleView;   // hidden while peering through the telescope
 if (!shovelView) return;
 const spd = Math.hypot(player.vel.x, player.vel.z);
 const bob = Math.sin(bobPhase*2)*0.014*Math.min(1,spd/4);
@@ -5313,6 +5420,12 @@ while (live.length) removeCoin(live[0], false);
 held = -1;
 for (const g of goblins){ scene.remove(g.root); scene.remove(g.shadow); if (g.smear) scene.remove(g.smear); }
 goblins.length = 0;
+/* witch + stranger re-lock until stranger is bought again next run */
+if (stranger){ scene.remove(stranger.root); stranger = null; }
+strangerTalked = false; strangerCinePending = false;
+witchSpawned = false; witchVisible = false;
+witch.root.visible = false; witch.root.scale.setScalar(0.001);
+witch.shadow.visible = false;
 makeGoblin(1.8, 7.6);
 player.pos.set(0,EYE,6.8); player.vel.set(0,0,0); player.vy = 0;
 yaw = 0; pitch = -0.08; roll = 0;
@@ -5375,6 +5488,8 @@ const start = (k==='chieftains'||k==='help'||k==='goblins'||k==='goblins2'||k===
 bought += upgrades[k]-start;
 }
 const merged = goblins.filter(g=>(g.tier||1) > 1).length;
+const cost = prestigeCost();
+const canPay = earned >= cost;
 const rows = [
 ['Earned coins', fmt(earned), '0'],
 ['Goblins in the meadow', String(goblins.length), '1'],
@@ -5382,6 +5497,7 @@ const rows = [
 ];
 if (merged > 0) rows.push(['Merged goblins', String(merged), 'lost']);
 rows.push(['Hole tribute', prestige > 0 ? 'claims all coins' : 'none', 'claims all coins']);
+if (cost > 0) rows.push(['Tribute cost', fmt(earned)+' / '+fmt(cost), canPay ? 'ready' : 'not enough']);
 const box = document.getElementById('ritualStats');
 box.innerHTML = '';
 for (const r of rows){
@@ -5390,6 +5506,10 @@ d.className = 'rsRow';
 d.innerHTML = `<span>${r[0]}</span><span><b>${r[1]}</b> <span class="rsArr">→</span> <b>${r[2]}</b></span>`;
 box.appendChild(d);
 }
+const readyBtn = document.getElementById('ritualReady');
+readyBtn.style.opacity = canPay ? '' : '0.45';
+readyBtn.style.cursor = canPay ? '' : 'not-allowed';
+readyBtn.textContent = canPay ? 'READY' : 'NEED '+fmt(cost)+' COINS';
 ritualOverlayEl.classList.remove('hidden');
 tone(60,1.2,'sine',0.25,0,-20); tone(220,0.6,'sine',0.08,0.2,-80);
 }
@@ -5399,6 +5519,7 @@ ritualOverlayEl.classList.add('hidden');
 document.body.classList.remove('ritual');
 }
 document.getElementById('ritualReady').addEventListener('click', ()=>{
+if (earned < prestigeCost()){ tone(80,0.18,'sine',0.28,0,-40); return; }
 closeRitual();
 try { renderer.domElement.requestPointerLock(); } catch(e){}
 startSacrifice();
@@ -6523,11 +6644,35 @@ let ambienceRamp = 0;
 function startCustomAmbience(vol=0.8){
 const buf = customBuf.ambience;
 if (!buf || customAmb || !AC) return;
-customAmb = AC.createBufferSource();
-customAmb.buffer = buf; customAmb.loop = true;
-const g = AC.createGain(); g.gain.value = vol;
-customAmb.connect(g); g.connect(windBus);   // follows the AMBIENCE setting + tree ducking
-customAmb.start();
+const D = buf.duration;
+const F = Math.min(4, Math.max(1.5, D*0.2));   // crossfade length at every loop seam
+const state = { stopped:false, timer:0 };
+customAmb = state;
+let startAt = AC.currentTime + 0.05;
+let cur = null;
+const launch = (when)=>{
+const src = AC.createBufferSource();
+src.buffer = buf;
+const g = AC.createGain();
+g.gain.setValueAtTime(0.0001, when);
+g.gain.linearRampToValueAtTime(vol, when + F);            // fade in over the seam
+src.connect(g); g.connect(windBus);                       // follows the AMBIENCE setting + tree ducking
+src.start(when);
+if (cur){                                                 // crossfade the previous play out
+cur.g.gain.cancelScheduledValues(when);
+cur.g.gain.setValueAtTime(vol, when);
+cur.g.gain.linearRampToValueAtTime(0.0001, when + F);
+try{ cur.src.stop(when + F + 0.1); }catch(e){}
+}
+return { src, g };
+};
+const step = ()=>{
+if (state.stopped) return;
+cur = launch(startAt);
+startAt += D - F;   // next play begins just before this one ends, so the seam is always covered
+state.timer = setTimeout(step, Math.max(50, (startAt - AC.currentTime - 2)*1000));
+};
+step();
 }
 function initCustomAudio(){
 if (customInit) return; customInit = true;
@@ -6791,7 +6936,7 @@ clearTimeout(toastTimer);
 toastTimer = setTimeout(()=>toastEl.classList.remove('show'), 2400);
 }
 function showPause(){
-if (!started || !menuReady) return;   // the pause screen can never replace the main menu at boot
+if (!started) return;   // no pause before the game begins (the menu handles boot)
 ovTitle.textContent = 'PAUSED';
 ovSub.textContent = 'The goblin waits, coin in hand…';
 ovGoal.textContent = '';
@@ -7761,6 +7906,7 @@ lampLight.distance = 9 + 5 * rainFactor;
 lampLight.color.setHSL(0.07, 0.85, 0.55 + 0.1*rainFactor);
 }
 updateFireplace(elapsed);
+updateFireSmoke(dt, elapsed);
 updatePennants(elapsed);
 // Update lantern moths orbit with sine wobble
 for(const moth of mothGeos){
@@ -7784,11 +7930,11 @@ pollenPos[i*3+1] = b.y + Math.sin(elapsed*0.3 + b.p)*0.5;
 pollenPos[i*3+2] = b.z + Math.cos(elapsed*0.12 + b.p)*2;
 }
 pollenGeo.attributes.position.needsUpdate = true;
-if (started && !witchSpawned && !cine && !dlgOpen && camMode === 'play' && allMaxed()){
+if (started && !witchSpawned && !cine && !dlgOpen && camMode === 'play' && stranger){
 startWitchCine();
 document.body.classList.add('cineMode');
 }
-if (started && witchSpawned && !reMaxToastDone && prestige > 0 && allMaxed() && camMode === 'play' && !cine){
+if (started && witchSpawned && !reMaxToastDone && prestige > 0 && stranger && camMode === 'play' && !cine){
 reMaxToastDone = true;
 toast('The witch awaits at the far end…');
 }
@@ -7801,6 +7947,7 @@ if (strangerCinePending && started && !cine && !dlgOpen && !shopOpen && camMode 
 strangerCinePending = false;
 startStrangerCine();
 }
+updateGusts(dt);
 grassMat.uniforms.uTime.value = elapsed;
 holeDustMat.uniforms.uTime.value = elapsed;
 boilUniforms.uBoil.value = Math.floor(elapsed * 8); // 8fps cranked boil
