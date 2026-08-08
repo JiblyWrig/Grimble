@@ -7838,10 +7838,8 @@ prodIntroEl.classList.add('clicked');
 goFullscreen();
 initAudio();                                   // ambience starts on the click
 if (AC && AC.state === 'suspended') AC.resume();
-if (customBuf.menutheme) maybeStartMenuTheme();   // already pre-decoded at page load → starts instantly on this click
-else if (menuThemeRaw && AC){
-AC.decodeAudioData(menuThemeRaw).then(b=>{ customBuf.menutheme = b; maybeStartMenuTheme(); }).catch(()=>{});
-} else loadAudio('menutheme','audio/menutheme.mp3').then(maybeStartMenuTheme);
+	if (customBuf.menutheme) maybeStartMenuTheme();   // already pre-decoded at page load → starts instantly on this click
+	else loadAudio('menutheme','audio/menutheme.mp3').then(maybeStartMenuTheme);
 initCustomAudio();
 setTimeout(()=>prodIntroEl.classList.add('logo'), 450);          // click fades, logo pops in
 setTimeout(()=>{                                                // letters hop & run off-screen
