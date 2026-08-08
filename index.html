@@ -5205,7 +5205,7 @@ witchSpawned = true;
 letterbox(true);
 mouseHeld = false;
 camMode = 'witchCine';
-cine = { type:'witch', t:0, fromPos:camera.position.clone(), fx:false, ring:null };
+cine = { type:'witch', t:0, fromPos:camera.position.clone(), fx:false, ring:null, thundered:false };
 tone(220,0.5,'sine',0.15,0,-80);
 }
 function startSacrifice(){
@@ -5780,6 +5780,10 @@ letterbox(false);
 startCamToPlay();
 toast('The witch awaits at the far end…');
 return;
+}
+if (!c.thundered && c.t > 0.5){
+c.thundered = true;
+playCustom('thunder', 0.8);
 }
 if (!c.fx && c.t > 1.0){
 c.fx = true;
@@ -7272,6 +7276,7 @@ loadAudio('meow','audio/meow.mp3');
 loadAudio('meow2','audio/meow2.mp3');
 loadAudio('meow3','audio/meow3.mp3');
 loadAudio('ufo','audio/ufo.mp3');
+loadAudio('thunder','audio/thunder.mp3');
 }
 function playCustom(name, vol=1, loop=false){ // one-shot helper for any loaded file
 const buf = customBuf[name]; if(!buf || !AC) return null;
