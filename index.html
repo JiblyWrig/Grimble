@@ -513,6 +513,12 @@ padding:12px 36px; cursor:pointer; box-shadow:0 0 26px rgba(255,80,170,.55), 0 6
 animation:aphroPulse 1.6s ease-in-out infinite; }
 #mergeAphro:hover { filter:brightness(1.12); }
 @keyframes aphroPulse { 50% { box-shadow:0 0 46px rgba(255,90,180,.9), 0 6px 0 #700c40; transform:translateX(-50%) scale(1.05); } }
+#mergeTip { position:fixed; z-index:71; pointer-events:none; opacity:0; transition:opacity .12s;
+min-width:190px; max-width:270px; padding:10px 14px; text-align:center;
+background:linear-gradient(165deg, #f0dfae, #d9bd82);
+border:2px solid #7a5a1e; border-radius:10px;
+box-shadow:0 10px 26px rgba(0,0,0,.65), inset 0 0 18px rgba(122,90,30,.25); }
+#mergeTip.show { opacity:1; }
 #mergeConfirm { position:fixed; inset:0; z-index:16; display:flex; align-items:center; justify-content:center;
   background:rgba(0,0,0,.55); }
 #mergeConfirm.hidden { display:none; }
@@ -665,6 +671,7 @@ animation:readyPulse 2.6s ease-in-out infinite; }
 <button id="mergeSplit" style="position:absolute;top:26px;left:160px;pointer-events:auto;font-family:'MedievalSharp',cursive;font-size:17px;letter-spacing:2px;color:#ffc9c9;background:rgba(60,10,10,.8);border:2px solid #ff6b6b;border-radius:12px;padding:9px 22px;cursor:pointer;box-shadow:0 0 18px rgba(255,80,80,.3);transition:all .12s;">&#8599; SPLIT</button>
 <button id="mergeAphro">&#9829; Create the Aphrodite &#9829;</button>
 </div>
+<div id="mergeTip"></div>
 <div id="mergeConfirm" class="hidden">
   <div class="mcPanel">
     <div class="mcTitle">Merge these goblins?</div>
@@ -2504,7 +2511,7 @@ if (t >= 0.7){ g.state='idle'; g.t = 1+Math.random(); }
 g.root.position.y = whistleBuffT > 0 ? Math.abs(Math.sin(time*7 + g.squirmT))*0.25 : 0;
 const dC = Math.hypot(p.x,p.z);
 if (dC > 0.0001 && dC < holeRS()+0.8){ const s=(holeRS()+0.8)/dC; p.x*=s; p.z*=s; }
-if (dC > WORLD_R-3){ const s=(WORLD_R-3)/Math.max(dC,0.0001); p.x*=s; p.z*=s; }
+if (dC > WORLD_R-3){ const s=(WORLD_R-3)/dC; p.x*=s; p.z*=s; }
 g.root.rotation.y = g.yaw;
 g.root.updateMatrixWorld(true);
 const dx = player.pos.x - p.x, dz = player.pos.z - p.z;
@@ -2823,6 +2830,15 @@ tone(880,0.5,'sine',0.05,0.2,220);
 /* ============================== GOBLIN MERGE (Fizz) ============================== */
 let mergeOpen=false, mergeTime=0;
 let mergeModels=[], selectedModel=null, hoverModel=null, pendingMerge=null;
+let mergeZoomT=1, mergeDrag=false, mdx=0, mdy=0, mergeClosing=false, mergeCloseT=0;
+const mergeLook = new THREE.Vector3(0,0.9,0);
+let mergeCamDist = 9;
+function applyMergeCam(){
+mergeCamera.zoom = mergeZoomT;
+mergeCamera.updateProjectionMatrix();
+mergeCamera.position.set(mergeLook.x, 2.3, mergeLook.z + mergeCamDist);
+mergeCamera.lookAt(mergeLook);
+}
 const mergeScene=new THREE.Scene();
 mergeScene.background=new THREE.Color(0x03030a);
 mergeScene.fog=new THREE.FogExp2(0x03030a, 0.014);
@@ -2920,7 +2936,20 @@ const mergeOverlayEl=document.getElementById('mergeOverlay');
 const mergeInfoEl=document.getElementById('mergeInfo');
 const mergeConfirmEl=document.getElementById('mergeConfirm');
 const mcTextEl=document.getElementById('mcText');
-document.getElementById('mergeBack').addEventListener('click',()=>closeMergeMenu());
+const mergeTipEl=document.getElementById('mergeTip');
+function showMergeTip(m,cx,cy){
+if(!m||!m.gob){ mergeTipEl.classList.remove('show'); return; }
+const g=m.gob, tier=g.tier||1;
+const coin = tier>=4?'pink ×100':tier===3?'red ×50':tier===2?'silver ×10':'gold ×1';
+mergeTipEl.innerHTML=`<div class="tipName">${g.name}</div>
+<div class="tipFlavor">tier ${tier}${g.chief?' · chieftain':''}</div>
+<div class="tipDelta">coin: ${coin} · throws every ${goblinInterval(g).toFixed(1)}s</div>`;
+mergeTipEl.style.left=THREE.MathUtils.clamp(cx,140,innerWidth-140)+'px';
+mergeTipEl.style.top=(cy-16)+'px';
+mergeTipEl.style.transform='translate(-50%,-100%)';
+mergeTipEl.classList.add('show');
+}
+document.getElementById('mergeBack').addEventListener('click',()=>beginMergeClose());
 let splitMode=false;
 document.getElementById('mergeSplit').addEventListener('click',()=>{
 splitMode=!splitMode;
@@ -2960,7 +2989,8 @@ function randomGoblinSpot(){
 function buildMergeScene(){
 for(const mm of mergeModels) mergeScene.remove(mm.model.root);
 mergeModels=[]; selectedModel=null; hoverModel=null; pendingMerge=null;
-mergeConfirmEl.classList.add('hidden');
+mergeClosing=false; mergeCloseT=0;
+mergeTipEl.classList.remove('show');
   const list=goblins.filter(g=>!g.isBub);
   const n=list.length, spacing=1.7, startX=-(n-1)*spacing/2;
  list.forEach((g,i)=>{
@@ -2969,7 +2999,7 @@ model.root.scale.setScalar(g.baseScale);
 model.armL.rotation.set(0,0,0); model.armR.rotation.set(0,0,0);
 model.legL.rotation.set(0,0,0); model.legR.rotation.set(0,0,0);
 model.head.rotation.set(0,0,0); model.inner.rotation.set(0,0,0); model.inner.position.y=0;
-model.root.position.set(startX+i*spacing,0,0);
+model.root.position.set(startX+i*spacing,5,0);   // starts up in the beam, drops in staggered
 model.root.rotation.y=0;
 const mergeable=!g.chief && (g.tier||1)<4;   // the Aphrodite cannot be merged or split
 let ring=null;
@@ -2992,13 +3022,18 @@ const ts = new THREE.Sprite(new THREE.SpriteMaterial({ map:tt, transparent:true,
 ts.scale.set(0.7,0.35,1);
 ts.position.y = g.baseScale*1.6 + 0.2;
 model.root.add(ts);
+const beam=new THREE.Sprite(new THREE.SpriteMaterial({map:violetGlowTex,color:0x2ee6a8,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));
+beam.scale.set(0.7,4.5,1); beam.position.y=2.2; model.root.add(beam);
 mergeScene.add(model.root);
-mergeModels.push({model,gob:g,mergeable,tier:g.tier||1,basePos:model.root.position.clone(),phase:Math.random()*6.28,ring});
+mergeModels.push({model,gob:g,mergeable,tier:g.tier||1,basePos:new THREE.Vector3(startX+i*spacing,0,0),phase:Math.random()*6.28,ring,beam,arrive:-i*0.12,popped:false});
 });
  const halfW=(n-1)*spacing/2+1.4;
 const ps=Math.max(1,(halfW+0.8)/7);   // platform grows so every goblin stands on it
 mergePlatform.scale.set(ps,1,ps);
 const dist=halfW/Math.tan(THREE.MathUtils.degToRad(mergeCamera.fov/2))+2.5;
+mergeCamDist = Math.max(7,dist);
+mergeLook.set(0,0.9,0);
+applyMergeCam();
  mergeCamera.position.set(0,2.3,Math.max(7,dist));
 mergeCamera.lookAt(0,0.9,0);
 const t3=list.filter(g=>(g.tier||1)===3).length;
@@ -3028,9 +3063,16 @@ function openMergeMenu(){
   mergeOverlayEl.classList.remove('hidden');
   tone(880,0.12,'sine',0.12,0,220); tone(1320,0.18,'sine',0.1,0.1,180);
 }
+function beginMergeClose(){
+if(!mergeOpen||mergeClosing) return;
+mergeClosing=true; mergeCloseT=0;
+mergeTipEl.classList.remove('show');
+tone(700,0.12,'sine',0.1,0,-300);
+}
 function closeMergeMenu(){
-mergeOpen=false; selectedModel=null; pendingMerge=null;
+mergeOpen=false; mergeClosing=false; mergeDrag=false; selectedModel=null; pendingMerge=null;
 splitMode=false;
+mergeTipEl.classList.remove('show');
 document.getElementById('mergeSplit').style.borderColor='#ff6b6b';
 document.getElementById('mergeSplit').style.boxShadow='0 0 18px rgba(255,80,80,.3)';
 mergeConfirmEl.classList.add('hidden');
@@ -3040,6 +3082,7 @@ fadeMusic(0.55);
 try{renderer.domElement.requestPointerLock();}catch(e){}
 }
 function showMergeConfirm(){
+mergeTipEl.classList.remove('show');
 const {a,b}=pendingMerge, t=a.tier, nt=t+1, mult=Math.pow(2,nt-1);
 const coinName = nt===3 ? 'red coins (50× value)' : 'silver coins';
 mcTextEl.innerHTML=`Two <b>tier-${t}</b> goblins will fuse into one <b>tier-${nt}</b> goblin.<br><br>`+
@@ -3100,12 +3143,24 @@ mergeRay.setFromCamera(mergeMouse,mergeCamera);
 _look.copy(mergeRay.ray.origin).addScaledVector(mergeRay.ray.direction,7);
 for(const m of mergeModels){
 const root=m.model.root;
+if(m.arrive!==undefined && m.arrive<1){
+m.arrive+=dt*2.2;
+const e=1-Math.pow(1-THREE.MathUtils.clamp(m.arrive,0,1),3);
+root.position.set(m.basePos.x,(1-e)*5,m.basePos.z);
+root.scale.setScalar(m.gob.baseScale*(0.5+0.5*e));
+if(m.beam) m.beam.material.opacity=(1-e)*0.85;
+if(m.arrive>=1 && !m.popped){
+m.popped=true; root.position.copy(m.basePos);
+if(m.beam) m.beam.material.opacity=0;
+tone(500+Math.random()*150,0.08,'triangle',0.08,0,200);   // pop!
+}
+}
 root.rotation.y = Math.sin(time*0.6+m.phase)*0.16;
 m.model.inner.position.y=Math.sin(time*2.1+m.phase)*0.02;
 m.model.armL.rotation.x=Math.sin(time*1.4+m.phase)*0.1;
 m.model.armR.rotation.x=-Math.sin(time*1.4+m.phase)*0.1;
 const isSel=(m===selectedModel);
-root.scale.setScalar(m.gob.baseScale*(isSel?1.12+Math.sin(time*9)*0.05:1));
+if(m.arrive===undefined || m.arrive>=1) root.scale.setScalar(m.gob.baseScale*(isSel?1.12+Math.sin(time*9)*0.05:1));
 /* pupils follow the cursor at all times */
 _v1.copy(_look);
 m.model.head.worldToLocal(_v1).normalize();
@@ -3139,17 +3194,52 @@ const py = 0.5 + ek*0.8;
 if(k >= 0.7 && k < 0.75) flashMerge(mergeAnimPos); // big flash at convergence
 if(k >= 1){ mergeAnimT = -1; mergeAnimPos = null; }
 }
+/* exit beams: everyone beams out, then the menu actually closes */
+if(mergeClosing){
+mergeCloseT+=dt;
+const e=THREE.MathUtils.clamp(mergeCloseT/0.45,0,1);
+for(const m of mergeModels){
+m.model.root.position.y = e*6;
+m.model.root.scale.setScalar(m.gob.baseScale*(1-e*0.7));
+if(m.beam) m.beam.material.opacity=e*0.85;
+}
+if(e>=1){ mergeClosing=false; closeMergeMenu(); }
+}
 }
 addEventListener('mousemove',e=>{
 if(!mergeOpen) return;
+if(mergeDrag){
+const dx=e.clientX-mdx, dy=e.clientY-mdy; mdx=e.clientX; mdy=e.clientY;
+const s=0.012/mergeZoomT;
+mergeLook.x=THREE.MathUtils.clamp(mergeLook.x-dx*s,-8,8);
+mergeLook.z=THREE.MathUtils.clamp(mergeLook.z+dy*s,-6,6);
+applyMergeCam();
+return;
+}
 setMergeNdc(e);
-if(!pendingMerge){
+if(!pendingMerge && !mergeClosing){
 hoverModel=pickMergeModel();
 renderer.domElement.style.cursor=(hoverModel&&hoverModel.mergeable)?'pointer':'';
-}
+showMergeTip(hoverModel,e.clientX,e.clientY);
+} else showMergeTip(null);
 });
 addEventListener('mousedown',e=>{
-if(!mergeOpen||e.button!==0||pendingMerge) return;
+if(!mergeOpen||e.button!==2) return;
+mergeDrag=true; mdx=e.clientX; mdy=e.clientY;
+});
+addEventListener('wheel',e=>{
+if(!mergeOpen) return;
+e.preventDefault();
+mergeZoomT=THREE.MathUtils.clamp(mergeZoomT*(e.deltaY<0?1.1:0.9),0.5,2.2);
+applyMergeCam();
+},{passive:false});
+addEventListener('dblclick',e=>{
+if(!mergeOpen) return;
+mergeZoomT=1; mergeLook.set(0,0.9,0);
+applyMergeCam();
+});
+addEventListener('mousedown',e=>{
+if(!mergeOpen||e.button!==0||pendingMerge||mergeClosing) return;
 setMergeNdc(e);
 const m=pickMergeModel();
 /* split mode: click a tier 2+ goblin to unmerge it */
@@ -3191,7 +3281,7 @@ tone(440,0.06,'sine',0.08);
 }
 });
 addEventListener('mouseup',e=>{
-/* click-to-select handles everything in mousedown — nothing needed here */
+if(e.button===2) mergeDrag=false;
 });
 /* ---------- Aphrodite ritual ---------- */
 const pinkBurst = makeBurst(0xff5fa8);
@@ -3208,6 +3298,7 @@ cine={ type:'aphro', t:0, fromPos:camera.position.clone(), gobs, beam:null, glow
 tone(60,1.5,'sine',0.3,0,-20);
 }
 document.getElementById('mergeAphro').addEventListener('click',()=>{
+if(mergeClosing) return;
 closeMergeMenu();
 startAphroCine();
 });
@@ -4647,7 +4738,7 @@ const want = rmbHeld && shovelOwned && locked && camMode==='play' && !shopOpen &
 if (want && !shovelTutDone){ shovelTutDone = true; hideCap(); }
 shovelUsing = want;
 shovelPush += ((want?1:0)-shovelPush)*Math.min(1,10*dt);
-if (shovelView) shovelView.visible = !cine && !teleView;   // hidden while peering through the telescope
+if (shovelView) shovelView.visible = !cine && !teleView && !shopOpen;   // hidden while peering through the telescope
 if (!shovelView) return;
 const spd = Math.hypot(player.vel.x, player.vel.z);
 const bob = Math.sin(bobPhase*2)*0.014*Math.min(1,spd/4);
@@ -5133,6 +5224,7 @@ c.light.intensity=Math.min(60,(t-16.2)*80)*fade;
 if (c.rose){
 const k2=sm(THREE.MathUtils.clamp((t-16.6)/3.0,0,1));
 c.rose.root.position.y=THREE.MathUtils.lerp(-6,0,k2);
+c.rose.root.position.z=THREE.MathUtils.lerp(0, holeRS()+1.0, k2*k2); // drifts out of the center so physics never divides by zero
 c.rose.root.rotation.y+=dt*0.6;
 if (k2>=1 && c.rose.state==='wait'){ c.rose.state='idle'; c.rose.t=1+Math.random(); c.rose.shadow.visible=true; pickTargetFor(c.rose); }
 }
@@ -7159,7 +7251,7 @@ if (htTimer) clearInterval(htTimer);
 addEventListener('keydown', e=>{
 if (e.code === 'Space') e.preventDefault();
 keys.add(e.code);
-if (mergeOpen && e.code === 'Escape'){ closeMergeMenu(); return; }
+if (mergeOpen && e.code === 'Escape'){ beginMergeClose(); return; }
 /* ESC → pause, even in odd states where pointerlockchange never fires */
 if (e.code === 'Escape' && started && !shopOpen && !dlgOpen && !cine && !mergeOpen && !ritualOpen && !statsOpen){
 if (locked){
