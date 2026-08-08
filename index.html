@@ -519,6 +519,16 @@ background:linear-gradient(165deg, #f0dfae, #d9bd82);
 border:2px solid #7a5a1e; border-radius:10px;
 box-shadow:0 10px 26px rgba(0,0,0,.65), inset 0 0 18px rgba(122,90,30,.25); }
 #mergeTip.show { opacity:1; }
+/* ---------- trophy hover tooltip ---------- */
+#trophyTip { position:fixed; left:50%; top:50%; transform:translate(-50%,30px); z-index:72; pointer-events:none; opacity:0; transition:opacity .12s;
+min-width:200px; max-width:280px; padding:10px 14px; text-align:center;
+background:linear-gradient(165deg, #f0dfae, #d9bd82);
+border:2px solid #7a5a1e; border-radius:10px;
+box-shadow:0 10px 26px rgba(0,0,0,.65), inset 0 0 18px rgba(122,90,30,.25); }
+#trophyTip.show { opacity:1; }
+#trophyTip .ttName { font-family:'MedievalSharp',cursive; font-size:15px; color:#5c3c10; letter-spacing:1px; }
+#trophyTip .ttDesc { font-size:11px; font-style:italic; color:#6b4a20; margin-top:3px; line-height:1.4; }
+#trophyTip .ttState { margin-top:6px; font-size:12px; font-weight:800; color:#3a2a08; }
 #mergeConfirm { position:fixed; inset:0; z-index:16; display:flex; align-items:center; justify-content:center;
   background:rgba(0,0,0,.55); }
 #mergeConfirm.hidden { display:none; }
@@ -672,6 +682,7 @@ animation:readyPulse 2.6s ease-in-out infinite; }
 <button id="mergeAphro">&#9829; Create the Aphrodite &#9829;</button>
 </div>
 <div id="mergeTip"></div>
+<div id="trophyTip"></div>
 <div id="mergeConfirm" class="hidden">
   <div class="mcPanel">
     <div class="mcTitle">Merge these goblins?</div>
@@ -799,6 +810,7 @@ let cycleT = 0, rainFactor = 0;
 let prestige = 0;
 let witchSpawned = false;
 let witchVisible = false;
+let witchTalked = false;
 let dlgOpen = false, dlgLine = 0;
 let cine = null;
 let reMaxToastDone = false;
@@ -3979,6 +3991,7 @@ l.computeLineDistances();
 return l;
 }
 const achSlots = [];
+const trophyHitMeshes = [];
 {
 const shack = new THREE.Group();
 const wallMat = new THREE.MeshLambertMaterial({ map: woodTex });
@@ -4030,6 +4043,13 @@ const slot = { grp, obj:null };
 achSlots.push(slot);
 slot.obj = achUnlocked.has(ACH[i].id) ? makeTrophySolid() : makeTrophyGhost();
 grp.add(slot.obj);
+/* invisible hit box for the 3D hover tooltip */
+const hit = new THREE.Mesh(new THREE.BoxGeometry(0.36,0.44,0.36), new THREE.MeshBasicMaterial({ visible:false }));
+hit.position.y = 0.1;
+hit.userData.idx = i;
+grp.add(hit);
+slot.hit = hit;
+trophyHitMeshes.push(hit);
 }
 }
 function swapTrophy(i, solid){
@@ -4037,6 +4057,23 @@ const s = achSlots[i]; if(!s) return;
 if (s.obj) s.grp.remove(s.obj);
 s.obj = solid ? makeTrophySolid() : makeTrophyGhost();
 s.grp.add(s.obj);
+}
+/* ---------- 3D trophy hover tooltip ---------- */
+function updateTrophyTip(){
+const el = document.getElementById('trophyTip');
+if (!el) return;
+if (!locked || camMode !== 'play' || shopOpen || dlgOpen || cine || mergeOpen || ritualOpen || statsOpen){
+el.classList.remove('show'); return;
+}
+raycaster.setFromCamera(SCREEN_C, camera);
+const hits = raycaster.intersectObjects(trophyHitMeshes, false);
+if (!hits.length || hits[0].distance > 7){ el.classList.remove('show'); return; }
+const a = ACH[hits[0].object.userData.idx];
+if (!a){ el.classList.remove('show'); return; }
+const unlocked = achUnlocked.has(a.id);
+el.innerHTML = `<div class="ttName">${a.name}</div><div class="ttDesc">${a.desc}</div>
+<div class="ttState">${unlocked ? '🏆 Unlocked' : '🔒 Locked'}</div>`;
+el.classList.add('show');
 }
 const achPopupEl = document.getElementById('achPopup');
 const achNameEl = document.getElementById('achName');
@@ -5559,17 +5596,18 @@ stranger.root.position.set(17, THREE.MathUtils.lerp(11,0,e), 14);
 u.position.y = 12+Math.sin(t*2)*0.2;
 camera.position.set(13.5,2.2,19.5);
 camera.lookAt(17, THREE.MathUtils.lerp(3,1,e), 14);
-} else if (t < 6.8){
-const e = sm((t-5.6)/1.2);
+} else if (t < 8.9){
+const e = sm((t-5.6)/3.2);
 c.beam.material.opacity = 0.22*(1-e);
-u.position.y = 12+e*30;
+// fly the ship around behind the fence and set it down among the trees
+u.position.lerpVectors(_cA.set(17,12,14), _cB.set(23.5,0.65,19.5), e);
+u.rotation.y += dt*1.5;
 stranger.root.position.y = 0;
 stranger.shadow.visible = true;
-stranger.shadow.visible = true;
-camera.position.lerpVectors(_tmp.set(13.5,2.2,19.5), _cB.set(15,1.7,17.5), e);
+camera.position.lerpVectors(_tmp.set(13.5,2.2,19.5), _v1.set(15,1.7,17.5), e);
 camera.lookAt(17,1,14);
-if (e >= 1 && !c.zapped){ c.zapped = true; scene.remove(u); c.beam.visible = false;
-violetBurst.burst(17,13,14,2,3); tone(700,0.4,'sine',0.1,0,500); }
+if (e >= 1 && !c.zapped){ c.zapped = true; c.beam.visible = false;
+violetBurst.burst(23.5,1,19.5,2,3); tone(700,0.4,'sine',0.1,0,500); }
 } else if (!c.done){
 c.done = true;
 document.body.classList.remove('cineMode');
@@ -5678,7 +5716,7 @@ goblins.length = 0;
 /* witch + stranger re-lock until stranger is bought again next run */
 if (stranger){ scene.remove(stranger.root); stranger = null; }
 strangerTalked = false; strangerCinePending = false;
-witchSpawned = false; witchVisible = false;
+witchSpawned = false; witchVisible = false; witchTalked = false;
 witch.root.visible = false; witch.root.scale.setScalar(0.001);
 witch.shadow.visible = false;
 makeGoblin(1.8, 7.6);
@@ -5708,7 +5746,7 @@ buildPrestigeRing();
 }
 /* ---------- dotted prestige ring: the hole's claim radius ---------- */
 let prestigeRing = null;
-const magnetR = () => HOLE_R + 2*prestige;   // 2 m from the rim, +2 m per prestige
+const magnetR = () => holeRS() + 2*prestige;   // 2m from the rim (scales with the maw), +2m per prestige
 function buildPrestigeRing(){
 if (prestigeRing){ scene.remove(prestigeRing); prestigeRing.geometry.dispose(); prestigeRing.material.dispose(); prestigeRing = null; }
 if (prestige < 1) return;
@@ -6175,7 +6213,11 @@ if (!strangerTalked){ strangerTalked = true; openDlg(FIZZ_CFG_FIRST); }
 else openDlg(FIZZ_CFG_AGAIN);
 return;
 }
-if (nearWitch){ openDlg(WITCH_CFG); return; }
+if (nearWitch){
+if (!witchTalked){ witchTalked = true; openDlg(WITCH_CFG); }   // first meeting: full dialogue…
+else openRitual();                                             // …after that, straight to the ritual menu
+return;
+}
 if (nearVendor){
 if (!goblinsAwakened){
 goblinsAwakened = true;
@@ -6595,7 +6637,7 @@ break;
 }
 toast('Another goblin shuffles in…');
 }
-if (key === 'maw'){ buildHole(); toast('The hole widens…'); }
+if (key === 'maw'){ buildHole(); buildPrestigeRing(); toast('The hole widens…'); }
 if (key === 'tempo') toast('The tools recover faster.');
 if (key === 'chieftains'){
 for(let i=0;i<20;i++){
@@ -6891,9 +6933,6 @@ return fetch(url)
 .catch(e=>console.warn('custom audio not loaded:', url, e));
 }
 /* prefetch the menu theme bytes at page load so the song can start the instant you click */
-let menuThemeRaw = null;
-fetch('audio/menutheme.mp3').then(r=>{ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
-.then(b=>{ menuThemeRaw = b; }).catch(()=>{});
 let menuTheme = null;
 function maybeStartMenuTheme(){
 if (!AC || started || menuTheme || !customBuf.menutheme || !settings.music) return;
@@ -7642,7 +7681,8 @@ prodIntroEl.classList.add('clicked');
 goFullscreen();
 initAudio();                                   // ambience starts on the click
 if (AC && AC.state === 'suspended') AC.resume();
-if (menuThemeRaw && AC){
+if (customBuf.menutheme) maybeStartMenuTheme();   // already pre-decoded at page load → starts instantly on this click
+else if (menuThemeRaw && AC){
 AC.decodeAudioData(menuThemeRaw).then(b=>{ customBuf.menutheme = b; maybeStartMenuTheme(); }).catch(()=>{});
 } else loadAudio('menutheme','audio/menutheme.mp3').then(maybeStartMenuTheme);
 initCustomAudio();
@@ -8281,6 +8321,7 @@ if (tutSkipT >= 5) skipTutorial();
 } else tutSkipT = 0;
 }
 if (locked && camMode === 'play' && !shopOpen && !cine && !dlgOpen) updatePrompt();
+updateTrophyTip();
 if (heldGoblin && locked && camMode === 'play') updateHeldGoblin();
 updateShovel(dt);
 if (locked && camMode === 'play' && !cine){
