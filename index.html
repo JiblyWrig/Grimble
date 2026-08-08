@@ -7175,10 +7175,10 @@ let customAmb = null, customInit = false;
 let ambienceBufName = 'ambience';   // which buffer is currently the looping ambience
 let aphroditeInWorld = false;       // once true, aphrodite.mp3 is the permanent ambience
 /* pre-fetch + pre-decode the menu theme at page load so it can start on the very first click */
-fetch('audio/menutheme.mp3')
+let menuThemePromise = fetch('audio/menutheme.mp3')
 .then(r=>{ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
 .then(b=>new OfflineAudioContext(1,1,44100).decodeAudioData(b))
-.then(buf=>{ customBuf.menutheme = buf; })
+.then(buf=>{ customBuf.menutheme = buf; return buf; })
 .catch(e=>console.warn('menu theme preload failed:', e));
 function loadAudio(name, url){
 return fetch(url)
@@ -7678,10 +7678,10 @@ try { renderer.domElement.requestPointerLock(); } catch(e){}
 /* First start triggers the hole-opening cinematic; later starts lock immediately */
 overlay.addEventListener('click', ()=>{
 if (menuReady) return; // 3D menu active: only the 3D button starts the game
-initAudio();
+initAudio();                                   // ambience starts on the click
 if (AC && AC.state === 'suspended') AC.resume();
-if (customBuf.menutheme) maybeStartMenuTheme();   // already decoded at page load → music begins on this click
-else loadAudio('menutheme','audio/menutheme.mp3').then(maybeStartMenuTheme);  // fallback if clicked super early
+if (customBuf.menutheme) maybeStartMenuTheme();   // already pre-decoded at page load → starts instantly on this click
+else menuThemePromise.then(()=>maybeStartMenuTheme());  // wait for the in-flight fetch instead of re-downloading
 initCustomAudio();
 if (started){
 // resuming from pause: state is live in memory — never reload the save
@@ -7999,8 +7999,8 @@ prodIntroEl.classList.add('clicked');
 goFullscreen();
 initAudio();                                   // ambience starts on the click
 if (AC && AC.state === 'suspended') AC.resume();
-	if (customBuf.menutheme) maybeStartMenuTheme();   // already pre-decoded at page load → starts instantly on this click
-	else loadAudio('menutheme','audio/menutheme.mp3').then(maybeStartMenuTheme);
+if (customBuf.menutheme) maybeStartMenuTheme();   // already pre-decoded at page load → starts instantly on this click
+else menuThemePromise.then(()=>maybeStartMenuTheme());  // wait for the in-flight fetch instead of re-downloading
 initCustomAudio();
 setTimeout(()=>prodIntroEl.classList.add('logo'), 450);          // click fades, logo pops in
 setTimeout(()=>{                                                // letters hop & run off-screen
