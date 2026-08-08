@@ -6785,6 +6785,12 @@ n.start(t); n.stop(t+dur);
 /* ---------- custom audio files: put them in an /audio folder next to index.html ---------- */
 const customBuf = {};
 let customAmb = null, customInit = false;
+/* pre-fetch + pre-decode the menu theme at page load so it can start on the very first click */
+fetch('audio/menutheme.mp3')
+.then(r=>{ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+.then(b=>new OfflineAudioContext(1,1,44100).decodeAudioData(b))
+.then(buf=>{ customBuf.menutheme = buf; })
+.catch(e=>console.warn('menu theme preload failed:', e));
 function loadAudio(name, url){
 return fetch(url)
 .then(r=>{ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
@@ -7225,6 +7231,9 @@ overlay.addEventListener('click', ()=>{
 if (menuReady) return; // 3D menu active: only the 3D button starts the game
 initAudio();
 if (AC && AC.state === 'suspended') AC.resume();
+if (customBuf.menutheme) maybeStartMenuTheme();   // already decoded at page load → music begins on this click
+else loadAudio('menutheme','audio/menutheme.mp3').then(maybeStartMenuTheme);  // fallback if clicked super early
+initCustomAudio();
 if (started){
 // resuming from pause: state is live in memory — never reload the save
 try { renderer.domElement.requestPointerLock(); } catch(e){}
