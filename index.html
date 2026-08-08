@@ -912,6 +912,7 @@ else if (k === 'ledger') c = 300 * Math.pow(2, upgrades.ledger);
 else if (k === 'stack') c = upgrades.stack === 1 ? 10 : Math.floor(70 * Math.pow(2, upgrades.stack - 2));
 else if (k === 'value') c = upgrades.value === 1 ? 5 : Math.floor(200 * Math.pow(2, upgrades.value - 2));
 else c = Math.floor(UPG[k].base * Math.pow(2, upgrades[k]-1));
+if (/^gob\d+$/.test(k) && upgrades.stranger > 0) c = Math.floor(c * 0.5);
 if (k !== 'ledger' && upgrades.ledger > 0) c = Math.floor(c * (1 - 0.05*upgrades.ledger));
 return c;
 };
@@ -951,21 +952,21 @@ const TREE = [
 { key:'width',     x:630, y:220, ico:ICO.width,  name:'Wide Blade',  from:'rate',  need:()=>upgrades.rate>1 },
 { key:'holejob',   x:690, y:80,  ico:ICO.holejob,name:'Hole-Job',    from:'width', need:()=>upgrades.width>0 },
 { key:'stranger',  x:770, y:220, ico:ICO.stranger,name:'Stranger',    from:'width', need:()=>upgrades.width>=2, green:true },
-{ key:'gob3',      x:870, y:300, ico:ICO.goblins,name:'+ Goblin',    from:'stranger',need:()=>upgrades.stranger>0 },
-{ key:'gob4',      x:870, y:140, ico:ICO.goblins,name:'+ Goblin',    from:'gob3',   need:()=>upgrades.gob3>0 },
-{ key:'gob5',      x:970, y:220, ico:ICO.goblins,name:'+ Goblin',    from:'gob4',   need:()=>upgrades.gob4>0 },
-{ key:'gob6',      x:970, y:60,  ico:ICO.goblins,name:'+ Goblin',    from:'gob5',   need:()=>upgrades.gob5>0 },
-{ key:'gob7',      x:1070,y:220, ico:ICO.goblins,name:'+ Goblin',    from:'gob6',   need:()=>upgrades.gob6>0 },
-{ key:'gob8',      x:1170,y:300, ico:ICO.goblins,name:'+ Goblin',    from:'gob7',   need:()=>upgrades.gob7>0 },
-{ key:'gob9',      x:1170,y:140, ico:ICO.goblins,name:'+ Goblin',    from:'gob8',   need:()=>upgrades.gob8>0 },
-{ key:'gob10',     x:1270,y:220, ico:ICO.goblins,name:'+ Goblin',    from:'gob9',   need:()=>upgrades.gob9>0 },
-{ key:'gob11',     x:1370,y:300, ico:ICO.goblins,name:'+ Goblin',    from:'gob10',  need:()=>upgrades.gob10>0 },
-{ key:'gob12',     x:1370,y:140, ico:ICO.goblins,name:'+ Goblin',    from:'gob11',  need:()=>upgrades.gob11>0 },
-{ key:'gob13',     x:1470,y:220, ico:ICO.goblins,name:'+ Goblin',    from:'gob12',  need:()=>upgrades.gob12>0 },
-{ key:'gob14',     x:1570,y:300, ico:ICO.goblins,name:'+ Goblin',    from:'gob13',  need:()=>upgrades.gob13>0 },
-{ key:'gob15',     x:1570,y:140, ico:ICO.goblins,name:'+ Goblin',    from:'gob14',  need:()=>upgrades.gob14>0 },
-{ key:'gob16',     x:1670,y:220, ico:ICO.goblins,name:'+ Goblin',    from:'gob15',  need:()=>upgrades.gob15>0 },
-{ key:'gob17',     x:1770,y:220, ico:ICO.goblins,name:'+ Goblin',    from:'gob16',  need:()=>upgrades.gob16>0 },
+{ key:'gob3',      x:920, y:380, ico:ICO.goblins,name:'+ Goblin',    from:'stranger',need:()=>upgrades.stranger>0 },
+{ key:'gob4',      x:920, y:60,  ico:ICO.goblins,name:'+ Goblin',    from:'gob3',   need:()=>upgrades.gob3>0 },
+{ key:'gob5',      x:1070,y:220, ico:ICO.goblins,name:'+ Goblin',    from:'gob4',   need:()=>upgrades.gob4>0 },
+{ key:'gob6',      x:1070,y:60,  ico:ICO.goblins,name:'+ Goblin',    from:'gob5',   need:()=>upgrades.gob5>0 },
+{ key:'gob7',      x:1220,y:220, ico:ICO.goblins,name:'+ Goblin',    from:'gob6',   need:()=>upgrades.gob6>0 },
+{ key:'gob8',      x:1370,y:380, ico:ICO.goblins,name:'+ Goblin',    from:'gob7',   need:()=>upgrades.gob7>0 },
+{ key:'gob9',      x:1370,y:60,  ico:ICO.goblins,name:'+ Goblin',    from:'gob8',   need:()=>upgrades.gob8>0 },
+{ key:'gob10',     x:1520,y:220, ico:ICO.goblins,name:'+ Goblin',    from:'gob9',   need:()=>upgrades.gob9>0 },
+{ key:'gob11',     x:1670,y:380, ico:ICO.goblins,name:'+ Goblin',    from:'gob10',  need:()=>upgrades.gob10>0 },
+{ key:'gob12',     x:1670,y:60,  ico:ICO.goblins,name:'+ Goblin',    from:'gob11',  need:()=>upgrades.gob11>0 },
+{ key:'gob13',     x:1820,y:220, ico:ICO.goblins,name:'+ Goblin',    from:'gob12',  need:()=>upgrades.gob12>0 },
+{ key:'gob14',     x:1970,y:380, ico:ICO.goblins,name:'+ Goblin',    from:'gob13',  need:()=>upgrades.gob13>0 },
+{ key:'gob15',     x:1970,y:60,  ico:ICO.goblins,name:'+ Goblin',    from:'gob14',  need:()=>upgrades.gob14>0 },
+{ key:'gob16',     x:2120,y:220, ico:ICO.goblins,name:'+ Goblin',    from:'gob15',  need:()=>upgrades.gob15>0 },
+{ key:'gob17',     x:2270,y:220, ico:ICO.goblins,name:'+ Goblin',    from:'gob16',  need:()=>upgrades.gob16>0 },
 { key:'maw',       x:-150,y:-40, ico:ICO.holejob,name:'Wider Maw',   from:'goblins2',need:()=>upgrades.goblins2>0 },
 { key:'tempo',     x:350, y:560, ico:ICO.whistle,name:'Second Wind', from:'help',   need:()=>upgrades.whistle>0 && upgrades.holejob>0 },
 ];
