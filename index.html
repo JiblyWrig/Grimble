@@ -1363,6 +1363,7 @@ if (holeEdge){ scene.remove(holeEdge); holeEdge.geometry.dispose(); holeEdge.mat
 holeEdge = new THREE.Mesh(new THREE.TorusGeometry(R+0.02, 0.0175, 6, 72),
 new THREE.MeshBasicMaterial({ color:0x000000 }));
 holeEdge.rotation.x = Math.PI/2; holeEdge.position.y = 0.02; holeEdge.renderOrder = 1;
+holeEdge.visible = introDone;   // hidden while the meadow is still sealed
 scene.add(holeEdge);
 /* collapse grass/flowers that would float over the widened maw (restore if it shrinks) */
 const RR = holeRS() + 0.25, RR2 = RR*RR;
@@ -3894,8 +3895,28 @@ const roofMat = toon(0x4a3520);
 const back = new THREE.Mesh(new THREE.BoxGeometry(3.3,2.3,0.08), wallMat); back.position.set(0,1.15,-1.34); shack.add(back);
 const left = new THREE.Mesh(new THREE.BoxGeometry(0.08,2.3,2.7), wallMat); left.position.set(-1.62,1.15,-0.05); shack.add(left);
 const right= new THREE.Mesh(new THREE.BoxGeometry(0.08,2.3,2.7), wallMat); right.position.set( 1.62,1.15,-0.05); shack.add(right);
-const roofA = new THREE.Mesh(new THREE.BoxGeometry(3.6,0.06,1.8), roofMat); roofA.rotation.x= 0.45; roofA.position.set(0,2.55,-0.78); shack.add(roofA);
-const roofB = new THREE.Mesh(new THREE.BoxGeometry(3.6,0.06,1.8), roofMat); roofB.rotation.x=-0.45; roofB.position.set(0,2.55, 0.78); shack.add(roofB);
+const roofA = new THREE.Mesh(new THREE.BoxGeometry(3.6,0.06,1.8), roofMat); roofA.rotation.x = -0.45; roofA.position.set(0, 2.72, -0.78); shack.add(roofA);
+const roofB = new THREE.Mesh(new THREE.BoxGeometry(3.6,0.06,1.8), roofMat); roofB.rotation.x = 0.45; roofB.position.set(0, 2.72, 0.78); shack.add(roofB);
+/* little "Achievements" sign beside the shack */
+const achC = document.createElement('canvas'); achC.width=256; achC.height=96;
+const ax = achC.getContext('2d');
+ax.fillStyle='#6b4526'; ax.fillRect(0,0,256,96);
+ax.strokeStyle='#3d2712'; ax.lineWidth=8; ax.strokeRect(4,4,248,88);
+ax.fillStyle='#f2d894';
+ax.font='bold 26px MedievalSharp, cursive';
+ax.textAlign='center'; ax.textBaseline='middle';
+ax.fillText('ACHIEVEMENTS', 128, 50);
+const achSignTex = new THREE.CanvasTexture(achC); achSignTex.colorSpace = THREE.SRGBColorSpace;
+const achPost = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.07,1.2,6), new THREE.MeshLambertMaterial({ map:woodTex }));
+achPost.position.set(2.15, 0.6, 1.5);
+shack.add(achPost);
+const achBoard = new THREE.Mesh(new THREE.BoxGeometry(1.5,0.56,0.05),
+[new THREE.MeshLambertMaterial({ map:woodTex }), new THREE.MeshLambertMaterial({ map:woodTex }),
+new THREE.MeshLambertMaterial({ map:woodTex }), new THREE.MeshLambertMaterial({ map:woodTex }),
+new THREE.MeshLambertMaterial({ map:achSignTex }), new THREE.MeshLambertMaterial({ map:woodTex })]);
+achBoard.position.set(2.15, 1.25, 1.5);
+achBoard.rotation.set(-0.06, 0.35, 0);
+shack.add(achBoard);
 for(const y of [0.99,1.54]){ const b=new THREE.Mesh(new THREE.BoxGeometry(2.9,0.05,0.4), wallMat); b.position.set(0,y,-1.1); shack.add(b); }
 for(const sx of [-1,1]){ const b=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.05,1.9), wallMat); b.position.set(sx*1.42,1.25,-0.1); shack.add(b); }
 shack.position.copy(SHACK_POS);
@@ -4980,6 +5001,7 @@ removeTutArrow();
 scene.remove(introPlug);
 if (plugGrass){ scene.remove(plugGrass); plugGrass = null; }
 if (holeRim) holeRim.material.opacity = 1;
+if (holeEdge) holeEdge.visible = true;
 cine = null;
 if (!started){ started = true; player.pos.set(0,EYE,6.8); yaw = 0; pitch = -0.08; }
 snapCameraToPlayer();
@@ -5230,6 +5252,7 @@ plugGrass.scale.copy(introPlug.scale);
 if (t > 7.6 && !c.plugged){
 c.plugged = true;
 if (holeRim) holeRim.material.opacity = 1;
+if (holeEdge) holeEdge.visible = true;
 scene.remove(introPlug);
 if (plugGrass){ scene.remove(plugGrass); plugGrass = null; }
 dirtBurst.burst(0, 0.1, 0, 3.2, 4.5);
@@ -6672,7 +6695,7 @@ comp.attack.value = 0.004; comp.release.value = 0.24;
 master.connect(comp); comp.connect(AC.destination);
 const _ft = AC.currentTime;
 master.gain.setValueAtTime(0.0001, _ft);
-master.gain.exponentialRampToValueAtTime(1.0, _ft + 2);   // ~2s fade-in so the click isn't abrupt
+master.gain.exponentialRampToValueAtTime(1.0, _ft + 0.3);   // quick fade — menu song audible right away
 noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate);
 const d = noiseBuf.getChannelData(0);
 for(let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
@@ -6769,6 +6792,10 @@ return fetch(url)
 .then(buf=>{ customBuf[name]=buf; })
 .catch(e=>console.warn('custom audio not loaded:', url, e));
 }
+/* prefetch the menu theme bytes at page load so the song can start the instant you click */
+let menuThemeRaw = null;
+fetch('audio/menutheme.mp3').then(r=>{ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+.then(b=>{ menuThemeRaw = b; }).catch(()=>{});
 let menuTheme = null;
 function maybeStartMenuTheme(){
 if (!AC || started || menuTheme || !customBuf.menutheme || !settings.music) return;
@@ -6776,7 +6803,8 @@ const src = AC.createBufferSource(); src.buffer = customBuf.menutheme; src.loop 
 const g = AC.createGain(); g.gain.value = 0;
 src.connect(g); g.connect(master);
 src.start();
-g.gain.setTargetAtTime(0.6, AC.currentTime, 0.6);
+g.gain.setValueAtTime(0.0001, AC.currentTime);
+g.gain.exponentialRampToValueAtTime(0.6, AC.currentTime + 0.25);   // audible almost immediately
 menuTheme = { src, gain:g };
 }
 function stopMenuTheme(){
@@ -7513,7 +7541,9 @@ prodIntroEl.classList.add('clicked');
 goFullscreen();
 initAudio();                                   // ambience starts on the click
 if (AC && AC.state === 'suspended') AC.resume();
-loadAudio('menutheme','audio/menutheme.mp3').then(maybeStartMenuTheme);
+if (menuThemeRaw && AC){
+AC.decodeAudioData(menuThemeRaw).then(b=>{ customBuf.menutheme = b; maybeStartMenuTheme(); }).catch(()=>{});
+} else loadAudio('menutheme','audio/menutheme.mp3').then(maybeStartMenuTheme);
 initCustomAudio();
 setTimeout(()=>prodIntroEl.classList.add('logo'), 450);          // click fades, logo pops in
 setTimeout(()=>{                                                // letters hop & run off-screen
@@ -7669,12 +7699,13 @@ shovelView.position.set(0,-0.81,-1.42);
       shovelBladePrev.copy(shovelBlade);
     }
 
-    /* --- clear intro plug if intro already played --- */
-    if (introDone){
-      scene.remove(introPlug);
-      if (plugGrass){ scene.remove(plugGrass); plugGrass = null; }
-      if (holeRim) holeRim.material.opacity = 1;
-    }
+/* --- clear intro plug if intro already played --- */
+if (introDone){
+scene.remove(introPlug);
+if (plugGrass){ scene.remove(plugGrass); plugGrass = null; }
+if (holeRim) holeRim.material.opacity = 1;
+if (holeEdge) holeEdge.visible = true;
+}
 
        /* rebuild hole geometry to match restored maw level */
     buildHole();
@@ -7708,6 +7739,7 @@ buildHole();                                    // maw width matches the save
 scene.remove(introPlug);                        // the hole was already torn open
 if (plugGrass){ scene.remove(plugGrass); plugGrass = null; }
 if (holeRim) holeRim.material.opacity = 1;
+if (holeEdge) holeEdge.visible = true;
 updatePrestigeBadge();                          // violet glow + dotted claim ring in the menu
 } catch(e){}
 }
