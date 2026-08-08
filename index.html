@@ -764,7 +764,7 @@ const EARN_Y = -8.5;
 const EYE = 1.62, GRAV = 20, JUMP_V = 7.4;
 const REST_Y = 0.03;
 const GOB_SPEED = 2.8;
-const MAX_WORLD_COINS = 4000;
+const MAX_WORLD_COINS = 3500;
 const MAX_GOBLINS = 12;
 const MAX_CHIEFS = 5;
 const EARN_SOUND_R = 10;
@@ -1646,7 +1646,7 @@ geo.setAttribute('aInfo', new THREE.InstancedBufferAttribute(aInfo,4));
 geo.instanceCount = GRASS_N;
 grassMat = new THREE.ShaderMaterial({
 side:THREE.DoubleSide,
-uniforms:{ uTime:{value:0}, uPlayer:{value:new THREE.Vector3(0,0,6.8)}, uGoblin:{value:new THREE.Vector3(1.8,0,7.6)}, uFogColor:{value:FOGC}, uGust:{value:0}, uGustDir:{value:new THREE.Vector2(0.82,0.57)} },
+uniforms:{ uTime:{value:0}, uPlayer:{value:new THREE.Vector3(0,0,6.8)}, uGoblin:{value:new THREE.Vector3(1.8,0,7.6)}, uFogColor:{value:FOGC}, uGust:{value:0}, uGustDir:{value:new THREE.Vector2(0.82,0.57)}, uRainDark:{value:0} },
 vertexShader:`
 attribute vec3 aPos; attribute vec4 aInfo;
 uniform float uTime; uniform vec3 uPlayer; uniform vec3 uGoblin;
@@ -1681,6 +1681,7 @@ gl_Position = projectionMatrix * mv;
 fragmentShader:`
 precision mediump float;
 uniform vec3 uFogColor;
+uniform float uRainDark;
 varying float vH; varying float vTint; varying float vFog; varying vec2 vPos;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
 float vnoise(vec2 p){
@@ -1702,6 +1703,7 @@ vec3 col = mix(greenA, greenB, patchG);
 col = mix(col, dry, patchY*0.7);
 col = mix(col, vec3(0.55,0.66,0.16), vTint*0.5);
 col *= 0.8 + 0.3*vH;
+col *= 1.0 - 0.3*uRainDark;
 col = mix(col, uFogColor, smoothstep(28.0,100.0,vFog));
 gl_FragColor = vec4(col,1.0);
 }`
@@ -1924,6 +1926,108 @@ g.attributes.aLife.needsUpdate = true;
 const goldBurst = makeBurst(0xffd75e);
 const violetBurst = makeBurst(0xb470ef);
 const dirtBurst = makeBurst(0x8a6a44, false);
+
+/* ---------- physical 3D dirt/earth chunks ---------- */
+const DIRT_CHUNKS_MAX = 120;
+const dirtChunks = [];
+const dirtChunkGeos = [
+new THREE.DodecahedronGeometry(0.09, 0),
+new THREE.DodecahedronGeometry(0.13, 0),
+new THREE.BoxGeometry(0.12, 0.08, 0.1),
+new THREE.DodecahedronGeometry(0.06, 0),
+new THREE.TetrahedronGeometry(0.11, 0),
+];
+const dirtChunkMats = [
+new THREE.MeshLambertMaterial({ color:0x5a3d1e }),
+new THREE.MeshLambertMaterial({ color:0x4a3018 }),
+new THREE.MeshLambertMaterial({ color:0x6b4a2a }),
+new THREE.MeshLambertMaterial({ color:0x3d2812 }),
+new THREE.MeshLambertMaterial({ color:0x7a5530 }),
+];
+for(let i=0;i<DIRT_CHUNKS_MAX;i++){
+const geo = dirtChunkGeos[i % dirtChunkGeos.length];
+const mat = dirtChunkMats[i % dirtChunkMats.length];
+const mesh = new THREE.Mesh(geo, mat);
+mesh.visible = false;
+scene.add(mesh);
+dirtChunks.push({
+mesh, active:false, vel:new THREE.Vector3(), angVel:new THREE.Vector3(),
+life:0, maxLife:1, grav:true
+});
+}
+let dirtChunkIdx = 0;
+function spawnDirtChunk(x, y, z, power){
+const c = dirtChunks[dirtChunkIdx];
+dirtChunkIdx = (dirtChunkIdx + 1) % DIRT_CHUNKS_MAX;
+c.active = true;
+c.mesh.visible = true;
+c.mesh.position.set(x, y, z);
+c.mesh.rotation.set(Math.random()*6, Math.random()*6, Math.random()*6);
+const s = 0.6 + Math.random()*1.2;
+c.mesh.scale.setScalar(s);
+const a = Math.random()*Math.PI*2;
+const spread = power * (0.3 + Math.random()*0.7);
+c.vel.set(
+Math.cos(a)*spread*(0.4+Math.random()*0.6),
+power*(1.2+Math.random()*1.8),
+Math.sin(a)*spread*(0.4+Math.random()*0.6)
+);
+c.angVel.set(
+(Math.random()-0.5)*14,
+(Math.random()-0.5)*14,
+(Math.random()-0.5)*14
+);
+c.life = 0;
+c.maxLife = 1.2 + Math.random()*1.4;
+c.grav = true;
+}
+function spawnDirtExplosion(x, y, z, count, power){
+for(let i=0;i<count;i++){
+const a = Math.random()*Math.PI*2;
+const r = Math.random()*0.6;
+spawnDirtChunk(
+x + Math.cos(a)*r,
+y + Math.random()*0.15,
+z + Math.sin(a)*r,
+power*(0.7+Math.random()*0.6)
+);
+}
+}
+function updateDirtChunks(dt){
+for(const c of dirtChunks){
+if(!c.active) continue;
+c.life += dt;
+if(c.life >= c.maxLife){
+c.active = false;
+c.mesh.visible = false;
+continue;
+}
+if(c.grav) c.vel.y -= 14*dt;
+c.mesh.position.addScaledVector(c.vel, dt);
+c.mesh.rotation.x += c.angVel.x*dt;
+c.mesh.rotation.y += c.angVel.y*dt;
+c.mesh.rotation.z += c.angVel.z*dt;
+/* land on ground */
+if(c.mesh.position.y < 0.04 && c.vel.y < 0){
+c.mesh.position.y = 0.04;
+c.vel.y *= -0.25;
+c.vel.x *= 0.6;
+c.vel.z *= 0.6;
+c.angVel.multiplyScalar(0.5);
+if(Math.abs(c.vel.y) < 0.4){ c.vel.set(0,0,0); c.angVel.set(0,0,0); c.grav=false; }
+}
+/* fall into hole */
+const dH = Math.hypot(c.mesh.position.x, c.mesh.position.z);
+if(dH < holeRS() && c.mesh.position.y < 0.1){
+c.grav = true;
+c.vel.y -= 6*dt;
+if(c.mesh.position.y < -3){ c.active=false; c.mesh.visible=false; }
+}
+/* fade out near end */
+const fadeK = 1 - Math.max(0, (c.life/c.maxLife - 0.7)/0.3);
+c.mesh.scale.setScalar((0.6+Math.random()*0.01)*fadeK);
+}
+}
 function burstSparks(x,y,z){ goldBurst.burst(x,y,z); }
 /* ---------- cartoon star-flash billboards (2–3 frame impact stars) ---------- */
 const starFlashTex = [];
@@ -2828,6 +2932,7 @@ mouseHeld = false;
 camMode = 'strangerCine';
 letterbox(true);
 document.body.classList.add('cineMode');
+playCustom('ufo', 0.7);
 const ufo = new THREE.Group();
 const hull = new THREE.Mesh(new THREE.SphereGeometry(1.4,20,12), toon(0x8a9aa8));
 hull.scale.set(1,0.32,1);
@@ -3993,6 +4098,7 @@ const ACH = [
 { id:'shovel', name:"Shovel Knight",      desc:"Claim the old snow shovel.",           test:()=>!!achFlags.shovel },
 { id:'rain',   name:"Rain Dancer",        desc:"Spend 5 minutes in the rain.",         test:()=>stats.rainTime>=300 },
 { id:'aphro',  name:"Aphrodite's Blessing",desc:"Summon the Aphrodite.",               test:()=>!!achFlags.aphro },
+{ id:'crowd',  name:"Overcrowded",        desc:"Have 3,000 coins in the world at once.", test:()=>live.length>=3000 },
 ];
 let achAccum = 0;
 const trophyGeo = (()=>{
@@ -4185,6 +4291,8 @@ const GNDT   = new Float32Array(MAX_COINS); // time spent sliding on the ground
 const SSCL   = new Float32Array(MAX_COINS);  // sacrifice shrink (1 = full)
 const CRAD   = new Float32Array(MAX_COINS);  // per-coin collision radius (bigger coins = bigger)
 for(let i=0;i<MAX_COINS;i++) CRAD[i]=COL_R;
+const COIN_DIRTY = new Uint8Array(MAX_COINS);
+const COIN_MAT  = []; for(let i=0;i<MAX_COINS;i++) COIN_MAT.push(new THREE.Matrix4());
 function supportOfCoin(i,q){
 const ay = 1 - 2*(q.x*q.x + q.z*q.z);
 const hl = Math.sqrt(Math.max(0, 1 - ay*ay));
@@ -4273,6 +4381,7 @@ return best;
 }
 /* write all instances to the GPU buffers */
 const coinDummy = new THREE.Object3D();
+const _cmS = new THREE.Vector3();
 function composeCoinInstances(){
 let ng=0, ns=0, ng2=0, np=0;
 for(let li=0; li<live.length; li++){
@@ -4281,25 +4390,26 @@ if (ST[i]===0) continue;
 const k = SSCL[i];
 if (k <= 0.02) continue;
 const i3=i*3;
-coinDummy.position.set(P[i3],P[i3+1],P[i3+2]);
-coinDummy.quaternion.copy(Q[i]);
-if (SIL[i]===3){
-coinDummy.scale.set(1.25*k,1.6*k,1.25*k);
-coinDummy.updateMatrix();
-coinMeshP.setMatrixAt(np++, coinDummy.matrix);
-} else if (SIL[i]===2){
-coinDummy.scale.set(1.2*k,1.5*k,1.2*k);
-coinDummy.updateMatrix();
-coinMeshG2.setMatrixAt(ng2++, coinDummy.matrix);
-} else if (SIL[i]===1){
-coinDummy.scale.set(1.1*k,1.3*k,1.1*k);
-coinDummy.updateMatrix();
-coinMeshS.setMatrixAt(ns++, coinDummy.matrix);
-} else {
-coinDummy.scale.set(k,k,k);
-coinDummy.updateMatrix();
-coinMeshG.setMatrixAt(ng++, coinDummy.matrix);
+/* sleeping + clean: reuse cached matrix, skip quaternion→matrix conversion */
+if (ST[i]===2 && !COIN_DIRTY[i]){
+const m = COIN_MAT[i];
+if (SIL[i]===3)      coinMeshP.setMatrixAt(np++, m);
+else if (SIL[i]===2) coinMeshG2.setMatrixAt(ng2++, m);
+else if (SIL[i]===1) coinMeshS.setMatrixAt(ns++, m);
+else                 coinMeshG.setMatrixAt(ng++, m);
+continue;
 }
+COIN_DIRTY[i]=0;
+const m = COIN_MAT[i];
+if (SIL[i]===3)      _cmS.set(1.25*k,1.6*k,1.25*k);
+else if (SIL[i]===2) _cmS.set(1.2*k,1.5*k,1.2*k);
+else if (SIL[i]===1) _cmS.set(1.1*k,1.3*k,1.1*k);
+else                 _cmS.set(k,k,k);
+m.compose(_v1.set(P[i3],P[i3+1],P[i3+2]), Q[i], _cmS);
+if (SIL[i]===3)      coinMeshP.setMatrixAt(np++, m);
+else if (SIL[i]===2) coinMeshG2.setMatrixAt(ng2++, m);
+else if (SIL[i]===1) coinMeshS.setMatrixAt(ns++, m);
+else                 coinMeshG.setMatrixAt(ng++, m);
 }
 coinMeshG.count=ng; coinMeshS.count=ns; coinMeshG2.count=ng2; coinMeshP.count=np;
 coinMeshG.instanceMatrix.needsUpdate = true;
@@ -4549,19 +4659,29 @@ _qTmp.setFromEuler(_euler.set(SPINT[i]*1.2, SPINT[i]*0.9, 0));
 Q[i].slerp(_qTmp, Math.min(1,4*dt));
 }
 /* fixed-step rigid body simulation — runs in telescope/iso view too */
-clinkBudget = 4;   // per-frame impact sound budget (no clink spam)
+let awakeN=0;
+for(let li=0;li<live.length;li++) if(coinAwake(live[li])) awakeN++;
+if (awakeN > 0){
+clinkBudget = 4;
 physAccum += dt;
 let n=0;
 while (physAccum >= PHYS_DT && n<3){ physAccum -= PHYS_DT; stepCoins(PHYS_DT); n++; }
 if (n===3) physAccum = 0;
+} else {
+physAccum = 0;
+}
 shovelPushCoins(dt);
 /* sleeping coins settle flat — centre follows the shrinking support height */
 for(let li=0; li<live.length; li++){
-  const i=live[li];
-  if (ST[i]!==2) continue;
-const i3=i*3, s0=supportOfCoin(i,Q[i]);
-Q[i].slerp(IDQ, Math.min(1, 10*dt));
-P[i3+1] += supportOfCoin(i,Q[i]) - s0;
+const i=live[li];
+if (ST[i]!==2) continue;
+const q=Q[i];
+if (q.x*q.x + q.y*q.y + q.z*q.z > 0.000001){
+const i3=i*3, s0=supportOfCoin(i,q);
+q.slerp(IDQ, Math.min(1, 10*dt));
+P[i3+1] += supportOfCoin(i,q) - s0;
+COIN_DIRTY[i]=1;
+}
 }
 composeCoinInstances();
 }
@@ -4635,8 +4755,9 @@ const cx = STALL_POS.x + 1.9, cz = STALL_POS.z + 0.4;
 for(let i=0;i<3;i++){
 spawnCatHeart(cx+(Math.random()-0.5)*0.35, 1.05+Math.random()*0.2, cz+(Math.random()-0.5)*0.35);
 }
-toneAt(90+Math.random()*20, 0.25, 'sine', 0.08, 0, 30, STALL_POS.x+1.9, STALL_POS.z+0.4, 8);      // purr
-toneAt(520+Math.random()*140, 0.12, 'triangle', 0.04, 0.06, 120, STALL_POS.x+1.9, STALL_POS.z+0.4, 8); // mrrp
+const meows = ['meow','meow2','meow3'];
+const pick = meows[(Math.random()*meows.length)|0];
+playCustom(pick, 0.5);
 }
 /* ============================== ABILITIES (whistle) ============================== */
 let whistleCd = 0, whistleBuffT = 0;
@@ -5078,7 +5199,6 @@ rumbled:false, plugged:false, dropped:false, landed:false, gob:null,
 stars, landT:0, zoomDone:false, eyesOpen:false,
 cap:0, capT:0, capClick:false, cap3Shown:false, turnT:-1, holdT:-1, fadeT:-1, done:false };
 tone(110, 2.0, 'sine', 0.12, 0, -40);
-toast('Hold 8 to skip');
 }
 function startWitchCine(){
 witchSpawned = true;
@@ -5442,7 +5562,7 @@ if (e >= 1 && !c.zoomDone){
 c.zoomDone = true;
 c.eyesOpen = true;
 c.cap = 1; c.capT = 0; c.capClick = false;
-setCap("This is Bub. He doesn't have much going on in his life but as like all other goblins, he seeks for riches");
+setCap("This is Bub. He doesn't have much going on in his life but as like all other dorks, he seeks for riches and a purpose");
 tone(520,0.08,'triangle',0.1);
 }
 }
@@ -5476,9 +5596,9 @@ noiseS(1.6, 0.3, 180, 50);
 }
 if (t > 5.6 && t < 7.6){
 shake = Math.max(shake, 0.45);
-if (Math.random() < 0.55){
-const a = Math.random()*Math.PI*2, r = HOLE_R*(0.4+Math.random()*0.9);
-dirtBurst.burst(Math.cos(a)*r, 0.08, Math.sin(a)*r, 1.8, 3.4);
+if (Math.random() < 0.45){
+const a = Math.random()*Math.PI*2, r = HOLE_R*(0.3+Math.random()*0.8);
+spawnDirtExplosion(Math.cos(a)*r, 0.05, Math.sin(a)*r, 3, 2.8);
 }
 const k = sm((t-5.6)/2.0);
 if (holeRim) holeRim.material.opacity = k;
@@ -5497,6 +5617,7 @@ if (holeRim) holeRim.material.opacity = 1;
 if (holeEdge) holeEdge.visible = true;
 scene.remove(introPlug);
 if (plugGrass){ scene.remove(plugGrass); plugGrass = null; }
+spawnDirtExplosion(0, 0.08, 0, 28, 4.2);
 dirtBurst.burst(0, 0.1, 0, 3.2, 4.5);
 shake = Math.max(shake, 0.95);
 tone(60, 0.7, 'sine', 0.35, 0, -30);
@@ -5859,7 +5980,7 @@ buildPrestigeRing();
 }
 /* ---------- dotted prestige ring: the hole's claim radius ---------- */
 let prestigeRing = null;
-const magnetR = () => holeRS() + 2*prestige;   // 2m from the rim (scales with the maw), +2m per prestige
+const magnetR = () => (holeRS() + 2*prestige) * 1.2;   // 20% wider claim radius
 function buildPrestigeRing(){
 if (prestigeRing){ scene.remove(prestigeRing); prestigeRing.geometry.dispose(); prestigeRing.material.dispose(); prestigeRing = null; }
 if (prestige < 1) return;
@@ -6908,6 +7029,7 @@ if (rainStartCount === 1) toast(GRIM_RAIN_1);
 else if (rainStartCount === 2) toast(GRIM_RAIN_2);
 }
 skyMat.uniforms.uRain.value = rainFactor;
+grassMat.uniforms.uRainDark.value = rainFactor;
 scene.fog.color.lerpColors(FOGC, RAIN_FOGC, rainFactor*0.85);
 grassMat.uniforms.uFogColor.value.copy(scene.fog.color);
 sun.intensity = 1.15*(1-0.8*rainFactor);   // sun dims harder for 20% darker feel
@@ -7146,6 +7268,10 @@ if (customInit) return; customInit = true;
 loadAudio('ambience','audio/ambience.mp3').then(()=>startCustomAmbience());
 loadAudio('aphrodite','audio/aphrodite.mp3').then(()=>applyAphroditeAmbience());
 loadAudio('rain','audio/rain.mp3');   // played once per rain, never looped
+loadAudio('meow','audio/meow.mp3');
+loadAudio('meow2','audio/meow2.mp3');
+loadAudio('meow3','audio/meow3.mp3');
+loadAudio('ufo','audio/ufo.mp3');
 }
 function playCustom(name, vol=1, loop=false){ // one-shot helper for any loaded file
 const buf = customBuf[name]; if(!buf || !AC) return null;
@@ -8380,6 +8506,7 @@ updateButterflies(dt, elapsed);
 goldBurst.update(dt);
 violetBurst.update(dt);
 dirtBurst.update(dt);
+updateDirtChunks(dt);
 updateStarFlashes(dt);
 updateFloatTexts(dt);
 updateCatHearts(dt);
