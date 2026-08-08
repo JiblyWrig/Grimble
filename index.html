@@ -1010,7 +1010,7 @@ vec3 col = mix(hor, zen, pow(max(h,0.0),0.55));
 if(h<0.0) col=mix(col, mix(vec3(0.55,0.66,0.55),vec3(0.35,0.38,0.40),uRain), min(1.0,-h*3.0));
 float s=max(dot(d,uSun),0.0);
 col += vec3(1.0,0.93,0.75)*(pow(s,300.0)*1.25 + pow(s,12.0)*0.18) * (1.0-0.85*uRain);
-col *= 1.0 - 0.2*uRain;   // rainy sky 20% darker
+col *= 1.0 - 0.30*uRain;   // rainy sky exactly 20% darker
 gl_FragColor=vec4(col,1.0); }`
 });
 scene.add(new THREE.Mesh(new THREE.SphereGeometry(300, 32, 16), skyMat));
@@ -2481,16 +2481,32 @@ g.thrown = true;
 toneAt(300+Math.random()*80, 0.09, 'sine', 0.045, 0, 140, p.x, p.z, 16);
 noiseAt(0.14, 0.04, 1200, 400, 0, p.x, p.z, 16);
 const fx = Math.sin(g.yaw), fz = Math.cos(g.yaw);
-const stackN=(g.tier>=4)?20:upgrades.stack;   // Aphrodite hurls 20 coins per throw
+const stackN=(g.tier>=4)?40:upgrades.stack;   // Aphrodite hurls 40 coins (doubled)
 for(let k=0;k<stackN;k++){
+const delay = k * (g.tier>=4 ? 0.04 : 0.08); // faster burst for Aphrodite
+if (g.tier>=4){
+// EXPLOSIVE SPREAD: uniform sphere distribution, not a directional cone
+const theta = Math.random()*Math.PI*2;
+const phi = Math.acos(2*Math.random()-1);
+const speed = 4.0 + Math.random()*6.0; // much higher velocity range
+const vx = Math.sin(phi)*Math.cos(theta)*speed;
+const vy = Math.abs(Math.sin(phi)*Math.sin(theta))*speed + 3.0; // bias upward so they don't go underground
+const vz = Math.cos(phi)*speed;
+g.coinQueue.push({
+pos: new THREE.Vector3(p.x+(Math.random()-0.5)*0.2, p.y+1.05+(Math.random()-0.5)*0.2, p.z+(Math.random()-0.5)*0.2),
+vel: new THREE.Vector3(vx + g.vel.x*0.15, vy, vz + g.vel.z*0.15),
+coinType: 3,
+at: g.coinQueueT + delay
+});
+} else {
 const a = Math.random()*Math.PI*2, m = 0.8+Math.random()*1.7;
-const delay = k * 0.08;
 g.coinQueue.push({
 pos: new THREE.Vector3(p.x+fx*0.35+(Math.random()-0.5)*0.35, p.y+1.05+Math.random()*0.3, p.z+fz*0.35+(Math.random()-0.5)*0.35),
 vel: new THREE.Vector3(Math.cos(a)*m + g.vel.x*0.3, 7.8+Math.random()*2.0, Math.sin(a)*m + g.vel.z*0.3),
-coinType: g.tier>=4 ? 3 : (g.tier===3 ? 2 : (g.tier>=2 ? 1 : ((upgrades.shiny>0 && Math.random()<0.01)?1:0))),
-at: g.coinQueueT + k*0.08
+coinType: g.tier===3 ? 2 : (g.tier>=2 ? 1 : ((upgrades.shiny>0 && Math.random()<0.01)?1:0)),
+at: g.coinQueueT + delay
 });
+}
 }
 g.clock = 0;
 }
@@ -6783,8 +6799,8 @@ rainFactor = f*f*(3-2*f);
 skyMat.uniforms.uRain.value = rainFactor;
 scene.fog.color.lerpColors(FOGC, RAIN_FOGC, rainFactor*0.85);
 grassMat.uniforms.uFogColor.value.copy(scene.fog.color);
-sun.intensity = 1.15*(1-0.6*rainFactor);   // rain now 20% darker than before
-hemi.intensity = 0.95*(1-0.56*rainFactor);
+sun.intensity = 1.15*(1-0.8*rainFactor);   // sun dims harder for 20% darker feel
+hemi.intensity = 0.95*(1-0.7*rainFactor);  // ambient also drops to match
 for (const c of clouds) c.material.color.setScalar(1-0.45*rainFactor);
 rainMat.uniforms.uFactor.value = rainFactor;
 rainMat.uniforms.uTime.value = time;
